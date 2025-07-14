@@ -15,7 +15,7 @@ export function ToggleMode() {
 
   if (!mounted) {
     return (
-      <Button variant="primary" size="lg" className="w-10 h-10">
+      <Button variant="outline" size="sm" className="w-10 h-10 p-2">
         <Sun className="h-5 w-5" />
       </Button>
     )
@@ -23,17 +23,18 @@ export function ToggleMode() {
 
   return (
     <Button
-      variant="primary"
-      size="lg"
+      variant="outline"
+      size="sm"
       onClick={toggleTheme}
-      className="w-10 h-10 hover:bg-transparent hover:scale-110 transition-transform duration-200"
-      aria-label="Toggle theme"
+      className="w-10 h-10 p-2 rounded-full"
+      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
       {theme === 'dark' ? (
-        <Sun className="h-5 w-5 text-yellow-400" />
+        <Sun className="h-5 w-5" />
       ) : (
-        <Moon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+        <Moon className="h-5 w-5" />
       )}
+      <span className="sr-only">Toggle theme</span>
     </Button>
   )
 }

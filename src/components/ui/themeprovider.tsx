@@ -29,9 +29,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     
     if (theme === 'dark') {
       root.classList.add('dark');
+      document.body.classList.add('dark');
       root.style.colorScheme = 'dark';
     } else {
       root.classList.remove('dark');
+      document.body.classList.remove('dark');
       root.style.colorScheme = 'light';
     }
     
