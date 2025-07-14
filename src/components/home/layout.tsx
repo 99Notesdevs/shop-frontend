@@ -1,5 +1,5 @@
 import Navbar from './Navbar';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import Footer from './footer';
 import Navigation from './navigation';

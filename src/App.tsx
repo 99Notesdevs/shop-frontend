@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import LogIn from './pages/login'
 import { HomeLayout } from './components/home/layout'
 import { ThemeProvider } from './components/ui/themeprovider'
+import Home from './pages/home'
 
 function App() {
   return (
@@ -15,7 +16,7 @@ function App() {
             <Route path="/*" element={
               <HomeLayout>
                 <Routes>
-                  <Route path="/" element={<Navigate to="/home" replace />} />
+                <Route path="/" element={<Home />} />  
                   {/* Add more routes here that should use the layout */}
                 </Routes>
               </HomeLayout>

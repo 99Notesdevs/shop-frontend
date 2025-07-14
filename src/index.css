@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-
 /* GLOBAL CSS */
 :root {
   /* Primary Colors */
@@ -8,14 +7,16 @@
   --primary-hover: #fbb41b;
   
   /* Text Colors */
-  --text-primary: #000000;
+  --text-primary: #4a5568;
   --text-secondary: #6b7280;
-  --text-light: #ffffff;
+  --text-light: #000000;
+  --text-dark: #ffffff;
   
   /* Background Colors */
-  --bg-light: #ffffff;
-  --bg-dark: #000000;
-  --bg-gray: #f3f4f6;
+  --bg-light: #ffffff; /*white*/
+  --bg-light-secondary: #f9fafb; /*gray-50*/
+  --bg-dark: #0f172a; /* slate-900*/
+  --bg-dark-secondary: #1e293b; /*slate-800*/
   
   /* Border Colors */
   --border-light: #e5e7eb;
@@ -25,5 +26,38 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Dark mode styles */
+.dark {
+  --text-primary: #f3f4f6;
+  --text-secondary: #d1d5db;
+  --text-light: #ffffff;
+  --text-dark: #000000;
+  
+  --bg-light: #0f172a; 
+  --bg-light-secondary: #1e293b; 
+  --bg-dark: #ffffff;
+  --bg-dark-secondary: #f9fafb;
+  
+  --border-light: #334155;
+  --border-dark: #e5e7eb;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
+/* Apply dark mode to the root element */
+html.dark {
+  background-color: var(--bg-light);
+  color: var(--text-primary);
+}
+
+/* Apply dark mode to the body */
+body {
+  background-color: var(--bg-light);
+  color: var(--text-primary);
+  transition: background-color 0.3s, color 0.3s;
 }
 
