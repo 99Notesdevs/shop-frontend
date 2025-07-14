@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import ContactForm from '../components/common/contact-form';
 import { FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock } from 'react-icons/fa';
 
