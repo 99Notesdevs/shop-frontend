@@ -1,0 +1,52 @@
+import { env } from "@/config/env";
+import Cookies from "js-cookie";
+
+const BASE_URL = env.API;
+
+const defaultHeaders: HeadersInit = {
+  Authorization: `Bearer ${Cookies.get("token") || ""}`,
+  "Content-Type": "application/json",
+  "x-auth-type": "Admin"
+};
+
+async function request<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const res = await fetch(`${BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...(options.headers || {}),
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(error || res.statusText);
+  }
+  
+  return res.json();
+}
+
+export const api = {
+  get: <T>(endpoint: string, headers?: HeadersInit) =>
+    request<T>(endpoint, { method: "GET", headers }),
+
+  post: <T>(endpoint: string, body?: unknown, headers?: HeadersInit) =>
+    request<T>(endpoint, {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers,
+    }),
+
+  put: <T>(endpoint: string, body?: unknown, headers?: HeadersInit) =>
+    request<T>(endpoint, {
+      method: "PUT",
+      body: JSON.stringify(body),
+      headers,
+    }),
+
+  delete: <T>(endpoint: string, headers?: HeadersInit) =>
+    request<T>(endpoint, { method: "DELETE", headers }),
+};
