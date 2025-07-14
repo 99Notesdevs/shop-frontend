@@ -1,65 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PriceRangeFilter from '../components/common/filter';
 import StockStatusFilter from '../components/common/stockstatus';
 import TopRatedProducts from '../components/common/topratedproducts';
 import { ProductCard } from '../components/product/product-card';
 import { Button } from '../components/ui/button';
+import ErrorBoundary from '../components/common/ErrorBoundary';
+import { env } from '../config/env';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-// Mock data for products
-const mockProducts = [
-  {
-    id: '1',
-    name: 'UPSC Prelims 2025 Test Series',
-    category: 'Test Series',
-    description: 'Comprehensive test series for UPSC Prelims 2025 with detailed solutions and performance analysis.',
-    price: 2999,
-    imageUrl: 'https://via.placeholder.com/300x400?text=Test+Series',
-  },
-  {
-    id: '2',
-    name: 'Modern Indian History Notes',
-    category: 'Study Material',
-    description: 'Detailed notes covering Modern Indian History for UPSC preparation.',
-    price: 499,
-    imageUrl: 'https://via.placeholder.com/300x400?text=History+Notes',
-  },
-  {
-    id: '3',
-    name: 'Indian Polity Book',
-    category: 'Books',
-    description: 'Complete guide to Indian Polity for UPSC and other competitive exams.',
-    price: 599,
-    imageUrl: 'https://via.placeholder.com/300x400?text=Polity+Book',
-  },
-  {
-    id: '4',
-    name: 'Geography Mapping Program',
-    category: 'Online Course',
-    description: 'Learn map-based questions and answers for UPSC Geography.',
-    price: 1299,
-    imageUrl: 'https://via.placeholder.com/300x400?text=Geography+Course',
-  },
-  {
-    id: '5',
-    name: 'CSAT Crash Course',
-    category: 'Online Course',
-    description: 'Quick revision course for CSAT paper with practice questions.',
-    price: 1999,
-    imageUrl: 'https://via.placeholder.com/300x400?text=CSAT+Course',
-  },
-  {
-    id: '6',
-    name: 'Current Affairs Compilation',
-    category: 'Study Material',
-    description: 'Monthly current affairs compilation for UPSC preparation.',
-    price: 299,
-    imageUrl: 'https://via.placeholder.com/300x400?text=Current+Affairs',
-  },
-];
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  imageUrl: string;
+  category: {
+    id: string;
+    name: string;
+  };
+  categoryId: string;
+  validity?: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const Home: React.FC = () => {
-  const [products, setProducts] = useState(mockProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('default');
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchProducts = async () => {
+      try {
+        console.log('Fetching products from:', `${env.API}/product`);
+        const response = await fetch(`${env.API}/product`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API Error Response:', errorText);
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        console.log('API Response:', data);
+        
+        // Handle different response formats
+        let productsArray = [];
+        if (Array.isArray(data)) {
+          productsArray = data;
+        } else if (data && Array.isArray(data.products)) {
+          productsArray = data.products;
+        } else if (data && data.data && Array.isArray(data.data)) {
+          productsArray = data.data;
+        } else {
+          console.warn('Unexpected API response format:', data);
+          throw new Error('Unexpected response format from the server');
+        }
+        
+        if (isMounted) {
+          setProducts(productsArray);
+          setError(null);
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+        if (isMounted) {
+          setError(`Failed to load products: ${errorMessage}`);
+          toast.error('Failed to load products');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchProducts();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleAddToCart = (productId: string) => {
     // Add to cart logic here
@@ -76,15 +102,16 @@ const Home: React.FC = () => {
     } else if (value === 'price-high-low') {
       sortedProducts.sort((a, b) => b.price - a.price);
     } else {
-      // Default sorting (by ID or any other default criteria)
-      sortedProducts.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+      // Default sorting (by creation date)
+      sortedProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
     
     setProducts(sortedProducts);
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <ErrorBoundary>
+      <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row gap-8">
           {/* Sidebar */}
           <div className="w-full md:w-1/4 space-y-6">
@@ -120,20 +147,30 @@ const Home: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  category={product.category}
-                  description={product.description}
-                  price={product.price}
-                  imageUrl={product.imageUrl}
-                  onAddToCart={handleAddToCart}
-                />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8 text-red-500">{error}</div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No products available</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {products.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    id={product.id}
+                    name={product.name}
+                    category={product.category?.name || 'Uncategorized'}
+                    description={product.description}
+                    price={product.price}
+                    imageUrl={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
+                    onAddToCart={handleAddToCart}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Pagination */}
             <div className="flex justify-center mt-8">
@@ -148,6 +185,7 @@ const Home: React.FC = () => {
           </div>
         </div>
       </div>
+    </ErrorBoundary>
   );
 };
 

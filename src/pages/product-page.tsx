@@ -1,41 +1,95 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
-import { FiChevronLeft, FiChevronRight, FiMaximize2, FiHeart, FiShare2, FiMinus, FiPlus } from 'react-icons/fi';
+import { useParams } from 'react-router-dom';
+import { FiChevronLeft, FiChevronRight, FiMaximize2, FiHeart, FiShare2, FiMinus, FiPlus, FiAlertCircle } from 'react-icons/fi';
 import { FaFacebook, FaTwitter, FaPinterest, FaLinkedin, FaEnvelope } from 'react-icons/fa';
+import axios from 'axios';
+import { env } from '../config/env';
 
-const ProductPage = () => {
-  const [quantity, setQuantity] = useState(1);
-  const [currentImage, setCurrentImage] = useState(0);
-  
-  const product = {
-    title: "Ancient India",
-    price: 349.00,
-    rating: 5,
-    reviews: 9,
-    categories: ["Ancient India", "History"],
-    description: [
-      "A comprehensive guide to Ancient Indian history, covering major events, cultures, and civilizations that shaped the Indian subcontinent.",
-      "This book provides an in-depth exploration of India's rich historical heritage, from the Indus Valley Civilization to the Mughal Empire.",
-      "Key features include:",
-      "✓ Detailed analysis of major dynasties and empires",
-      "✓ Insights into cultural and scientific achievements",
-      "✓ Exploration of trade routes and economic systems",
-      "✓ Examination of religious and philosophical developments",
-      "✓ Illustrated with maps, timelines, and artifacts"
-    ],
-    highlights: [
-      "Comprehensive coverage of 5000+ years of history",
-      "Written by renowned historians",
-      "Includes study questions and further reading",
-      "Perfect for students and history enthusiasts"
-    ]
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  imageUrl: string;
+  category: {
+    id: number;
+    name: string;
   };
 
-  const images = [
-    "/images/ancient-india-1.jpg",
-    "/images/ancient-india-2.jpg",
-    "/images/ancient-india-3.jpg",
-  ];
+}
+
+const ProductPage = () => {
+  const { id } = useParams<{ id: string }>();
+  const [quantity, setQuantity] = useState(1);
+  const [currentImage, setCurrentImage] = useState(0);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>(['/placeholder-product.jpg']);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${env.API}/product/${id}`);
+        if (response.data.success) {
+          const productData = response.data.data;
+          setProduct(productData);
+          
+          // If product has imageUrl, use it, otherwise use placeholder
+          const productImages = productData.imageUrl 
+            ? [productData.imageUrl] 
+            : ['/placeholder-product.jpg'];
+          setImages(productImages);
+        } else {
+          throw new Error(response.data.message || 'Failed to fetch product');
+        }
+      } catch (err) {
+        console.error('Error fetching product:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load product');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchProduct();
+    } else {
+      setError('No product ID provided');
+      setLoading(false);
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <FiAlertCircle className="text-red-500 text-5xl mb-4" />
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Error Loading Product</h2>
+        <p className="text-gray-600 mb-6">{error || 'Product not found'}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  // Format description if it's a string
+  const descriptionList = typeof product.description === 'string' 
+    ? product.description.split('\n').filter(line => line.trim() !== '')
+    : [];
 
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity >= 1) {
@@ -54,7 +108,7 @@ const ProductPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Helmet>
-        <title>{product.title} - 99Notes</title>
+        <title>{product.name} - 99Notes</title>
         <meta name="description" content={product.description} />
       </Helmet>
 
@@ -68,7 +122,7 @@ const ProductPage = () => {
             <li>/</li>
             <li>History</li>
             <li>/</li>
-            <li className="text-gray-900 font-medium">{product.title}</li>
+            <li className="text-gray-900 font-medium">{product.name}</li>
           </ol>
         </nav>
 
@@ -80,7 +134,7 @@ const ProductPage = () => {
                 <div className="relative aspect-[3/4] bg-gray-100 rounded overflow-hidden">
                   <img 
                     src={images[currentImage]} 
-                    alt={product.title}
+                    alt={product.name}
                     className="w-full h-full object-contain"
                   />
                   <button 
@@ -109,7 +163,7 @@ const ProductPage = () => {
                     >
                       <img 
                         src={img}
-                        alt={`${product.title} ${index + 1}`}
+                        alt={`${product.name} ${index + 1}`}
                         className="w-16 h-16 object-cover"
                       />
                     </button>
@@ -120,44 +174,35 @@ const ProductPage = () => {
 
             {/* Product Details */}
             <div className="md:w-1/2">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.title}</h1>
-              
-              <div className="flex items-center mb-4">
-                <div className="flex text-yellow-400">
-                  {[...Array(5)].map((_, i) => (
-                    <svg key={i} className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <span className="text-gray-600 ml-2">({product.reviews} customer reviews)</span>
-              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
 
-              <div className="text-3xl font-bold text-gray-900 mb-6">₹{product.price.toFixed(2)}</div>
+              <p className="text-2xl font-bold text-gray-900 mb-6">₹{product.price.toFixed(2)}</p>
 
               <div className="flex items-center mb-6">
-                <span className="text-gray-700 mr-4">Quantity:</span>
-                <div className="flex items-center border border-gray-300 rounded">
+                <div className="flex items-center space-x-4">
+                <div className="flex items-center border rounded-md">
                   <button 
-                    className="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
                     onClick={() => handleQuantityChange(quantity - 1)}
+                    disabled={quantity <= 1}
                   >
-                    <FiMinus />
+                    <FiMinus className="w-4 h-4" />
                   </button>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    value={quantity} 
-                    onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
-                    className="w-12 text-center border-x border-gray-300 py-1 outline-none"
-                  />
+                  <span className="px-4 py-2 w-12 text-center">{quantity}</span>
                   <button 
-                    className="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
                     onClick={() => handleQuantityChange(quantity + 1)}
+                    disabled={quantity >= (product.stock || 1)}
                   >
-                    <FiPlus />
+                    <FiPlus className="w-4 h-4" />
                   </button>
                 </div>
+              </div>
+              {product.stock > 0 ? (
+                <p className="text-sm text-green-600 mt-2">In Stock ({product.stock} available)</p>
+              ) : (
+                <p className="text-sm text-red-600 mt-2">Currently out of stock</p>
+              )}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -184,11 +229,7 @@ const ProductPage = () => {
                 <div className="flex items-center mb-2">
                   <span className="text-gray-700 w-24">Categories:</span>
                   <div className="flex flex-wrap gap-2">
-                    {product.categories.map((category, index) => (
-                      <a key={index} href="#" className="text-blue-600 hover:underline">
-                        {category}{index < product.categories.length - 1 ? ',' : ''}
-                      </a>
-                    ))}
+                    {product.category?.name || 'No category'}
                   </div>
                 </div>
               </div>
@@ -219,24 +260,14 @@ const ProductPage = () => {
           {/* Product Description - Moved below */}
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Product Description</h2>
-            <div className="space-y-4 text-gray-700">
-              {product.description.map((paragraph, index) => (
-                <p key={index} className={index >= 2 && index <= 7 ? 'ml-4' : ''}>
-                  {paragraph}
-                </p>
-              ))}
-              
-              <div className="mt-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">Key Highlights:</h3>
-                <ul className="space-y-2">
-                  {product.highlights.map((highlight, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-green-600 mr-2">•</span>
-                      <span>{highlight}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div className="prose max-w-none mb-8">
+              {descriptionList.length > 0 ? (
+                descriptionList.map((paragraph, index) => (
+                  <p key={index} className="text-gray-700 mb-4">{paragraph}</p>
+                ))
+              ) : (
+                <p className="text-gray-700">{product.description || 'No description available.'}</p>
+              )}
             </div>
           </div>
         </div>
