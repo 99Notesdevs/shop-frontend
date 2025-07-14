@@ -5,7 +5,9 @@ import LogIn from './pages/login'
 import { HomeLayout } from './components/home/layout'
 import { ThemeProvider } from './components/ui/themeprovider'
 import Home from './pages/home'
-
+import Products from './pages/products'
+import ProductPage from './pages/product-page'
+import ContactUs from './pages/contactus'
 function App() {
   return (
     <ThemeProvider>
@@ -17,6 +19,9 @@ function App() {
               <HomeLayout>
                 <Routes>
                 <Route path="/" element={<Home />} />  
+                <Route path="/products" element={<Products />} />  
+                <Route path="/product/:id" element={<ProductPage />} />  
+                <Route path="/contact" element={<ContactUs />} />  
                   {/* Add more routes here that should use the layout */}
                 </Routes>
               </HomeLayout>
