@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import PriceRangeFilter from '../components/common/filter';
-import StockStatusFilter from '../components/common/stockstatus';
-import TopRatedProducts from '../components/common/topratedproducts';
-import { ProductCard } from '../components/product/product-card';
-import { Button } from '../components/ui/button';
+import PriceRangeFilter from '../common/filter';
+import StockStatusFilter from '../common/stockstatus';
+import TopRatedProducts from '../common/topratedproducts';
+import { ProductCard } from './product-card';
+import { Button } from '../ui/button';
 
 // Mock data for products - same as in home.tsx
 const mockProducts = [

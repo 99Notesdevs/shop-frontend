@@ -67,7 +67,7 @@ export function ProductCard({
         </div>
         
         <div className="flex items-center justify-between mt-2">
-          <span className="text-lg font-semibold">${price.toFixed(2)}</span>
+          <span className="text-lg font-semibold">₹{price.toFixed(2)}</span>
           <Button 
             size="sm" 
             onClick={(e) => {
