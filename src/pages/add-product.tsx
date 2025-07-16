@@ -1,17 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { env } from '../config/env';
 
+interface Category {
+  id: number;
+  name: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function AddProduct() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showCategoryForm, setShowCategoryForm] = useState(false);
-  const [categoryForm, setCategoryForm] = useState({
-    name: '',
-    description: ''
-  });
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${env.API}/category`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch categories');
+        }
+        const data = await response.json();
+        if (data.success && data.data) {
+          setCategories(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        toast.error('Failed to load categories');
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -30,55 +58,6 @@ export default function AddProduct() {
     }));
   };
 
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setCategoryForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleAddCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!categoryForm.name) {
-      toast.error('Category name is required');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${env.API}/category`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(categoryForm),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to add category');
-      }
-
-      const data = await response.json();
-      
-      // Update the category ID in the form
-      setFormData(prev => ({
-        ...prev,
-        categoryId: data.id.toString()
-      }));
-
-      // Reset the category form
-      setCategoryForm({
-        name: '',
-        description: ''
-      });
-      setShowCategoryForm(false);
-      
-      toast.success('Category added successfully!');
-    } catch (error) {
-      console.error('Error adding category:', error);
-      toast.error('Failed to add category. Please try again.');
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,87 +171,30 @@ export default function AddProduct() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowCategoryForm(!showCategoryForm)}
-                  className="text-sm text-indigo-600 hover:text-indigo-500"
-                >
-                  {showCategoryForm ? 'Hide category form' : '+ Add New Category'}
-                </button>
-              </div>
-              
-              {!showCategoryForm && (
-                <input
-                  type="number"
+              <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700">
+                Category <span className="text-red-500">*</span>
+              </label>
+              {isLoadingCategories ? (
+                <div className="animate-pulse h-10 bg-gray-200 rounded-md"></div>
+              ) : (
+                <select
                   id="categoryId"
                   name="categoryId"
-                  min="1"
                   required
                   value={formData.categoryId}
                   onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                  placeholder="Enter category ID"
-                />
-              )}
-              
-              {showCategoryForm && (
-                <div className="mt-2 p-4 bg-gray-50 rounded-md">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">Add New Category</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label htmlFor="categoryName" className="block text-sm font-medium text-gray-700">
-                        Category Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        id="categoryName"
-                        name="name"
-                        required
-                        value={categoryForm.name}
-                        onChange={handleCategoryChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                        placeholder="e.g., Electronics, Clothing"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="categoryDescription" className="block text-sm font-medium text-gray-700">
-                        Description
-                      </label>
-                      <textarea
-                        id="categoryDescription"
-                        name="description"
-                        rows={2}
-                        value={categoryForm.description}
-                        onChange={handleCategoryChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                        placeholder="Brief description of the category"
-                      />
-                    </div>
-                    <div className="flex justify-end space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowCategoryForm(false)}
-                        className="px-3 py-1 text-sm border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleAddCategory}
-                        className="px-3 py-1 text-sm border border-transparent rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                      >
-                        Save Category
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border bg-white"
+                >
+                  <option value="">Select a category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
               )}
               <p className="mt-1 text-xs text-gray-500">
-                {!showCategoryForm ? 'Enter the category ID or add a new category' : 'Fill in the details for the new category'}
+                Select a category for this product
               </p>
             </div>
 
