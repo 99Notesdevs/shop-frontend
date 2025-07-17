@@ -8,7 +8,7 @@ import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
-import { env } from '../config/env';
+import { api } from '../api/route';
 
 const AddCategoryPage = () => {
   const navigate = useNavigate();
@@ -60,17 +60,9 @@ const AddCategoryPage = () => {
     setLoading(true);
     
     try {
-      const response = await fetch(`${env.API}/category`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
+      const data = await api.post(`/category`, formData) as { success: boolean; message?: string };
+
+      if (!data.success) {
         throw new Error(data.message || 'Failed to create category');
       }
       

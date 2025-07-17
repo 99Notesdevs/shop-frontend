@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { env } from '../../config/env';
+import { api } from '../../api/route';
 
 interface Category {
   id: number | string;
@@ -24,9 +23,10 @@ const CategoriesDropdown: React.FC<CategoriesDropdownProps> = ({ onCategorySelec
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get(`${env.API}/category`);
-        if (response.data.success) {
-          setCategories(response.data.data);
+        const response = await api.get('/category') as { success: boolean; data: Category[] };
+        console.log(response);
+        if (response.success) {
+          setCategories(response.data);
         } else {
           setError('Failed to fetch categories');
         }

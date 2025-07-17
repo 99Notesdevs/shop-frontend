@@ -3,8 +3,7 @@ import { Helmet } from 'react-helmet';
 import { useParams } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight, FiMaximize2, FiHeart, FiShare2, FiMinus, FiPlus, FiAlertCircle } from 'react-icons/fi';
 import { FaFacebook, FaTwitter, FaPinterest, FaLinkedin, FaEnvelope } from 'react-icons/fa';
-import axios from 'axios';
-import { env } from '../config/env';
+import { api } from '../api/route';
 
 interface Product {
   id: number;
@@ -33,9 +32,9 @@ const ProductPage = () => {
     const fetchProduct = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${env.API}/product/${id}`);
-        if (response.data.success) {
-          const productData = response.data.data;
+        const data = await api.get(`/product/${id}`) as { success: boolean; data: Product };
+        if (data.success) {
+          const productData = data.data;
           setProduct(productData);
           
           // If product has imageUrl, use it, otherwise use placeholder
@@ -44,7 +43,7 @@ const ProductPage = () => {
             : ['/placeholder-product.jpg'];
           setImages(productImages);
         } else {
-          throw new Error(response.data.message || 'Failed to fetch product');
+          throw new Error('Failed to fetch product');
         }
       } catch (err) {
         console.error('Error fetching product:', err);

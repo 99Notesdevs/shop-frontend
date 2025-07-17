@@ -6,7 +6,7 @@ import { ToggleMode } from './togglemode';
 import { LogIn, ChevronDown } from 'lucide-react';
 
 interface User {
-  _id?: string;
+  id?: number;
   firstName?: string;
   lastName?: string;
   email?: string;
