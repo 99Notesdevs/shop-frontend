@@ -1,4 +1,4 @@
-import { env } from "@/config/env";
+import { env } from "../config/env";
 import Cookies from "js-cookie";
 
 const BASE_URL = env.API;
