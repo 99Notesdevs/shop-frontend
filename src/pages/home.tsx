@@ -5,10 +5,10 @@ import TopRatedProducts from '../components/common/topratedproducts';
 import { ProductCard } from '../components/product/product-card';
 import { Button } from '../components/ui/button';
 import ErrorBoundary from '../components/common/ErrorBoundary';
-import { env } from '../config/env';
 import { toast } from 'react-toastify';
 import Categories from '../components/product/categories';
 import 'react-toastify/dist/ReactToastify.css';
+import { api } from '../api/route';
 
 // Define the Category interface to match the one in categories.tsx
 interface Category {
@@ -50,10 +50,9 @@ const Home: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${env.API}/category`);
-        if (response.ok) {
-          const data = await response.json();
-          setCategories(Array.isArray(data) ? data : data.data || []);
+        const response = await api.get(`/category`) as { success: boolean; data: Category[] };
+        if (response.success) {
+          setCategories(Array.isArray(response.data) ? response.data : []);
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -69,25 +68,21 @@ const Home: React.FC = () => {
     
     const fetchProducts = async () => {
       try {
-        console.log('Fetching products from:', `${env.API}/product`);
-        const response = await fetch(`${env.API}/product`);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('API Error Response:', errorText);
-          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        console.log('Fetching products from:', `/product`);
+        const data = await api.get(`/product`) as { success: boolean; data: Product[] };
+
+        if (!data.success) {
+          console.error('API Error Response:', data);
+          throw new Error(`API error`);
         }
         
-        const data = await response.json();
         console.log('API Response:', data);
         
         // Handle different response formats
         let productsArray = [];
         if (Array.isArray(data)) {
           productsArray = data;
-        } else if (data && Array.isArray(data.products)) {
-          productsArray = data.products;
-        } else if (data && data.data && Array.isArray(data.data)) {
+        } else if (data && Array.isArray(data.data)) {
           productsArray = data.data;
         } else {
           console.warn('Unexpected API response format:', data);

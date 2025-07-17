@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { env } from '../config/env';
+import { api } from '../api/route';
 
 interface Category {
   id: number;
@@ -21,11 +21,10 @@ export default function AddProduct() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${env.API}/category`);
-        if (!response.ok) {
+        const data = await api.get('/category') as { success: boolean; data: Category[] };
+        if (!data.success) {
           throw new Error('Failed to fetch categories');
         }
-        const data = await response.json();
         if (data.success && data.data) {
           setCategories(data.data);
         }
@@ -64,21 +63,15 @@ export default function AddProduct() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${env.API}/product`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const response = await api.post(`/product`, {
           ...formData,
           price: parseFloat(formData.price),
           stock: parseInt(formData.stock, 10),
           categoryId: parseInt(formData.categoryId, 10),
           validity: formData.validity ? parseInt(formData.validity, 10) : undefined
-        }),
-      });
+        }) as { success: boolean; message?: string };
 
-      if (!response.ok) {
+      if (!response.success) {
         throw new Error('Failed to add product');
       }
 
