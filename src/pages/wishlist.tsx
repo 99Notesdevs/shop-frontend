@@ -2,7 +2,7 @@ import { Heart, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-
+import { env } from '../config/env';
 interface Product {
   id: number;
   name: string;
@@ -14,7 +14,7 @@ interface Product {
 export default function WishlistPage() {
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const { currentUser } = useAuth();
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     const fetchWishlist = async () => {
@@ -24,7 +24,7 @@ export default function WishlistPage() {
       }
 
       try {
-        const response = await fetch(`http://localhost:3000/api/wishlist/${currentUser.id}`);
+        const response = await fetch(`${env.API}/wishlist/${currentUser.id}`);
         if (!response.ok) throw new Error('Failed to fetch wishlist');
         
         const data = await response.json();
@@ -43,7 +43,7 @@ export default function WishlistPage() {
     if (!currentUser?.id) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/wishlist/${currentUser.id}/${productId}`, {
+      const response = await fetch(`${env.API}/wishlist/${currentUser.id}/${productId}`, {
         method: 'DELETE',
       });
 

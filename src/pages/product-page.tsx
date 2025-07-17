@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight, FiMaximize2, FiHeart, FiShare2, FiMinus, FiPlus, FiAlertCircle } from 'react-icons/fi';
 import { FaFacebook, FaTwitter, FaPinterest, FaLinkedin, FaEnvelope } from 'react-icons/fa';
 import { api } from '../api/route';
+import { useAuth } from '../contexts/AuthContext';
+import Cookies from 'js-cookie';
+import toast from 'react-hot-toast';
 
 interface Product {
   id: number;
@@ -16,7 +19,6 @@ interface Product {
     id: number;
     name: string;
   };
-
 }
 
 const ProductPage = () => {
@@ -27,6 +29,10 @@ const ProductPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [images, setImages] = useState<string[]>(['/placeholder-product.jpg']);
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -61,6 +67,124 @@ const ProductPage = () => {
     }
   }, [id]);
 
+  const handleBuyNow = async () => {
+    const token = Cookies.get("token");
+    const data = {
+      orderDate: new Date().toISOString(),
+      totalAmount: 1200,
+      status: "Pending",
+      billingAddress: "",
+      shippingAddress: "",
+    };
+    const response = await fetch(`${api}/order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (response.status === 403) {
+      alert('Please login to continue');
+      window.location.href = '/users/login';
+      return;
+    }
+    const responseData = await response.json();
+    console.log("First ", responseData);
+    const orderId = responseData.data.id;
+    const orderData = {
+      orderId: orderId,
+      phonepe_transactionId: "",
+      status: "",
+      amount: data.totalAmount,
+      redirectUrl: "",
+      validity: 10
+    }
+    const response2 = await fetch(`${api}/payments/create-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(orderData),
+    });
+    const responseData2 = await response2.json();
+    console.log(responseData2.data);
+    const redirectUrl = responseData2.redirectUrl;
+    window.location.href = redirectUrl;
+  };
+    
+
+  // Check if product is in wishlist
+  // useEffect(() => {
+  //   const checkWishlistStatus = async () => {
+  //     if (!currentUser?.id || !product) return;
+      
+  //     try {
+  //       const response = await api.get(`${api}/wishlist/check/${currentUser.id}/${product.id}`);
+  //       setIsInWishlist(response.data.isInWishlist);
+  //     } catch (error) {
+  //       console.error('Error checking wishlist status:', error);
+  //     }
+  //   };
+
+  //   checkWishlistStatus();
+  // }, [currentUser, product]);
+
+  
+
+  // const handleWishlistToggle = async () => {
+  //   if (!currentUser) {
+  //     toast.info('Please log in to manage your wishlist');
+  //     navigate('/login');
+  //     return;
+  //   }
+
+  //   if (!product) return;
+
+  //   setWishlistLoading(true);
+  //   try {
+  //     if (isInWishlist) {
+  //       // Remove from wishlist
+  //       await api.delete(`${api}/wishlist/remove`, {
+  //         data: {
+  //           userId: currentUser.id,
+  //           productId: product.id
+  //         }
+  //       });
+  //       setIsInWishlist(false);
+  //       toast.success('Removed from wishlist');
+  //     } else {
+  //       // Add to wishlist
+  //       await api.post(`${api}/wishlist/add`, {
+  //         userId: currentUser.id,
+  //         productId: product.id
+  //       });
+  //       setIsInWishlist(true);
+  //       toast.success('Added to wishlist');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error updating wishlist:', error);
+  //     toast.error('Failed to update wishlist');
+  //   } finally {
+  //     setWishlistLoading(false);
+  //   }
+  // };
+
+  const handleQuantityChange = (newQuantity: number) => {
+    if (newQuantity >= 1) {
+      setQuantity(newQuantity);
+    }
+  };
+
+  const nextImage = () => {
+    setCurrentImage((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImage((prev) => (prev - 1 + images.length) % images.length);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -90,22 +214,8 @@ const ProductPage = () => {
     ? product.description.split('\n').filter(line => line.trim() !== '')
     : [];
 
-  const handleQuantityChange = (newQuantity: number) => {
-    if (newQuantity >= 1) {
-      setQuantity(newQuantity);
-    }
-  };
-
-  const nextImage = () => {
-    setCurrentImage((prev) => (prev + 1) % images.length);
-  };
-
-  const prevImage = () => {
-    setCurrentImage((prev) => (prev - 1 + images.length) % images.length);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--bg-light)] dark:bg-[var(--bg-dark)]">
       <Helmet>
         <title>{product.name} - 99Notes</title>
         <meta name="description" content={product.description} />
@@ -208,15 +318,22 @@ const ProductPage = () => {
                 <button className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-6 rounded-md transition-colors">
                   ADD TO CART
                 </button>
-                <button className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium py-3 px-6 rounded-md transition-colors">
+                <button onClick={handleBuyNow} className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium py-3 px-6 rounded-md transition-colors">
                   BUY NOW
                 </button>
               </div>
 
               <div className="flex items-center space-x-4 mb-6">
-                <button className="flex items-center text-gray-600 hover:text-gray-900">
-                  <FiHeart className="mr-2" />
-                  <span>Add to wishlist</span>
+                <button 
+                  // onClick={handleWishlistToggle}
+                  disabled={wishlistLoading}
+                  className={`flex items-center ${isInWishlist ? 'text-red-500' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  <FiHeart 
+                    className={`mr-2 ${isInWishlist ? 'fill-current' : ''}`} 
+                    style={isInWishlist ? { fill: 'currentColor' } : {}} 
+                  />
+                  <span>{isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}</span>
                 </button>
                 <button className="flex items-center text-gray-600 hover:text-gray-900">
                   <FiShare2 className="mr-2" />

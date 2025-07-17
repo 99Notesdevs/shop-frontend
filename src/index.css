@@ -2,9 +2,17 @@
 
 /* GLOBAL CSS */
 :root {
+  /* Light Theme (default) */
+  --foreground: #1a202c;
+  --background: #ffffff;
+  
   /* Primary Colors */
   --primary: #fbbc34;
   --primary-hover: #fbb41b;
+  --indigo-600: #4f46e5;
+  --indigo-700: #4338ca;
+  --indigo-500: #6366f1;
+  --red-600: #dc2626;
   
   /* Text Colors */
   --text-primary: #4a5568;
@@ -13,10 +21,10 @@
   --text-dark: #ffffff;
   
   /* Background Colors */
-  --bg-light: #ffffff; /*white*/
-  --bg-light-secondary: #f9fafb; /*gray-50*/
-  --bg-dark: #0f172a; /* slate-900*/
-  --bg-dark-secondary: #1e293b; /*slate-800*/
+  --bg-light: #ffffff;
+  --bg-light-secondary: #f9fafb;
+  --bg-dark: #1e293b;/*slate-800*/
+  --bg-dark-secondary: #0f172a;/*slate-900*/
   
   /* Border Colors */
   --border-light: #e5e7eb;
@@ -28,36 +36,61 @@
   --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* Dark mode styles */
+/* Dark Theme */
 .dark {
-  --text-primary: #f3f4f6;
-  --text-secondary: #d1d5db;
+  --foreground: #ffffff;
+  --background: #0f172a;
+  
+  --text-primary: #e2e8f0;
+  --text-secondary: #a0aec0;
   --text-light: #ffffff;
   --text-dark: #000000;
   
-  --bg-light: #0f172a; 
-  --bg-light-secondary: #1e293b; 
-  --bg-dark: #ffffff;
-  --bg-dark-secondary: #f9fafb;
+  --bg-light: #1a202c;
+  --bg-light-secondary: #2d3748;
+  --bg-dark: #f7fafc;
+  --bg-dark-secondary: #edf2f7;
   
-  --border-light: #334155;
-  --border-dark: #e5e7eb;
-  
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --border-light: #4a5568;
+  --border-dark: #e2e8f0;
 }
 
-/* Apply dark mode to the root element */
-html.dark {
-  background-color: var(--bg-light);
-  color: var(--text-primary);
-}
-
-/* Apply dark mode to the body */
+/* Base styles */
 body {
-  background-color: var(--bg-light);
-  color: var(--text-primary);
-  transition: background-color 0.3s, color 0.3s;
+  color: var(--foreground);
+  background-color: var(--background);
+  transition: color 0.3s ease, background-color 0.3s ease;
 }
 
+/* Utility classes for theming */
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.bg-light {
+  background-color: var(--bg-light);
+}
+
+.bg-light-secondary {
+  background-color: var(--bg-light-secondary);
+}
+
+.bg-dark {
+  background-color: var(--bg-dark);
+}
+
+.bg-dark-secondary {
+  background-color: var(--bg-dark-secondary);
+}
+
+.border-light {
+  border-color: var(--border-light);
+}
+
+.border-dark {
+  border-color: var(--border-dark);
+}
