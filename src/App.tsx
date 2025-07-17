@@ -13,6 +13,7 @@ import CartPage from './pages/cart';
 import AddProduct from './pages/add-product';
 import WishlistPage from './pages/wishlist';
 import AddCategory from './pages/add-category';
+import Checkout from './pages/checkout';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
                     <Route path="/wishlist" element={<WishlistPage />} />
                     <Route path="/add-product" element={<AddProduct />} />
                     <Route path="/add-category" element={<AddCategory />} />
+                    <Route path="/checkout" element={<Checkout />} />
                   </Routes>
                 </HomeLayout>
               } />
