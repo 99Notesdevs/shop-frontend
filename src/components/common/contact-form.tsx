@@ -1,8 +1,8 @@
 'use client';
 
-import { env } from '../../config/env';
 import React, { useState } from 'react';
 import { FaUser, FaEnvelope, FaPhone, FaComment } from 'react-icons/fa';
+import { env } from '../../config/env';
 
 interface FormData {
   name: string;
@@ -79,7 +79,7 @@ const ContactForm: React.FC = () => {
         phone: formData.mobile,
         message: formData.message
       }
-      const response = await fetch(`${env.API}/form`, {
+      const response = await fetch(`${env.API_MAIN}/form`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
