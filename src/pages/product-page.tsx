@@ -7,6 +7,7 @@ import { api } from '../api/route';
 import { useAuth } from '../contexts/AuthContext';
 import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
+import { env } from '../config/env';
 
 interface Product {
   id: number;
@@ -76,7 +77,7 @@ const ProductPage = () => {
       billingAddress: "",
       shippingAddress: "",
     };
-    const response = await fetch(`${api}/order`, {
+    const response = await fetch(`${env.API}/order`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -100,7 +101,7 @@ const ProductPage = () => {
       redirectUrl: "",
       validity: 10
     }
-    const response2 = await fetch(`${api}/payments/create-order`, {
+    const response2 = await fetch(`${env.API}/payments/create-order`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -115,61 +116,75 @@ const ProductPage = () => {
   };
     
 
-  // Check if product is in wishlist
-  // useEffect(() => {
-  //   const checkWishlistStatus = async () => {
-  //     if (!currentUser?.id || !product) return;
-      
-  //     try {
-  //       const response = await api.get(`${api}/wishlist/check/${currentUser.id}/${product.id}`);
-  //       setIsInWishlist(response.data.isInWishlist);
-  //     } catch (error) {
-  //       console.error('Error checking wishlist status:', error);
-  //     }
-  //   };
+  const addToWishlist = async (productId: number) => {
+    if (!currentUser) {
+      toast.error('Please sign in to add items to your wishlist');
+      navigate('/login');
+      return;
+    }
 
-  //   checkWishlistStatus();
-  // }, [currentUser, product]);
+    setWishlistLoading(true);
+    try {
+      const response = await fetch(`${env.API}/wishlist/${productId}/1`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        credentials: 'include'
+      });
 
-  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add to wishlist');
+      }
 
-  // const handleWishlistToggle = async () => {
-  //   if (!currentUser) {
-  //     toast.info('Please log in to manage your wishlist');
-  //     navigate('/login');
-  //     return;
-  //   }
+      setIsInWishlist(true);
+      toast.success('Added to wishlist');
+    } catch (error) {
+      console.error('Error adding to wishlist:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to add to wishlist');
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
 
-  //   if (!product) return;
+  const removeFromWishlist = async (productId: number) => {
+    setWishlistLoading(true);
+    try {
+      const response = await fetch(`${env.API}/wishlist/${productId}/1`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        credentials: 'include'
+      });
 
-  //   setWishlistLoading(true);
-  //   try {
-  //     if (isInWishlist) {
-  //       // Remove from wishlist
-  //       await api.delete(`${api}/wishlist/remove`, {
-  //         data: {
-  //           userId: currentUser.id,
-  //           productId: product.id
-  //         }
-  //       });
-  //       setIsInWishlist(false);
-  //       toast.success('Removed from wishlist');
-  //     } else {
-  //       // Add to wishlist
-  //       await api.post(`${api}/wishlist/add`, {
-  //         userId: currentUser.id,
-  //         productId: product.id
-  //       });
-  //       setIsInWishlist(true);
-  //       toast.success('Added to wishlist');
-  //     }
-  //   } catch (error) {
-  //     console.error('Error updating wishlist:', error);
-  //     toast.error('Failed to update wishlist');
-  //   } finally {
-  //     setWishlistLoading(false);
-  //   }
-  // };
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to remove from wishlist');
+      }
+
+      setIsInWishlist(false);
+      toast.success('Removed from wishlist');
+    } catch (error) {
+      console.error('Error removing from wishlist:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to remove from wishlist');
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
+
+  const toggleWishlist = async () => {
+    if (!id) return;
+    
+    if (isInWishlist) {
+      await removeFromWishlist(parseInt(id));
+    } else {
+      await addToWishlist(parseInt(id));
+    }
+  };
 
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity >= 1) {
@@ -183,6 +198,48 @@ const ProductPage = () => {
 
   const prevImage = () => {
     setCurrentImage((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+    
+    const token = Cookies.get("token");
+    if (!token) {
+      toast.error('Please login to add items to cart');
+      navigate('/users/login');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${env.API}/cart/1?productId=${product.id}&quantity=${quantity}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        toast.error('Please login to continue');
+        navigate('/users/login');
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add item to cart');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Item added to cart successfully!');
+      } else {
+        throw new Error(data.message || 'Failed to add item to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to add item to cart');
+    }
   };
 
   if (loading) {
@@ -315,7 +372,7 @@ const ProductPage = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <button className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-6 rounded-md transition-colors">
+                <button onClick={handleAddToCart} className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-6 rounded-md transition-colors">
                   ADD TO CART
                 </button>
                 <button onClick={handleBuyNow} className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium py-3 px-6 rounded-md transition-colors">
@@ -324,16 +381,23 @@ const ProductPage = () => {
               </div>
 
               <div className="flex items-center space-x-4 mb-6">
-                <button 
-                  // onClick={handleWishlistToggle}
+                <button
+                  onClick={toggleWishlist}
                   disabled={wishlistLoading}
-                  className={`flex items-center ${isInWishlist ? 'text-red-500' : 'text-gray-600 hover:text-gray-900'}`}
+                  className={`flex items-center justify-center p-2 rounded-full ${
+                    isInWishlist 
+                      ? 'text-red-500 hover:bg-red-50' 
+                      : 'text-gray-400 hover:bg-gray-100'
+                  } transition-colors duration-200`}
+                  title={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
                 >
-                  <FiHeart 
-                    className={`mr-2 ${isInWishlist ? 'fill-current' : ''}`} 
-                    style={isInWishlist ? { fill: 'currentColor' } : {}} 
-                  />
-                  <span>{isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}</span>
+                  {wishlistLoading ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
+                  ) : (
+                    <FiHeart 
+                      className={`h-6 w-6 ${isInWishlist ? 'fill-current' : ''}`} 
+                    />
+                  )}
                 </button>
                 <button className="flex items-center text-gray-600 hover:text-gray-900">
                   <FiShare2 className="mr-2" />

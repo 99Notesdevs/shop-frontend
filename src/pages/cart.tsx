@@ -1,15 +1,90 @@
 import { ShoppingCart, Trash2 } from 'lucide-react';
-import { useCart } from '../contexts/cart-context';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { env } from '../config/env';
+import Cookies from 'js-cookie';
+interface CartItem {
+  id: number;
+  productId: number;
+  name: string;
+  description: string;
+  price: number;
+  quantity: number;
+  image?: string;
+}
 
 export default function CartPage() {
-  // Sample cart data - in a real app, this would come from your cart context
-  const { cartItems, removeFromCart, updateQuantity } = useCart();
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCart = async () => {
+      try {
+        const data = await fetch(`${env.API}/cart/user/1`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Cookies.get('token')}`,
+          },
+        });
+        const response = await data.json();
+        console.log(response);
+        // Map the API response to match our CartItem interface
+        const items = response.data?.items?.map((item: any) => ({
+          id: item.id,
+          productId: item.productId,
+          name: item.product?.name || 'Product',
+          description: item.product?.description || '',
+          price: item.product?.price || 0,
+          quantity: item.quantity,
+          image: item.product?.images?.[0]?.url
+        })) || [];
+        setCartItems(items);
+      } catch (err) {
+        console.error('Failed to fetch cart:', err);
+        setError('Failed to load cart. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCart();
+  }, []);
 
   // Calculate total amount
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = subtotal > 0 ? 50 : 0; // Example shipping cost
   const total = subtotal + shipping;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your cart...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <h2 className="text-xl font-medium text-gray-900 mb-2">Something went wrong</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -32,6 +107,30 @@ export default function CartPage() {
       </div>
     );
   }
+
+  const handleUpdateQuantity = async (itemId: number, newQuantity: number) => {
+    try {
+      // TODO: Call update cart item API
+      setCartItems(prevItems =>
+        prevItems.map(item =>
+          item.id === itemId ? { ...item, quantity: Math.max(1, newQuantity) } : item
+        )
+      );
+    } catch (error) {
+      console.error('Failed to update quantity:', error);
+      // Optionally show error to user
+    }
+  };
+
+  const handleRemoveItem = async (itemId: number) => {
+    try {
+      // TODO: Call remove item API
+      setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
+    } catch (error) {
+      console.error('Failed to remove item:', error);
+      // Optionally show error to user
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -67,7 +166,7 @@ export default function CartPage() {
                       <div className="mt-4 flex items-center justify-between">
                         <div className="flex items-center">
                           <button 
-                            onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                            onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                             className="p-1 text-gray-400 hover:text-gray-500"
                           >
                             <span className="sr-only">Decrease quantity</span>
@@ -75,7 +174,7 @@ export default function CartPage() {
                           </button>
                           <span className="mx-2 w-8 text-center">{item.quantity}</span>
                           <button 
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                             className="p-1 text-gray-400 hover:text-gray-500"
                           >
                             <span className="sr-only">Increase quantity</span>
@@ -84,7 +183,7 @@ export default function CartPage() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => handleRemoveItem(item.id)}
                           className="text-red-600 hover:text-red-800 flex items-center text-sm"
                         >
                           <Trash2 className="h-5 w-5 mr-1" />

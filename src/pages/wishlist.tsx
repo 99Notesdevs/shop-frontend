@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { env } from '../config/env';
+import toast from 'react-hot-toast';
+
 interface Product {
   id: number;
   name: string;
@@ -18,148 +20,122 @@ export default function WishlistPage() {
 
   useEffect(() => {
     const fetchWishlist = async () => {
-      if (!currentUser?.id) {
-        setLoading(false);
-        return;
-      }
-
+      setLoading(true);
       try {
-        const response = await fetch(`${env.API}/wishlist/${currentUser.id}`);
-        if (!response.ok) throw new Error('Failed to fetch wishlist');
+        const response = await fetch(`${env.API}/wishlist/1`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch wishlist');
+        }
         
         const data = await response.json();
-        setWishlist(data.products || []);
+        setWishlist(data.data?.items || []);
       } catch (error) {
         console.error('Error fetching wishlist:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to load wishlist');
+        setWishlist([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchWishlist();
-  }, [currentUser]);
+  }, []);
 
   const removeFromWishlist = async (productId: number) => {
-    if (!currentUser?.id) return;
-
     try {
-      const response = await fetch(`${env.API}/wishlist/${currentUser.id}/${productId}`, {
+      const response = await fetch(`${env.API}/wishlist/${productId}/1`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        credentials: 'include'
       });
 
-      if (!response.ok) throw new Error('Failed to remove from wishlist');
-      
-      // Update local state
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to remove from wishlist');
+      }
+
       setWishlist(wishlist.filter(item => item.id !== productId));
+      toast.success('Removed from wishlist');
     } catch (error) {
       console.error('Error removing from wishlist:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to remove from wishlist');
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your wishlist...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Sign in to view your wishlist</h2>
-          <p className="text-gray-600 mb-8">Please sign in to see your saved items.</p>
-          <Link
-            to="/login"
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Sign In
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (wishlist.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <Heart className="mx-auto h-16 w-16 text-gray-400" />
-            <h2 className="mt-4 text-3xl font-extrabold text-gray-900">Your wishlist is empty</h2>
-            <p className="mt-2 text-gray-500">Save your favorite items to see them here.</p>
-            <div className="mt-6">
-              <Link
-                to="/products"
-                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Continue Shopping
-              </Link>
-            </div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-8">Your Wishlist</h1>
-        
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <ul className="divide-y divide-gray-200">
-            {wishlist.map((item) => (
-              <li key={item.id} className="p-6 flex flex-col sm:flex-row">
-                <div className="flex-shrink-0">
-                  <img
-                    src={item.imageUrl || 'https://via.placeholder.com/150'}
-                    alt={item.name}
-                    className="w-24 h-24 object-cover rounded-md"
-                  />
-                </div>
-                <div className="mt-4 sm:mt-0 sm:ml-6 flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {item.name}
-                    </h3>
-                    <button
-                      onClick={() => removeFromWishlist(item.id)}
-                      className="text-gray-400 hover:text-red-500"
-                      aria-label="Remove from wishlist"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-                  <p className="mt-1 text-sm text-gray-500">{item.description}</p>
-                  <div className="mt-4 flex items-center justify-between">
-                    <p className="text-lg font-medium text-gray-900">${item.price.toFixed(2)}</p>
-                    <Link
-                      to={`/product/${item.id}`}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      View Product
-                    </Link>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-        
-        <div className="mt-8 flex justify-end">
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">Your Wishlist</h1>
+      
+      {wishlist.length === 0 ? (
+        <div className="text-center py-12">
+          <Heart className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <h2 className="text-xl font-medium text-gray-900 mb-2">Your wishlist is empty</h2>
+          <p className="text-gray-500 mb-6">Save items you love for later</p>
           <Link
             to="/products"
-            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
           >
             Continue Shopping
           </Link>
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {wishlist.map((product) => (
+            <div key={product.id} className="group relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
+              <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden">
+                <img
+                  src={product.imageUrl || '/placeholder-product.jpg'}
+                  alt={product.name}
+                  className="w-full h-48 object-cover object-center"
+                />
+                <button
+                  onClick={() => removeFromWishlist(product.id)}
+                  className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors duration-200"
+                  title="Remove from wishlist"
+                >
+                  <X className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
+              <div className="p-4">
+                <h3 className="text-sm font-medium text-gray-900 line-clamp-2 h-12">
+                  {product.name}
+                </h3>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-lg font-semibold text-gray-900">
+                    ${product.price.toFixed(2)}
+                  </p>
+                  <Link
+                    to={`/products/${product.id}`}
+                    className="text-sm font-medium text-primary hover:text-primary-dark"
+                  >
+                    View Details
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
