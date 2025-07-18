@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight, FiMaximize2, FiHeart, FiShare2, FiMinus, FiPlus, FiAlertCircle } from 'react-icons/fi';
@@ -34,6 +34,41 @@ const ProductPage = () => {
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
+
+  const checkWishlistStatus = useCallback(async (productId: number) => {
+    if (!currentUser) {
+      setIsInWishlist(false);
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${env.API}/wishlist/1`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const wishlistProducts = data.data?.products || [];
+        const isProductInWishlist = wishlistProducts.some((item: any) => item.id === productId);
+        setIsInWishlist(isProductInWishlist);
+      }
+    } catch (error) {
+      console.error('Error checking wishlist status:', error);
+      setIsInWishlist(false);
+    }
+  }, [currentUser]);
+
+  // Check wishlist status when product or user changes
+  useEffect(() => {
+    if (id && product) {
+      checkWishlistStatus(parseInt(id));
+    }
+  }, [id, product, currentUser, checkWishlistStatus]);
 
   useEffect(() => {
     const fetchProduct = async () => {
