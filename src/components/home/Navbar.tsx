@@ -29,7 +29,7 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
   return (
     <>
       <div className="w-full" />
-      <nav className="sticky top-0 w-full bg-[var(--bg-light)] dark:bg-[var(--bg-dark)] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.1)] dark:shadow-[0_2px_10px_-3px_rgba(255,255,255,0.1)] z-40 h-20 flex items-center px-8 transition-colors duration-200">
+      <nav className="sticky top-0 w-full bg-[var(--bg-light)] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.1)] z-40 h-20 flex items-center px-8 transition-colors duration-200">
         {/* Left Section - Logo */}
         <div className="flex-1 flex">
           <Link to="/">
@@ -55,30 +55,30 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
             </button>
           ) : (
             <div className="relative group">
-              <div className="flex items-center gap-2 focus:outline-none cursor-pointer py-2 px-1 rounded-md hover:bg-[var(--bg-light-secondary)] dark:hover:bg-[var(--bg-dark-secondary)] transition-colors">
+              <div className="flex items-center gap-2 focus:outline-none cursor-pointer py-2 px-1 rounded-md hover:bg-[var(--bg-light-secondary)] transition-colors">
                 <img 
                   src={`https://ui-avatars.com/api/?name=${user?.firstName+" "+user?.lastName || 'User'}&background=random`}
                   alt="User Avatar" 
-                  className="w-8 h-8 rounded-full border-2 border-[var(--border-light)] dark:border-[var(--border-dark)] object-cover"
+                  className="w-8 h-8 rounded-full border-2 border-[var(--border-light)] object-cover"
                 />
-                <span className="hidden md:inline text-sm font-medium text-[var(--text-light)] dark:text-[var(--text-dark)]">
+                <span className="hidden md:inline text-sm font-medium text-[var(--text-light)]">
                   {user?.firstName+" "+user?.lastName || 'User'}
                 </span>
-                <ChevronDown className="w-4 h-4 text-[var(--text-light)] dark:text-[var(--text-dark)]" />
+                <ChevronDown className="w-4 h-4 text-[var(--text-light)]" />
               </div>
               
               {/* Dropdown menu */}
-              <div className="absolute right-0 mt-2 w-48 bg-[var(--bg-light)] dark:bg-[var(--bg-dark)] rounded-md shadow-lg py-1 z-50 hidden group-hover:block border border-gray-200 dark:border-gray-700">
+              <div className="absolute right-0 mt-2 w-48 bg-[var(--bg-light)] rounded-md shadow-lg py-1 z-50 hidden group-hover:block border border-gray-200">
                 <Link
                   to="/profile"
-                  className="block px-4 py-2 text-sm text-[var(--text-primary)] dark:text-[var(--text-dark)] hover:bg-[var(--bg-light-secondary)] dark:hover:bg-[var(--bg-dark-secondary)]"
+                  className="block px-4 py-2 text-sm text-[var(--text-primary)]  hover:bg-[var(--bg-light-secondary)]"
                 >
                   Your Profile
                 </Link>
-                <div className="border-t border-[var(--border-light)] dark:border-[var(--border-dark)] my-1"></div>
+                <div className="border-t border-[var(--border-light)] my-1"></div>
                 <button
                   onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 text-sm text-[var(--red-600)] hover:bg-[var(--bg-light-secondary)] dark:hover:bg-[var(--bg-dark-secondary)]"
+                  className="w-full text-left px-4 py-2 text-sm text-[var(--red-600)] hover:bg-[var(--bg-light-secondary)]"
                 >
                   Sign out
                 </button>
@@ -88,7 +88,7 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
            {/* Cart Icon */}
            <button 
             onClick={() => navigate('/cart')}
-            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:text-[var(--text-dark)] dark:hover:text-white transition-colors relative"
+            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors relative"
             aria-label="Cart"
           >
             <ShoppingCart className="w-5 h-5" />
@@ -97,7 +97,7 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
           {/* Wishlist Icon */}
           <button 
             onClick={() => navigate('/wishlist')}
-            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:text-[var(--text-dark)] dark:hover:text-white transition-colors"
+            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
             aria-label="Wishlist"
           >
             <Heart className="w-5 h-5" />

@@ -1,9 +1,9 @@
-import { Heart, X } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { env } from '../config/env';
 import toast from 'react-hot-toast';
+import { ProductCard } from '../components/product/product-card';
 
 interface Product {
   id: number;
@@ -11,13 +11,16 @@ interface Product {
   price: number;
   imageUrl: string;
   description: string;
+  stock: number;
+  categoryId: number;
+  validity: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function WishlistPage() {
-  const [wishlist, setWishlist] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user: currentUser } = useAuth();
-
   useEffect(() => {
     const fetchWishlist = async () => {
       setLoading(true);
@@ -37,11 +40,11 @@ export default function WishlistPage() {
         }
         
         const data = await response.json();
-        setWishlist(data.data?.items || []);
+        setProducts(data.data?.products || []);
       } catch (error) {
         console.error('Error fetching wishlist:', error);
         toast.error(error instanceof Error ? error.message : 'Failed to load wishlist');
-        setWishlist([]);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
@@ -66,12 +69,18 @@ export default function WishlistPage() {
         throw new Error(errorData.message || 'Failed to remove from wishlist');
       }
 
-      setWishlist(wishlist.filter(item => item.id !== productId));
+      setProducts(prevProducts => prevProducts.filter(item => item.id !== productId));
       toast.success('Removed from wishlist');
     } catch (error) {
       console.error('Error removing from wishlist:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to remove from wishlist');
     }
+  };
+
+  const handleAddToCart = (productId: string) => {
+    // Implement add to cart functionality
+    console.log('Add to cart:', productId);
+    toast.success('Added to cart');
   };
 
   if (loading) {
@@ -86,7 +95,7 @@ export default function WishlistPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Your Wishlist</h1>
       
-      {wishlist.length === 0 ? (
+      {products.length === 0 ? (
         <div className="text-center py-12">
           <Heart className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <h2 className="text-xl font-medium text-gray-900 mb-2">Your wishlist is empty</h2>
@@ -100,38 +109,24 @@ export default function WishlistPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {wishlist.map((product) => (
-            <div key={product.id} className="group relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
-              <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden">
-                <img
-                  src={product.imageUrl || '/placeholder-product.jpg'}
-                  alt={product.name}
-                  className="w-full h-48 object-cover object-center"
-                />
-                <button
-                  onClick={() => removeFromWishlist(product.id)}
-                  className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors duration-200"
-                  title="Remove from wishlist"
-                >
-                  <X className="h-5 w-5 text-gray-600" />
-                </button>
-              </div>
-              <div className="p-4">
-                <h3 className="text-sm font-medium text-gray-900 line-clamp-2 h-12">
-                  {product.name}
-                </h3>
-                <div className="mt-2 flex items-center justify-between">
-                  <p className="text-lg font-semibold text-gray-900">
-                    ${product.price.toFixed(2)}
-                  </p>
-                  <Link
-                    to={`/products/${product.id}`}
-                    className="text-sm font-medium text-primary hover:text-primary-dark"
-                  >
-                    View Details
-                  </Link>
-                </div>
-              </div>
+          {products.map((product) => (
+            <div key={product.id} className="relative group">
+              <button
+                onClick={() => removeFromWishlist(product.id)}
+                className="absolute top-2 right-2 z-10 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors duration-200"
+                title="Remove from wishlist"
+              >
+                <Heart className="h-5 w-5 text-red-500 fill-current" />
+              </button>
+              <ProductCard
+                id={product.id.toString()}
+                name={product.name}
+                category={`Category ${product.categoryId}`}
+                description={product.description}
+                price={product.price}
+                imageUrl={product.imageUrl || '/placeholder-product.jpg'}
+                onAddToCart={handleAddToCart}
+              />
             </div>
           ))}
         </div>
