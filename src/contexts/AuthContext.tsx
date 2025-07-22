@@ -95,7 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         // If not admin, check regular user
-        const userData = await fetchUserData(token);
+        const userData = await fetchUserData();
         if (userData) {
           setUser(userData);
           localStorage.setItem("userId", userData.id.toString());
@@ -123,10 +123,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const fetchUserData = async (token: string) => {
+  const fetchUserData = async () => {
     try {
       const response = await fetch(`${env.API_MAIN}/user`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
@@ -139,10 +142,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return null;
     }
   };
-  const fetchUserDetails = async (token: string) => {
+  const fetchUserDetails = async () => {
     try {
       const response = await fetch(`${env.API_MAIN}/user/validate`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
@@ -160,6 +166,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await fetch(`${env.API_MAIN}/user`, {
         method: "POST",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
@@ -168,13 +175,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error("Login failed");
       }
 
-      const data = await response.json();
-      const token = data.data.split(" ")[1];
-      if (Cookies.get("token")) {
-        Cookies.remove("token");
-      }
-      Cookies.set("token", token, { expires: 7 });
-      const userData = await fetchUserData(token);
+      // const data = await response.json();
+      // const token = data.data.split(" ")[1];
+      // if (Cookies.get("token")) {
+      //   Cookies.remove("token");
+      // }
+      // Cookies.set("token", token, { expires: 7 });
+      const userData = await fetchUserData();
 
       if (!userData) {
         throw new Error("Failed to fetch user data");
@@ -279,7 +286,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               const token = data.token.split(" ")[1];
               Cookies.set("token", token, { expires: 7 });
 
-              const userData = await fetchUserData(token);
+              const userData = await fetchUserData();
               if (userData) {
                 setUser(userData);
                 localStorage.setItem("userId", userData.id.toString());

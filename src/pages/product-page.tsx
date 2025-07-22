@@ -46,7 +46,6 @@ const ProductPage = () => {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         credentials: 'include'
       });
@@ -103,20 +102,29 @@ const ProductPage = () => {
     }
   }, [id]);
 
-  const handleBuyNow = async () => {
-    const token = Cookies.get("token");
+  const handleBuyNow = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    if (!product) {
+      console.error('Product data is not available');
+      toast.error('Product information is not available. Please refresh the page.');
+      return;
+    }
+    
+    // const token = Cookies.get("token");
     const data = {
       orderDate: new Date().toISOString(),
-      totalAmount: 1200,
+      totalAmount: product.price,
+
       status: "Pending",
       billingAddress: "",
       shippingAddress: "",
     };
     const response = await fetch(`${env.API}/order`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
@@ -130,23 +138,26 @@ const ProductPage = () => {
     const orderId = responseData.data.id;
     const orderData = {
       orderId: orderId,
+      productId: product?.id,
       phonepe_transactionId: "",
       status: "",
-      amount: data.totalAmount,
+      amount: 1,
       redirectUrl: "",
       validity: 10
     }
-    const response2 = await fetch(`${env.API}/payments/create-order`, {
+    console.log(orderData);
+    const response2 = await fetch(`${env.API}/payments/create-order-product`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(orderData),
     });
     const responseData2 = await response2.json();
     console.log(responseData2.data);
     const redirectUrl = responseData2.redirectUrl;
+    console.log(redirectUrl);
     window.location.href = redirectUrl;
   };
     
@@ -157,16 +168,15 @@ const ProductPage = () => {
       navigate('/login');
       return;
     }
-
+    console.log(product?.id);
     setWishlistLoading(true);
     try {
       const response = await fetch(`${env.API}/wishlist/${productId}/1`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -189,11 +199,10 @@ const ProductPage = () => {
     try {
       const response = await fetch(`${env.API}/wishlist/${productId}/1`, {
         method: 'DELETE',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -248,9 +257,9 @@ const ProductPage = () => {
     try {
       const response = await fetch(`${env.API}/cart/1?productId=${product.id}&quantity=${quantity}`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -307,7 +316,7 @@ const ProductPage = () => {
     : [];
 
   return (
-    <div className="min-h-screen bg-[var(--bg-light)] dark:bg-[var(--bg-dark)]">
+    <div className="min-h-screen bg-[var(--bg-light)]">
       <Helmet>
         <title>{product.name} - 99Notes</title>
         <meta name="description" content={product.description} />

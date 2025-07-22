@@ -2,6 +2,7 @@ import { ShoppingCart, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/route';
+import { useAuth } from '../contexts/AuthContext';
 
 interface CartItem {
   id: number;
@@ -30,16 +31,33 @@ interface CartData {
 
 export default function CartPage() {
   const [cartData, setCartData] = useState<CartData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [localCartItems, setLocalCartItems] = useState<CartItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // Fetch cart data on component mount
+  const { user, isLoading: isAuthLoading } = useAuth();
+
+  // Handle authentication state and fetch cart data
   useEffect(() => {
+    // If auth is still loading, wait
+    if (isAuthLoading) return;
+    
+    // Mark that we've checked auth state
+    setAuthChecked(true);
+    
     const fetchCart = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      if (!user?.id) {
+        setIsLoading(false);
+        setError('Please log in to view your cart');
+        return;
+      }
+      
       try {
-        // First, fetch the cart data using the API route
-        const cartResponse = await api.get<{ success: boolean; data: CartData }>('/cart/user/1');
+        const cartResponse = await api.get<{ success: boolean; data: CartData }>(`/cart/user/${user.id}`);
         
         if (cartResponse.success && cartResponse.data) {
           // Fetch product details for each cart item using the API route
@@ -66,18 +84,18 @@ export default function CartPage() {
           // Initialize local cart items with products
           setLocalCartItems(itemsWithProducts);
         } else {
-          throw new Error('Failed to load cart data');
+          setError('Failed to fetch cart data');
         }
-      } catch (err) {
-        console.error('Failed to fetch cart:', err);
-        setError('Failed to load cart. Please try again later.');
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+        setError('Failed to load cart. Please try again.');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchCart();
-  }, []);
+  }, [user, isAuthLoading]);
 
   // Group cart items by product ID
   const groupedItems = localCartItems.reduce((groups, item) => {
@@ -199,30 +217,28 @@ export default function CartPage() {
     }
   };
 
-  if (isLoading) {
+  // Show loading state if auth is still being checked or data is loading
+  if (!authChecked || isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your cart...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-4xl mb-4">⚠️</div>
-          <h2 className="text-xl font-medium text-gray-900 mb-2">Something went wrong</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          >
-            Try Again
-          </button>
+          <p className="text-red-500 mb-4">{error}</p>
+          {!user?.id && (
+            <Link 
+              to="/login" 
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Go to Login
+            </Link>
+          )}
         </div>
       </div>
     );
@@ -251,8 +267,8 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-extrabold text-gray-900 mb-8">Shopping Cart</h1>
         
         <div className="lg:grid lg:grid-cols-12 lg:gap-x-12 xl:gap-x-16">
