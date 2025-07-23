@@ -1,17 +1,250 @@
 import { ShoppingCart, Trash2 } from 'lucide-react';
-import { useCart } from '../contexts/cart-context';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../api/route';
+import { useAuth } from '../contexts/AuthContext';
+
+interface CartItem {
+  id: number;
+  cartId: number;
+  productId: number;
+  quantity: number;
+  createdAt: string;
+  updatedAt: string;
+  product?: {
+    id: number;
+    name: string;
+    description: string;
+    price: number;
+    images?: Array<{ url: string }>;
+  };
+}
+
+interface CartData {
+  id: number;
+  userId: number;
+  totalAmount: number;
+  createdAt: string;
+  updatedAt: string;
+  cartItems: CartItem[];
+}
 
 export default function CartPage() {
-  // Sample cart data - in a real app, this would come from your cart context
-  const { cartItems, removeFromCart, updateQuantity } = useCart();
+  const [cartData, setCartData] = useState<CartData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [localCartItems, setLocalCartItems] = useState<CartItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // Calculate total amount
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const { user, isLoading: isAuthLoading } = useAuth();
+
+  // Handle authentication state and fetch cart data
+  useEffect(() => {
+    // If auth is still loading, wait
+    if (isAuthLoading) return;
+    
+    // Mark that we've checked auth state
+    setAuthChecked(true);
+    
+    const fetchCart = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      if (!user?.id) {
+        setIsLoading(false);
+        setError('Please log in to view your cart');
+        return;
+      }
+      
+      try {
+        const cartResponse = await api.get<{ success: boolean; data: CartData }>(`/cart/user/${user.id}`);
+        
+        if (cartResponse.success && cartResponse.data) {
+          // Fetch product details for each cart item using the API route
+          const itemsWithProducts = await Promise.all(
+            cartResponse.data.cartItems.map(async (item: CartItem) => {
+              try {
+                const productResponse = await api.get<{ success: boolean; data: any }>(`/product/${item.productId}`);
+                return {
+                  ...item,
+                  product: productResponse.success ? productResponse.data : null
+                };
+              } catch (error) {
+                console.error(`Failed to fetch product ${item.productId}:`, error);
+                return item; // Return item without product data if fetch fails
+              }
+            })
+          );
+          
+          setCartData({
+            ...cartResponse.data,
+            cartItems: itemsWithProducts
+          });
+          
+          // Initialize local cart items with products
+          setLocalCartItems(itemsWithProducts);
+        } else {
+          setError('Failed to fetch cart data');
+        }
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+        setError('Failed to load cart. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCart();
+  }, [user, isAuthLoading]);
+
+  // Group cart items by product ID
+  const groupedItems = localCartItems.reduce((groups, item) => {
+    const existingItem = groups.find(g => g.productId === item.productId);
+    if (existingItem) {
+      existingItem.quantity += item.quantity;
+      existingItem.ids = [...(existingItem.ids || []), item.id];
+    } else {
+      groups.push({
+        ...item,
+        ids: [item.id],
+        quantity: item.quantity
+      });
+    }
+    return groups;
+  }, [] as (CartItem & { ids: number[] })[]);
+
+  // Use grouped items for display
+  const cartItems = groupedItems;
+
+  // Calculate subtotal by summing up all items' prices
+  const subtotal = cartItems.reduce((sum, item) => {
+    return sum + ((item.product?.price || 0) * item.quantity);
+  }, 0);
+  
   const shipping = subtotal > 0 ? 50 : 0; // Example shipping cost
   const total = subtotal + shipping;
 
-  if (cartItems.length === 0) {
+  const handleUpdateQuantity = async (itemId: number, newQuantity: number) => {
+    try {
+      // Find the item to update
+      const itemToUpdate = localCartItems.find(item => item.id === itemId);
+      if (!itemToUpdate) return;
+
+      // Calculate the difference in quantity
+      const quantityDiff = Math.max(1, newQuantity) - itemToUpdate.quantity;
+      if (quantityDiff === 0) return;
+
+      // Update local state optimistically for all matching product items
+      const updatedItems = localCartItems.map(item => {
+        if (item.productId === itemToUpdate.productId) {
+          // For the first item, set the new quantity
+          if (item.id === itemId) {
+            return { ...item, quantity: Math.max(1, newQuantity) };
+          }
+          // For other items of the same product, adjust their quantities proportionally
+          else if (quantityDiff > 0) {
+            // When increasing, only update the first item to avoid multiple API calls
+            return item;
+          } else {
+            // When decreasing, distribute the decrease across all items
+            const newItemQuantity = Math.max(1, item.quantity + Math.floor(quantityDiff / localCartItems.filter(i => i.productId === itemToUpdate.productId).length));
+            return { ...item, quantity: newItemQuantity };
+          }
+        }
+        return item;
+      });
+      
+      setLocalCartItems(updatedItems);
+      
+      // Call the API to update the quantity for the specific item
+      const cartId = cartData?.id;
+      if (!cartId) throw new Error('Cart not found');
+      
+      await api.put(`/cart/${cartId}/${itemId}`, { 
+        quantity: Math.max(1, newQuantity) 
+      });
+      
+      // Update cart data with the new quantities
+      if (cartData) {
+        setCartData({
+          ...cartData,
+          cartItems: cartData.cartItems.map(item => {
+            const updatedItem = updatedItems.find(ui => ui.id === item.id);
+            return updatedItem ? { ...item, quantity: updatedItem.quantity } : item;
+          })
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update quantity:', error);
+      // Revert local state on error
+      setLocalCartItems([...localCartItems]);
+    }
+  };
+
+  const handleRemoveItem = async (cartItemId: number) => {
+    try {
+      // Get the cart ID from cartData
+      const cartId = cartData?.id;
+      
+      if (!cartId) {
+        throw new Error('Cart not found');
+      }
+
+      // Show loading state
+      setIsLoading(true);
+
+      // Call the API to remove the item from the cart using the API route
+      await api.delete(`/cart/${cartId}/${cartItemId}`);
+
+      // Update local state to remove the deleted item
+      setLocalCartItems(prevItems => 
+        prevItems.filter(item => item.id !== cartItemId)
+      );
+      
+      // Also update cartData if it exists
+      if (cartData) {
+        setCartData(prevData => ({
+          ...prevData!,
+          cartItems: prevData!.cartItems.filter(item => item.id !== cartItemId)
+        }));
+      }
+      
+    } catch (error) {
+      console.error('Failed to remove item:', error);
+      setError(error instanceof Error ? error.message : 'Failed to remove item from cart');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Show loading state if auth is still being checked or data is loading
+  if (!authChecked || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          {!user?.id && (
+            <Link 
+              to="/login" 
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Go to Login
+            </Link>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (!cartData || cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -34,8 +267,8 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-extrabold text-gray-900 mb-8">Shopping Cart</h1>
         
         <div className="lg:grid lg:grid-cols-12 lg:gap-x-12 xl:gap-x-16">
@@ -44,55 +277,54 @@ export default function CartPage() {
             <div className="bg-white shadow overflow-hidden sm:rounded-lg">
               <ul className="divide-y divide-gray-200">
                 {cartItems.map((item) => (
-                  <li key={item.id} className="p-6 flex flex-col sm:flex-row">
-                    <div className="flex-shrink-0">
-                      <img
-                        src={item.image || 'https://via.placeholder.com/150'}
-                        alt={item.name}
-                        className="w-24 h-24 rounded-md object-cover object-center sm:w-32 sm:h-32"
-                      />
-                    </div>
-
-                    <div className="mt-4 sm:mt-0 sm:ml-6 flex-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-medium text-gray-900">
-                          {item.name}
-                        </h3>
-                        <p className="ml-4 text-lg font-medium text-gray-900">
-                          ₹{item.price.toFixed(2)}
-                        </p>
+                  <div key={item.id} className="border-b border-gray-200 py-6">
+                    <div className="flex items-center">
+                      <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200">
+                        {item.product?.images?.[0]?.url ? (
+                          <img
+                            src={item.product.images[0].url}
+                            alt={item.product.name}
+                            className="h-full w-full object-cover object-center"
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+                            <ShoppingCart className="h-8 w-8 text-gray-400" />
+                          </div>
+                        )}
                       </div>
-                      <p className="mt-1 text-sm text-gray-500">{item.description}</p>
-                      
-                      <div className="mt-4 flex items-center justify-between">
-                        <div className="flex items-center">
-                          <button 
-                            onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                            className="p-1 text-gray-400 hover:text-gray-500"
+                      <div className="ml-4 flex-1">
+                        <div className="flex justify-between text-base font-medium text-gray-900">
+                          <h3>{item.product?.name || 'Product'}</h3>
+                          <p className="ml-4">${(item.product?.price || 0 * item.quantity).toFixed(2)}</p>
+                        </div>
+                        <p className="mt-1 text-sm text-gray-500">{item.product?.description || 'No description available'}</p>
+                        <div className="mt-2 flex items-center">
+                          <div className="flex items-center">
+                            <button
+                              onClick={() => handleUpdateQuantity(item.ids[0], item.quantity - 1)}
+                              className="text-gray-500 hover:text-gray-700 px-2"
+                              disabled={item.quantity <= 1}
+                            >
+                              -
+                            </button>
+                            <span className="mx-2">{item.quantity}</span>
+                            <button
+                              onClick={() => handleUpdateQuantity(item.ids[0], item.quantity + 1)}
+                              className="text-gray-500 hover:text-gray-700 px-2"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => item.ids.forEach(id => handleRemoveItem(id))}
+                            className="ml-4 text-red-500 hover:text-red-700"
                           >
-                            <span className="sr-only">Decrease quantity</span>
-                            <span className="text-2xl">-</span>
-                          </button>
-                          <span className="mx-2 w-8 text-center">{item.quantity}</span>
-                          <button 
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="p-1 text-gray-400 hover:text-gray-500"
-                          >
-                            <span className="sr-only">Increase quantity</span>
-                            <span className="text-2xl">+</span>
+                            <Trash2 className="h-5 w-5" />
                           </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => removeFromCart(item.id)}
-                          className="text-red-600 hover:text-red-800 flex items-center text-sm"
-                        >
-                          <Trash2 className="h-5 w-5 mr-1" />
-                          <span>Remove</span>
-                        </button>
                       </div>
                     </div>
-                  </li>
+                  </div>
                 ))}
               </ul>
             </div>

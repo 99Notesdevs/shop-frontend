@@ -13,29 +13,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check for saved theme preference or use system preference
-    const savedTheme = localStorage.getItem('theme') as Theme;
+    const savedTheme = localStorage.getItem('theme') as Theme | null;
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
     if (savedTheme) {
       setTheme(savedTheme);
-    } else if (systemPrefersDark) {
-      setTheme('dark');
+    } else {
+      setTheme(systemPrefersDark ? 'dark' : 'light');
     }
   }, []);
 
   useEffect(() => {
-    // Apply the theme class to the root element
     const root = window.document.documentElement;
     
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      document.body.classList.add('dark');
-      root.style.colorScheme = 'dark';
-    } else {
-      root.classList.remove('dark');
-      document.body.classList.remove('dark');
-      root.style.colorScheme = 'light';
-    }
+    // Remove all theme classes first
+    root.classList.remove('light', 'dark');
+    document.body.classList.remove('light', 'dark');
+    
+    // Add the current theme class
+    root.classList.add(theme);
+    document.body.classList.add(theme);
+    
+    // Update color scheme for form controls
+    root.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
     
     // Save the theme preference
     localStorage.setItem('theme', theme);

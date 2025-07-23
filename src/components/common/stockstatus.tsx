@@ -43,7 +43,7 @@ export default function StockStatusFilter() {
   }, [isOnSale, isInStock, navigate, location.pathname, searchParams]);
 
   return (
-    <div className="space-y-4 p-4 border rounded-lg">
+    <div className="space-y-4 p-4">
       <h3 className="font-medium">STOCK STATUS</h3>
       
       <div className="space-y-3">
