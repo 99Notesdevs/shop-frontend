@@ -102,7 +102,7 @@ const ProductPage = () => {
     }
   }, [id]);
 
-  const handleBuyNow = async (e: React.MouseEvent) => {
+  const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
     
     if (!product) {
@@ -110,55 +110,22 @@ const ProductPage = () => {
       toast.error('Product information is not available. Please refresh the page.');
       return;
     }
-    
-    // const token = Cookies.get("token");
-    const data = {
-      orderDate: new Date().toISOString(),
-      totalAmount: product.price,
 
-      status: "Pending",
-      billingAddress: "",
-      shippingAddress: "",
+    // Add item to cart or create a temporary cart with this single item
+    const cartItem = {
+      id: product.id.toString(),
+      name: product.name,
+      price: product.price,
+      quantity: quantity, // Using the quantity state from the product page
+      image: product.imageUrl || '/placeholder-product.jpg'
     };
-    const response = await fetch(`${env.API}/order`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    if (response.status === 403) {
-      alert('Please login to continue');
-      window.location.href = '/users/login';
-      return;
-    }
-    const responseData = await response.json();
-    console.log("First ", responseData);
-    const orderId = responseData.data.id;
-    const orderData = {
-      orderId: orderId,
-      productId: product?.id,
-      phonepe_transactionId: "",
-      status: "",
-      amount: 1,
-      redirectUrl: "",
-      validity: 10
-    }
-    console.log(orderData);
-    const response2 = await fetch(`${env.API}/payments/create-order-product`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(orderData),
-    });
-    const responseData2 = await response2.json();
-    console.log(responseData2.data);
-    const redirectUrl = responseData2.redirectUrl;
-    console.log(redirectUrl);
-    window.location.href = redirectUrl;
+
+    // Store the cart item in localStorage or context
+    // For this example, we'll use localStorage
+    localStorage.setItem('checkoutItems', JSON.stringify([cartItem]));
+    
+    // Redirect to checkout page
+    navigate('/checkout', { state: { fromBuyNow: true } });
   };
     
 
