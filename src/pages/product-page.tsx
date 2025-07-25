@@ -146,7 +146,7 @@ const ProductPage = () => {
       validity: 10
     }
     console.log(orderData);
-    const response2 = await fetch(`${env.API}/payments/create-order-product`, {
+    const response2 = await fetch(`${env.API}/payment/create-order-product`, {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -158,7 +158,7 @@ const ProductPage = () => {
     console.log(responseData2.data);
     const redirectUrl = responseData2.redirectUrl;
     console.log(redirectUrl);
-    window.location.href = redirectUrl;
+    window.location.href = redirectUrl
   };
     
 
