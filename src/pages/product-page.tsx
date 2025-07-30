@@ -8,6 +8,8 @@ import { useAuth } from '../contexts/AuthContext';
 import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
 import { env } from '../config/env';
+import { FaStar } from 'react-icons/fa';
+import { StarRating } from '../components/StarRating';
 
 interface Product {
   id: number;
@@ -32,6 +34,9 @@ const ProductPage = () => {
   const [images, setImages] = useState<string[]>(['/placeholder-product.jpg']);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [userRating, setUserRating] = useState<number | null>(null);
+  const [globalRating, setGlobalRating] = useState<number | null>(null);
+  const [ratingLoading, setRatingLoading] = useState(true);
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -119,13 +124,45 @@ const ProductPage = () => {
       quantity: quantity, // Using the quantity state from the product page
       image: product.imageUrl || '/placeholder-product.jpg'
     };
-
-    // Store the cart item in localStorage or context
-    // For this example, we'll use localStorage
-    localStorage.setItem('checkoutItems', JSON.stringify([cartItem]));
-    
-    // Redirect to checkout page
-    navigate('/checkout', { state: { fromBuyNow: true } });
+    const response = await fetch(`${env.API}/order`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (response.status === 403) {
+      alert('Please login to continue');
+      window.location.href = '/users/login';
+      return;
+    }
+    const responseData = await response.json();
+    console.log("First ", responseData);
+    const orderId = responseData.data.id;
+    const orderData = {
+      orderId: orderId,
+      productId: product?.id,
+      phonepe_transactionId: "",
+      status: "",
+      amount: 1,
+      redirectUrl: "",
+      validity: 10
+    }
+    console.log(orderData);
+    const response2 = await fetch(`${env.API}/payment/create-order-product`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(orderData),
+    });
+    const responseData2 = await response2.json();
+    console.log(responseData2.data);
+    const redirectUrl = responseData2.redirectUrl;
+    console.log(redirectUrl);
+    window.location.href = redirectUrl
   };
     
 
@@ -253,6 +290,55 @@ const ProductPage = () => {
     }
   };
 
+  const fetchRatings = async () => {
+    if (!id) return;
+    
+    try {
+      setRatingLoading(true);
+      // Fetch global rating
+      const globalRes = await api.get(`/productRating/global/${id}`)as {success:boolean,data:number};
+
+      if (globalRes.success && globalRes.data) {
+        setGlobalRating(parseFloat(globalRes.data.toFixed(1)));
+      }
+
+      // Fetch user rating if logged in
+      if (currentUser?.id) {
+        const userRes = await api.get(`/productRating/user/${id}/${currentUser.id}`)as {success:boolean,data:number};
+        if (userRes.success && userRes.data) {
+          setUserRating(userRes.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching ratings:', error);
+    } finally {
+      setRatingLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRatings();
+  }, [id, currentUser]);
+
+  const handleRatingUpdate = async (newRating: number) => {
+    if (!currentUser?.id) {
+      toast.error('Please login to rate this product');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      await api.post(`/productRating/${id}`, {
+        rating: newRating
+      });
+      setUserRating(newRating);
+      toast.success('Thank you for your rating!');
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      toast.error('Failed to submit rating');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -354,6 +440,41 @@ const ProductPage = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
 
               <p className="text-2xl font-bold text-gray-900 mb-6">₹{product.price.toFixed(2)}</p>
+
+              <div className="flex items-center mb-4">
+                {ratingLoading ? (
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, i) => (
+                      <FaStar key={i} className="text-gray-300" />
+                    ))}
+                    <span className="ml-2 text-gray-500">Loading...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <div className="flex">
+                      {[...Array(5)].map((_, i) => (
+                        <FaStar 
+                          key={i} 
+                          className={`cursor-pointer ${i < (userRating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}
+                          onClick={() => handleRatingUpdate(i + 1)}
+                          onMouseEnter={() => currentUser?.id && setUserRating(i + 1)}
+                          onMouseLeave={() => setUserRating(prev => prev || null)}
+                        />
+                      ))}
+                    </div>
+                    {globalRating !== null && (
+                      <span className="ml-2 text-gray-600">
+                        {globalRating} (Global Rating)
+                      </span>
+                    )}
+                    {!currentUser?.id && (
+                      <span className="text-sm text-gray-500 ml-2">
+                        (<a href="/login" className="text-blue-500 hover:underline">Login</a> to rate)
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className="flex items-center mb-6">
                 <div className="flex items-center space-x-4">

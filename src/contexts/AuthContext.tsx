@@ -79,15 +79,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Check authentication status on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const token = Cookies.get("token");
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
+      // const token = Cookies.get("token"); 
+      // if (!token) {
+      //   setIsLoading(false);
+      //   return;
+      // }
 
       try {
         // Check if admin first
-        const isAdmin = await checkAdminStatus(token);
+        const isAdmin = await checkAdminStatus();
         if (isAdmin) {
           setAdmin(true);
           setIsLoading(false);
@@ -111,10 +111,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const checkAdminStatus = async (token: string) => {
+  const checkAdminStatus = async () => {
     try {
       const response = await fetch(`${env.API_MAIN}/admin/check`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       return response.ok;
     } catch (error) {
@@ -220,7 +220,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = data.data.token;
 
       Cookies.set("token", token, { expires: 7 });
-      const isAdmin = await checkAdminStatus(token);
+      const isAdmin = await checkAdminStatus();
 
       if (!isAdmin) {
         throw new Error("Not authorized as admin");
@@ -263,7 +263,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAdmin = async () => {
     const token = Cookies.get("token");
     if (!token) return false;
-    return checkAdminStatus(token);
+    return checkAdminStatus();
   };
 
   // Google OAuth implementation
