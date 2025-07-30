@@ -6,16 +6,16 @@ import LogIn from './pages/login';
 import { HomeLayout } from './components/home/layout';
 import { ThemeProvider } from './components/ui/themeprovider';
 import Home from './pages/home';
-import Products from './components/product/products';
 import ProductPage from './pages/product-page';
 import ContactUs from './pages/contactus';
 import CartPage from './pages/cart';
 import AddProduct from './pages/add-product';
 import WishlistPage from './pages/wishlist';
 import AddCategory from './pages/add-category';
-import Checkout from './pages/checkout';
+// import Checkout from './pages/checkout';
 import PaymentSuccess from './pages/payment/success';
 import PaymentFailure from './pages/payment/failure';
+import AllProduct from './pages/all-product';
 
 function App() {
   return (
@@ -29,14 +29,14 @@ function App() {
                 <HomeLayout>
                   <Routes>
                     <Route path="/" element={<Home />} />
-                    <Route path="/products" element={<Products />} />
                     <Route path="/product/:id" element={<ProductPage />} />
                     <Route path="/contact" element={<ContactUs />} />
+                    <Route path="/Products" element={<AllProduct />} />
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/wishlist" element={<WishlistPage />} />
                     <Route path="/add-product" element={<AddProduct />} />
                     <Route path="/add-category" element={<AddCategory />} />
-                    <Route path="/checkout" element={<Checkout />} />
+                    {/* <Route path="/checkout" element={<Checkout />} /> */}
                     <Route path="/payment/success" element={<PaymentSuccess />} />
                     <Route path="/payment/failure" element={<PaymentFailure />} />
                   </Routes>
