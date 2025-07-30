@@ -107,7 +107,7 @@ const ProductPage = () => {
     }
   }, [id]);
 
-  const handleBuyNow = (e: React.MouseEvent) => {
+  const handleBuyNow = async (e: React.MouseEvent) => {
     e.preventDefault();
     
     if (!product) {
@@ -115,15 +115,20 @@ const ProductPage = () => {
       toast.error('Product information is not available. Please refresh the page.');
       return;
     }
-
-    // Add item to cart or create a temporary cart with this single item
-    const cartItem = {
-      id: product.id.toString(),
-      name: product.name,
-      price: product.price,
-      quantity: quantity, // Using the quantity state from the product page
-      image: product.imageUrl || '/placeholder-product.jpg'
+    
+    // const token = Cookies.get("token");
+    const data = {
+      orderDate: new Date().toISOString(),
+      totalAmount: product.price,
+      status: "Pending",
+      billingAddress: "",
+      shippingAddress: "",
     };
+
+    // localStorage.setItem('checkoutItems', JSON.stringify([data]));
+    
+    // // Redirect to checkout page
+    // navigate('/checkout', { state: { fromBuyNow: true } });
     const response = await fetch(`${env.API}/order`, {
       method: 'POST',
       credentials: 'include',
