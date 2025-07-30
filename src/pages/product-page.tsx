@@ -235,18 +235,25 @@ const ProductPage = () => {
     setCurrentImage((prev) => (prev - 1 + images.length) % images.length);
   };
 
+  const { cart, updateCart } = useAuth();
+  
+  // Check if the current product is in the cart
+  const isProductInCart = useCallback(() => {
+    if (!cart || !cart.cartItems || !product) return false;
+    return cart.cartItems.some((item: any) => item.productId === product.id);
+  }, [cart, product]);
+
   const handleAddToCart = async () => {
     if (!product) return;
     
-    const token = Cookies.get("token");
-    if (!token) {
+    if (!cart?.id) {
       toast.error('Please login to add items to cart');
       navigate('/users/login');
       return;
     }
 
     try {
-      const response = await fetch(`${env.API}/cart/1?productId=${product.id}&quantity=${quantity}`, {
+      const response = await fetch(`${env.API}/cart/${cart.id}?productId=${product.id}&quantity=${quantity}`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -255,7 +262,7 @@ const ProductPage = () => {
       });
 
       if (response.status === 401) {
-        toast.error('Please login to continue');
+        toast.error('Your session has expired. Please login again');
         navigate('/users/login');
         return;
       }
@@ -266,6 +273,11 @@ const ProductPage = () => {
       }
 
       const data = await response.json();
+      
+      // Update the cart in the auth context
+      if (data.data) {
+        updateCart(data.data);
+      }
       if (data.success) {
         toast.success('Item added to cart successfully!');
       } else {
@@ -407,9 +419,21 @@ const ProductPage = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <button onClick={handleAddToCart} className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-6 rounded-md transition-colors">
-                  ADD TO CART
-                </button>
+                {isProductInCart() ? (
+                  <button 
+                    onClick={() => navigate('/cart')} 
+                    className="bg-black text-white font-medium py-3 px-6 rounded-md transition-colors"
+                  >
+                    GO TO CART
+                  </button>
+                ) : (
+                  <button 
+                    onClick={handleAddToCart} 
+                    className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-6 rounded-md transition-colors"
+                  >
+                    ADD TO CART
+                  </button>
+                )}
                 <button onClick={handleBuyNow} className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium py-3 px-6 rounded-md transition-colors">
                   BUY NOW
                 </button>

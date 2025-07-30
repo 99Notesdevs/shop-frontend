@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Star, ChevronRight } from 'lucide-react';
 
 interface ProductCardProps {
   id: string;
@@ -23,7 +23,6 @@ export function ProductCard({
   onAddToCart,
 }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-
   const navigate = useNavigate();
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -31,54 +30,76 @@ export function ProductCard({
     navigate(`/product/${id}`);
   };
 
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onAddToCart(id);
+  };
+
   return (
     <div 
-      className="relative bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg h-full flex flex-col cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
+      className="relative bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md h-full flex flex-col group cursor-pointer"
     >
       {/* Product Image */}
-      <div className="relative pt-[100%] bg-gray-100">
+      <div className="relative h-48 overflow-hidden">
         <img
           src={imageUrl}
           alt={name}
-          className="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
-        
-        {/* Category Badge */}
-        <span className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
-          {category}
-        </span>
-        
-        {/* Hover Description */}
-        {isHovered && (
-          <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 transition-opacity duration-300">
-            <p className="text-white text-sm text-center">{description}</p>
-          </div>
-        )}
       </div>
       
       {/* Product Info */}
-      <div className="p-4 flex-grow flex flex-col">
-        <div className="flex-grow">
-          <h3 className="font-medium text-gray-900 line-clamp-2 mb-1">{name}</h3>
-          <p className="text-sm text-gray-500 mb-3">{category}</p>
+      <div className="p-4 flex-1 flex flex-col">
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="text-base font-medium text-gray-900 line-clamp-1">{name}</h3>
+          <p className="text-base font-bold text-gray-900">₹{price.toFixed(2)}</p>
         </div>
         
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-lg font-semibold">₹{price.toFixed(2)}</span>
-          <Button 
-            size="sm" 
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddToCart(id);
-            }}
-            className="flex items-center gap-1"
-          >
-            <ShoppingCart className="h-4 w-4" />
-            <span>Add to Cart</span>
-          </Button>
+        <p className="text-sm text-gray-500 mb-3 line-clamp-2">{description}</p>
+        
+        {/* Rating */}
+        <div className="flex items-center mb-3">
+          <div className="flex">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Star 
+                key={star} 
+                className={`w-4 h-4 ${star <= 4 ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+              />
+            ))}
+          </div>
+          <span className="text-xs text-gray-500 ml-1">(24)</span>
+        </div>
+        
+        {/* Buttons */}
+        <div className="mt-auto pt-2 border-t border-gray-100">
+          <div className="flex items-center justify-between mt-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-xs flex items-center gap-1 border-gray-300 hover:bg-gray-50 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddToCart(e);
+              }}
+            >
+              <ShoppingCart className="w-4 h-4" />
+              Add to Cart
+            </Button>
+            
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCardClick(e);
+              }}
+              className="text-xs text-gray-600 hover:text-gray-900 flex items-center transition-colors"
+            >
+              View Details
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

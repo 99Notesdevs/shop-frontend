@@ -1,7 +1,6 @@
 import { Route, BrowserRouter, Routes } from 'react-router-dom';
 import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
-import { CartProvider } from './contexts/cart-context';
 import LogIn from './pages/login';
 import { HomeLayout } from './components/home/layout';
 import { ThemeProvider } from './components/ui/themeprovider';
@@ -22,7 +21,6 @@ function App() {
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
-          <CartProvider>
             <Routes>
               <Route path="/login" element={<LogIn />} />
               <Route path="/*" element={
@@ -43,7 +41,6 @@ function App() {
                 </HomeLayout>
               } />
             </Routes>
-          </CartProvider>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
