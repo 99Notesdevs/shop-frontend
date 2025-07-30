@@ -12,7 +12,7 @@ import CartPage from './pages/cart';
 import AddProduct from './pages/add-product';
 import WishlistPage from './pages/wishlist';
 import AddCategory from './pages/add-category';
-// import Checkout from './pages/checkout';
+import Checkout from './pages/checkout';
 import PaymentSuccess from './pages/payment/success';
 import PaymentFailure from './pages/payment/failure';
 import AllProduct from './pages/all-product';
@@ -36,7 +36,7 @@ function App() {
                     <Route path="/wishlist" element={<WishlistPage />} />
                     <Route path="/add-product" element={<AddProduct />} />
                     <Route path="/add-category" element={<AddCategory />} />
-                    {/* <Route path="/checkout" element={<Checkout />} /> */}
+                    <Route path="/checkout" element={<Checkout />} />
                     <Route path="/payment/success" element={<PaymentSuccess />} />
                     <Route path="/payment/failure" element={<PaymentFailure />} />
                   </Routes>
