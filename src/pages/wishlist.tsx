@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { env } from '../config/env';
 import toast from 'react-hot-toast';
 import { ProductCard } from '../components/product/product-card';
+import { useAuth } from '../contexts/AuthContext';
+import { Breadcrumb } from '../components/ui/breadcrumb';
 
 interface Product {
   id: number;
@@ -21,17 +23,18 @@ interface Product {
 export default function WishlistPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user: currentUser } = useAuth();
+  console.log(currentUser?.id);
   useEffect(() => {
     const fetchWishlist = async () => {
       setLoading(true);
       try {
         const response = await fetch(`${env.API}/wishlist/1`, {
           method: 'GET',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          credentials: 'include'
+          }
         });
         
         if (!response.ok) {
@@ -54,14 +57,18 @@ export default function WishlistPage() {
   }, []);
 
   const removeFromWishlist = async (productId: number) => {
+    if (!currentUser?.id) {
+      toast.error('User not authenticated');
+      return;
+    }
+    
     try {
       const response = await fetch(`${env.API}/wishlist/${productId}/1`, {
         method: 'DELETE',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        credentials: 'include'
+        }
       });
 
       if (!response.ok) {
@@ -92,45 +99,53 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Your Wishlist</h1>
+    <div className="bg-gray-50 min-h-screen">
+      <div className="bg-white border-b border-gray-200">
+        <div className="container mx-auto px-4 py-4">
+          <Breadcrumb />
+        </div>
+      </div>
       
-      {products.length === 0 ? (
-        <div className="text-center py-12">
-          <Heart className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <h2 className="text-xl font-medium text-gray-900 mb-2">Your wishlist is empty</h2>
-          <p className="text-gray-500 mb-6">Save items you love for later</p>
-          <Link
-            to="/products"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-          >
-            Continue Shopping
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {products.map((product) => (
-            <div key={product.id} className="relative group">
-              <button
-                onClick={() => removeFromWishlist(product.id)}
-                className="absolute top-2 right-2 z-10 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors duration-200"
-                title="Remove from wishlist"
-              >
-                <Heart className="h-5 w-5 text-red-500 fill-current" />
-              </button>
-              <ProductCard
-                id={product.id.toString()}
-                name={product.name}
-                category={`Category ${product.categoryId}`}
-                description={product.description}
-                price={product.price}
-                imageUrl={product.imageUrl || '/placeholder-product.jpg'}
-                onAddToCart={handleAddToCart}
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl mb-8 text-center text-var(--text-heading)">Wishlist</h1>
+        
+        {products.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
+            <Heart className="mx-auto h-16 w-16 text-gray-300 mb-4" strokeWidth={1} />
+            <h2 className="text-xl font-medium text-var(--text-primary) mb-2">Your wishlist is empty</h2>
+            <p className="text-var(--text-secondary) mb-6">Save items you love for later</p>
+            <Link
+              to="/products"
+              className="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            >
+              Continue Shopping
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <div key={product.id} className="relative group">
+                <button
+                  onClick={() => removeFromWishlist(product.id)}
+                  className="absolute top-2 right-2 z-10 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors duration-200"
+                  title="Remove from wishlist"
+                >
+                  <Heart className="h-5 w-5 text-red-500 fill-current" />
+                </button>
+                <ProductCard
+                  id={product.id.toString()}
+                  name={product.name}
+                  category={`Category ${product.categoryId}`}
+                  description={product.description}
+                  price={product.price}
+                  imageUrl={product.imageUrl || '/placeholder-product.jpg'}
+                  onAddToCart={handleAddToCart}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
