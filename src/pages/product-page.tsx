@@ -5,9 +5,9 @@ import { FiChevronLeft, FiChevronRight, FiMaximize2, FiHeart, FiShare2, FiMinus,
 import { FaFacebook, FaTwitter, FaPinterest, FaLinkedin, FaEnvelope } from 'react-icons/fa';
 import { api } from '../api/route';
 import { useAuth } from '../contexts/AuthContext';
-import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
 import { env } from '../config/env';
+import { RelatedProducts } from '../components/product/related-product';
 
 interface Product {
   id: number;
@@ -319,103 +319,149 @@ const ProductPage = () => {
     : [];
 
   return (
-    <div className="min-h-screen bg-[var(--bg-light)]">
+    <div className="min-h-screen bg-gray-50">
       <Helmet>
         <title>{product.name} - 99Notes</title>
         <meta name="description" content={product.description} />
       </Helmet>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Breadcrumbs */}
-        <nav className="text-sm text-gray-600 mb-8">
-          <ol className="flex space-x-2">
-            <li>Home</li>
-            <li>/</li>
-            <li>Books</li>
-            <li>/</li>
-            <li>History</li>
-            <li>/</li>
-            <li className="text-gray-900 font-medium">{product.name}</li>
-          </ol>
-        </nav>
+      <main className="max-w-7xl mx-auto">
+        {/* Top Navigation */}
+        <div className="bg-white shadow-sm sticky top-0 z-10">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <button 
+                  onClick={() => window.history.back()}
+                  className="p-2 rounded-full hover:bg-gray-100"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <h1 className="text-lg font-medium text-gray-900">Product Details</h1>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button className="p-2 rounded-full hover:bg-gray-100">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <button className="p-2 rounded-full hover:bg-gray-100 relative">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                  </svg>
+                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-col md:flex-row gap-8">
+        <div className="container mx-auto px-4 py-6">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex flex-col lg:flex-row gap-8">
             {/* Product Images */}
-            <div className="md:w-1/2">
-              <div className="relative bg-white p-4 rounded-lg shadow-sm">
-                <div className="relative aspect-[3/4] bg-gray-100 rounded overflow-hidden">
+            <div className="lg:w-1/2">
+              <div className="relative bg-gray-50 rounded-lg overflow-hidden">
+                <div className="aspect-[3/4] flex items-center justify-center">
                   <img 
                     src={images[currentImage]} 
                     alt={product.name}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain p-4"
                   />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-between px-4">
                   <button 
-                    className="absolute top-1/2 left-2 bg-white p-2 rounded-full shadow-md transform -translate-y-1/2"
+                    className="bg-white/80 hover:bg-white p-2 rounded-full shadow-md"
                     onClick={prevImage}
                   >
                     <FiChevronLeft className="w-5 h-5" />
                   </button>
                   <button 
-                    className="absolute top-1/2 right-2 bg-white p-2 rounded-full shadow-md transform -translate-y-1/2"
+                    className="bg-white/80 hover:bg-white p-2 rounded-full shadow-md"
                     onClick={nextImage}
                   >
                     <FiChevronRight className="w-5 h-5" />
                   </button>
-                  <button className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-md">
+                </div>
+                <div className="absolute top-4 right-4">
+                  <button className="bg-white/80 hover:bg-white p-2 rounded-full shadow-md">
                     <FiMaximize2 className="w-5 h-5" />
                   </button>
                 </div>
-                
-                <div className="flex mt-4 space-x-2">
-                  {images.map((img, index) => (
-                    <button 
-                      key={index}
-                      className={`w-16 h-16 rounded overflow-hidden border-2 ${currentImage === index ? 'border-orange-500' : 'border-transparent'}`}
-                      onClick={() => setCurrentImage(index)}
-                    >
-                      <img 
-                        src={img}
-                        alt={`${product.name} ${index + 1}`}
-                        className="w-16 h-16 object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
+              </div>
+              
+              <div className="flex mt-4 space-x-2 overflow-x-auto pb-2">
+                {images.map((img, index) => (
+                  <button 
+                    key={index}
+                    className={`flex-shrink-0 w-16 h-16 rounded overflow-hidden border-2 ${
+                      currentImage === index ? 'border-orange-500' : 'border-transparent'
+                    }`}
+                    onClick={() => setCurrentImage(index)}
+                  >
+                    <img 
+                      src={img}
+                      alt={`${product.name} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Product Details */}
-            <div className="md:w-1/2">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-
-              <p className="text-2xl font-bold text-gray-900 mb-6">₹{product.price.toFixed(2)}</p>
-
-              <div className="flex items-center mb-6">
-                <div className="flex items-center space-x-4">
-                <div className="flex items-center border rounded-md">
-                  <button 
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-                    onClick={() => handleQuantityChange(quantity - 1)}
-                    disabled={quantity <= 1}
-                  >
-                    <FiMinus className="w-4 h-4" />
-                  </button>
-                  <span className="px-4 py-2 w-12 text-center">{quantity}</span>
-                  <button 
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-                    onClick={() => handleQuantityChange(quantity + 1)}
-                    disabled={quantity >= (product.stock || 1)}
-                  >
-                    <FiPlus className="w-4 h-4" />
-                  </button>
+            <div className="lg:w-1/2">
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">{product.name}</h1>
+              
+              <div className="flex items-center mb-4">
+                <div className="flex items-center">
+                  {[...Array(5)].map((_, i) => (
+                    <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                  <span className="text-gray-500 text-sm ml-2">(24 reviews)</span>
                 </div>
               </div>
-              {product.stock > 0 ? (
-                <p className="text-sm text-green-600 mt-2">In Stock ({product.stock} available)</p>
-              ) : (
-                <p className="text-sm text-red-600 mt-2">Currently out of stock</p>
-              )}
+
+              <div className="mb-4">
+                <span className="text-2xl font-bold text-gray-900">₹{product.price.toFixed(2)}</span>
+                <span className="ml-2 text-base text-gray-500 line-through">₹{(product.price * 1.2).toFixed(2)}</span>
+                <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-0.5 rounded">20% OFF</span>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  {product.description?.split('.')[0] || 'No description available.'}
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <div className="flex items-center">
+                  <span className="text-gray-700 font-medium mr-4">Quantity:</span>
+                  <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
+                    <button 
+                      className="px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-40 h-10 w-10 flex items-center justify-center"
+                      onClick={() => handleQuantityChange(quantity - 1)}
+                      disabled={quantity <= 1}
+                    >
+                      <FiMinus className="w-3 h-3" />
+                    </button>
+                    <span className="w-10 text-center text-sm font-medium border-l border-r border-gray-300 h-10 flex items-center justify-center">
+                      {quantity}
+                    </span>
+                    <button 
+                      className="px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-40 h-10 w-10 flex items-center justify-center"
+                      onClick={() => handleQuantityChange(quantity + 1)}
+                      disabled={quantity >= (product.stock || 1)}
+                    >
+                      <FiPlus className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <span className="ml-3 text-sm text-gray-500">{product.stock} available</span>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -427,91 +473,66 @@ const ProductPage = () => {
                     GO TO CART
                   </button>
                 ) : (
-                  <button 
-                    onClick={handleAddToCart} 
+                <button 
+                  onClick={handleAddToCart} 
                     className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-6 rounded-md transition-colors"
-                  >
-                    ADD TO CART
-                  </button>
+                >
+                  ADD TO CART
+                </button>
                 )}
                 <button onClick={handleBuyNow} className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium py-3 px-6 rounded-md transition-colors">
                   BUY NOW
                 </button>
               </div>
 
-              <div className="flex items-center space-x-4 mb-6">
-                <button
-                  onClick={toggleWishlist}
-                  disabled={wishlistLoading}
-                  className={`flex items-center justify-center p-2 rounded-full ${
-                    isInWishlist 
-                      ? 'text-red-500 hover:bg-red-50' 
-                      : 'text-gray-400 hover:bg-gray-100'
-                  } transition-colors duration-200`}
-                  title={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-                >
-                  {wishlistLoading ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
-                  ) : (
-                    <FiHeart 
-                      className={`h-6 w-6 ${isInWishlist ? 'fill-current' : ''}`} 
-                    />
-                  )}
-                </button>
-                <button className="flex items-center text-gray-600 hover:text-gray-900">
-                  <FiShare2 className="mr-2" />
-                  <span>Compare</span>
-                </button>
-              </div>
-
-              <div className="border-t border-gray-200 pt-4">
-                <div className="flex items-center mb-2">
-                  <span className="text-gray-700 w-24">Categories:</span>
-                  <div className="flex flex-wrap gap-2">
-                    {product.category?.name || 'No category'}
-                  </div>
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-center space-x-6">
+                  <button
+                    onClick={toggleWishlist}
+                    disabled={wishlistLoading}
+                    className={`flex items-center space-x-2 text-sm font-medium ${
+                      isInWishlist ? 'text-red-500' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <FiHeart className={`w-5 h-5 ${isInWishlist ? 'fill-current' : ''}`} />
+                    <span>Add to Wishlist</span>
+                  </button>
+                  <button className="flex items-center space-x-2 text-sm font-medium text-gray-600 hover:text-gray-900">
+                    <FiShare2 className="w-5 h-5" />
+                    <span>Share</span>
+                  </button>
                 </div>
               </div>
+            </div>
 
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <h3 className="text-sm font-medium text-gray-900 mb-3">Share:</h3>
-                <div className="flex space-x-4">
-                  <a href="#" className="text-gray-500 hover:text-blue-600">
-                    <FaFacebook className="w-5 h-5" />
-                  </a>
-                  <a href="#" className="text-gray-500 hover:text-blue-400">
-                    <FaTwitter className="w-5 h-5" />
-                  </a>
-                  <a href="#" className="text-gray-500 hover:text-red-600">
-                    <FaPinterest className="w-5 h-5" />
-                  </a>
-                  <a href="#" className="text-gray-500 hover:text-blue-700">
-                    <FaLinkedin className="w-5 h-5" />
-                  </a>
-                  <a href="#" className="text-gray-500 hover:text-gray-700">
-                    <FaEnvelope className="w-5 h-5" />
-                  </a>
-                </div>
+            {/* Product Description */}
+            <div id="description" className="mt-12 pt-6 border-t border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Product Description</h2>
+              <div className="prose max-w-none">
+                {descriptionList.length > 0 ? (
+                  descriptionList.map((paragraph, index) => (
+                    <p key={index} className="text-gray-700 mb-4">{paragraph}</p>
+                  ))
+                ) : (
+                  <p className="text-gray-700">{product.description || 'No description available.'}</p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Product Description - Moved below */}
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Product Description</h2>
-            <div className="prose max-w-none mb-8">
-              {descriptionList.length > 0 ? (
-                descriptionList.map((paragraph, index) => (
-                  <p key={index} className="text-gray-700 mb-4">{paragraph}</p>
-                ))
-              ) : (
-                <p className="text-gray-700">{product.description || 'No description available.'}</p>
-              )}
-            </div>
+          {/* Related Products */}
+          <div className="mt-12">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Related Products</h2>
+            <RelatedProducts 
+              categoryId={product.category?.id || 0} 
+              currentProductId={product.id} 
+              onAddToCart={handleAddToCart} 
+            />
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
+  </div>
   );
 };
 
