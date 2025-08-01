@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ProductCard } from '../components/product/product-card';
 import { Button } from '../components/ui/button';
 import { toast } from 'react-toastify';
@@ -6,6 +7,8 @@ import Categories from '../components/product/categories';
 import 'react-toastify/dist/ReactToastify.css';
 import { api } from '../api/route';
 import { Breadcrumb } from '../components/ui/breadcrumb';
+import { useAuth } from '../contexts/AuthContext';
+import { env } from '../config/env';
 
 // Define the Category interface to match the one in categories.tsx
 interface Category {
@@ -42,6 +45,8 @@ const AllProduct: React.FC = () => {
   const [sortBy, setSortBy] = useState('default');
   const [selectedCategory, setSelectedCategory] = useState<number | string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const { cart, updateCart } = useAuth();
+  const navigate = useNavigate();
 
   // Fetch categories
   useEffect(() => {
@@ -111,6 +116,13 @@ const AllProduct: React.FC = () => {
     };
   }, []);
 
+  // Function to get category name by ID
+  const getCategoryName = (categoryId: string | number) => {
+    if (!categoryId) return 'Uncategorized';
+    const category = categories.find(cat => String(cat.id) === String(categoryId));
+    return category?.name || `Category ${categoryId}`;
+  };
+
   // Filter and sort products when category or sort changes
   const filterAndSortProducts = useCallback(() => {
     let result = [...allProducts];
@@ -145,9 +157,50 @@ const AllProduct: React.FC = () => {
     filterAndSortProducts();
   }, [filterAndSortProducts]);
 
-  const handleAddToCart = (productId: string) => {
-    // Add to cart logic here
-    console.log('Added to cart:', productId);
+  const handleAddToCart = async (productId: string) => {
+    if (!productId) return;
+    
+    if (!cart?.id) {
+      toast.error('Please login to add items to cart');
+      navigate('/users/login');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${env.API}/cart/${cart.id}?productId=${productId}&quantity=1`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.status === 401) {
+        toast.error('Your session has expired. Please login again');
+        navigate('/users/login');
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add item to cart');
+      }
+
+      const data = await response.json();
+      
+      // Update the cart in the auth context
+      if (data.data) {
+        updateCart(data.data);
+      }
+      if (data.success) {
+        toast.success('Item added to cart successfully!');
+      } else {
+        throw new Error(data.message || 'Failed to add item to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to add item to cart');
+    }
   };
 
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -260,7 +313,7 @@ const AllProduct: React.FC = () => {
               key={product.id}
               id={product.id}
               name={product.name}
-              category={product.category?.name || 'Uncategorized'}
+              category={getCategoryName(product.categoryId)}
               description={product.description}
               price={product.price}
               imageUrl={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}

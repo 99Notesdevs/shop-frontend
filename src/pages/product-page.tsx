@@ -2,12 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight, FiMaximize2, FiHeart, FiShare2, FiMinus, FiPlus, FiAlertCircle } from 'react-icons/fi';
-import { FaFacebook, FaTwitter, FaPinterest, FaLinkedin, FaEnvelope } from 'react-icons/fa';
 import { api } from '../api/route';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { env } from '../config/env';
 import { RelatedProducts } from '../components/product/related-product';
+import { Breadcrumb } from '../components/ui/breadcrumb';
+import ProductHighlights from '../components/product/product-highlights';
+import CustomerRating from '../components/product/customer-rating';
+import ServiceIcon from '../components/common/service-icon';
 
 interface Product {
   id: number;
@@ -176,10 +179,8 @@ const ProductPage = () => {
       }
 
       setIsInWishlist(true);
-      toast.success('Added to wishlist');
     } catch (error) {
-      console.error('Error adding to wishlist:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to add to wishlist');
+      alert(error instanceof Error ? error.message : 'Failed to add to wishlist');
     } finally {
       setWishlistLoading(false);
     }
@@ -320,111 +321,85 @@ const ProductPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Helmet>
-        <title>{product.name} - 99Notes</title>
-        <meta name="description" content={product.description} />
-      </Helmet>
 
       <main className="max-w-7xl mx-auto">
         {/* Top Navigation */}
-        <div className="bg-white shadow-sm sticky top-0 z-10">
-          <div className="container mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button 
-                  onClick={() => window.history.back()}
-                  className="p-2 rounded-full hover:bg-gray-100"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                <h1 className="text-lg font-medium text-gray-900">Product Details</h1>
-              </div>
-              <div className="flex items-center space-x-3">
-                <button className="p-2 rounded-full hover:bg-gray-100">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                <button className="p-2 rounded-full hover:bg-gray-100 relative">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                  </svg>
-                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        
 
         <div className="container mx-auto px-4 py-6">
+          {/* Breadcrumb */}
+          <div className="mb-6">
+            <Breadcrumb />
+          </div>
+          
           <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Product Images */}
-            <div className="lg:w-1/2">
-              <div className="relative bg-gray-50 rounded-lg overflow-hidden">
-                <div className="aspect-[3/4] flex items-center justify-center">
-                  <img 
-                    src={images[currentImage]} 
-                    alt={product.name}
-                    className="w-full h-full object-contain p-4"
-                  />
+            <div className="flex flex-col lg:flex-row gap-8">
+              {/* Product Images */}
+              <div className="lg:w-1/2">
+                <div className="relative bg-gray-50 rounded-lg overflow-hidden">
+                  <div className="relative w-full pt-[133.33%]">
+                    <div className="absolute inset-0 flex items-center justify-center p-4">
+                      <img 
+                        src={images[currentImage]} 
+                        alt={product.name}
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-between px-4">
+                    <button 
+                      className="bg-white/80 hover:bg-white p-2 rounded-full shadow-md"
+                      onClick={prevImage}
+                    >
+                      <FiChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button 
+                      className="bg-white/80 hover:bg-white p-2 rounded-full shadow-md"
+                      onClick={nextImage}
+                    >
+                      <FiChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="absolute top-4 right-4">
+                    <button className="bg-white/80 hover:bg-white p-2 rounded-full shadow-md">
+                      <FiMaximize2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
-                <div className="absolute inset-0 flex items-center justify-between px-4">
-                  <button 
-                    className="bg-white/80 hover:bg-white p-2 rounded-full shadow-md"
-                    onClick={prevImage}
-                  >
-                    <FiChevronLeft className="w-5 h-5" />
-                  </button>
-                  <button 
-                    className="bg-white/80 hover:bg-white p-2 rounded-full shadow-md"
-                    onClick={nextImage}
-                  >
-                    <FiChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="absolute top-4 right-4">
-                  <button className="bg-white/80 hover:bg-white p-2 rounded-full shadow-md">
-                    <FiMaximize2 className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-              
-              <div className="flex mt-4 space-x-2 overflow-x-auto pb-2">
-                {images.map((img, index) => (
-                  <button 
-                    key={index}
-                    className={`flex-shrink-0 w-16 h-16 rounded overflow-hidden border-2 ${
-                      currentImage === index ? 'border-orange-500' : 'border-transparent'
-                    }`}
-                    onClick={() => setCurrentImage(index)}
-                  >
-                    <img 
-                      src={img}
-                      alt={`${product.name} ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Product Details */}
-            <div className="lg:w-1/2">
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">{product.name}</h1>
-              
-              <div className="flex items-center mb-4">
-                <div className="flex items-center">
-                  {[...Array(5)].map((_, i) => (
-                    <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
+                
+                <div className="flex mt-4 space-x-2 overflow-x-auto pb-2">
+                  {images.map((img, index) => (
+                    <button 
+                      key={index}
+                      className={`flex-shrink-0 w-16 h-16 rounded overflow-hidden border-2 ${
+                        currentImage === index ? 'border-orange-500' : 'border-transparent'
+                      }`}
+                      onClick={() => setCurrentImage(index)}
+                    >
+                      <img 
+                        src={img}
+                        alt={`${product.name} ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
                   ))}
-                  <span className="text-gray-500 text-sm ml-2">(24 reviews)</span>
                 </div>
               </div>
+
+              {/* Product Details */}
+              <div className="lg:w-1/2">
+                <h1 className="text-2xl font-bold text-gray-900 mb-1">{product.name}</h1>
+                
+                <div className="flex items-center mb-4">
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, i) => (
+                      <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                    <span className="text-gray-500 text-sm ml-2">(24 reviews)</span>
+                  </div>
+                </div>
 
               <div className="mb-4">
                 <span className="text-2xl font-bold text-gray-900">₹{product.price.toFixed(2)}</span>
@@ -503,21 +478,30 @@ const ProductPage = () => {
                   </button>
                 </div>
               </div>
-            </div>
-
-            {/* Product Description */}
-            <div id="description" className="mt-12 pt-6 border-t border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Product Description</h2>
-              <div className="prose max-w-none">
-                {descriptionList.length > 0 ? (
-                  descriptionList.map((paragraph, index) => (
-                    <p key={index} className="text-gray-700 mb-4">{paragraph}</p>
-                  ))
-                ) : (
-                  <p className="text-gray-700">{product.description || 'No description available.'}</p>
-                )}
+              <div className="pt-4 border-t border-gray-200">
+              <ProductHighlights />
+              <ServiceIcon />
               </div>
             </div>
+          </div>
+
+          {/* Product Description */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Product Description</h2>
+            <div className="prose max-w-none">
+              {descriptionList.length > 0 ? (
+                descriptionList.map((paragraph, index) => (
+                  <p key={index} className="text-gray-700 mb-4">{paragraph}</p>
+                ))
+              ) : (
+                <p className="text-gray-700">{product.description || 'No description available.'}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Customer Rating */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
+            <CustomerRating />
           </div>
 
           {/* Related Products */}
@@ -529,10 +513,10 @@ const ProductPage = () => {
               onAddToCart={handleAddToCart} 
             />
           </div>
+          </div>
         </div>
-      </div>
-    </main>
-  </div>
+      </main>
+    </div>
   );
 };
 
