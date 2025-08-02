@@ -8,13 +8,16 @@ import Home from './pages/home';
 import ProductPage from './pages/product-page';
 import ContactUs from './pages/contactus';
 import CartPage from './pages/cart';
-import AddProduct from './pages/add-product';
+import AddProduct from './components/admin-dashboard/add-product';
 import WishlistPage from './pages/wishlist';
-import AddCategory from './pages/add-category';
+import AddCategory from './components/admin-dashboard/add-category';
 import Checkout from './pages/checkout';
-import PaymentSuccess from './pages/payment/success';
 import PaymentFailure from './pages/payment/failure';
 import AllProduct from './pages/all-product';
+import PaymentSuccess from './pages/payment/success';
+import AdminLogin from './components/admin-dashboard/admin-login';
+import AdminLayout from './components/admin-dashboard/layout';
+import AdminDashboard from './pages/admin-dashboard';
 
 function App() {
   return (
@@ -23,6 +26,16 @@ function App() {
         <AuthProvider>
             <Routes>
               <Route path="/login" element={<LogIn />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="login" element={<AdminLogin />} />
+                <Route path="add-product" element={<AddProduct />} />
+                <Route path="add-category" element={<AddCategory />} />
+              </Route>
+
+              {/* Main App Routes */}
               <Route path="/*" element={
                 <HomeLayout>
                   <Routes>
@@ -32,8 +45,7 @@ function App() {
                     <Route path="/Products" element={<AllProduct />} />
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/wishlist" element={<WishlistPage />} />
-                    <Route path="/add-product" element={<AddProduct />} />
-                    <Route path="/add-category" element={<AddCategory />} />
+                   
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/payment/success" element={<PaymentSuccess />} />
                     <Route path="/payment/failure" element={<PaymentFailure />} />

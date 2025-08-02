@@ -9,6 +9,8 @@
   /* Primary Colors */
   --primary:  #FBAB3B;/*#fbbc34*/
   --primary-hover: #fbb41b;
+  --button:#FBAB3B;
+  --button-hover:#DC7E00;
   --indigo-600: #4f46e5;
   --indigo-700: #4338ca;
   --indigo-500: #6366f1;
