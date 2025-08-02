@@ -1,73 +1,65 @@
-import { useEffect, useState, useRef } from 'react';
-import { ProductCard } from './product-card';
+import { useEffect, useState } from 'react';
 import { api } from '../../api/route';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { ProductCard } from './product-card';
 
 interface Product {
-  id: number;
+  id: string;
   name: string;
   description: string;
   price: number;
   imageUrl: string;
-  category: {
-    id: number;
-    name: string;
-  };
-}
-
-interface ApiResponse {
-  success: boolean;
-  data: {
-    products: Product[];
-  };
+  category: string;
 }
 
 interface RelatedProductsProps {
-  categoryId: number;
-  currentProductId: number;
+  currentProductId: string | number;
+  categoryId: string | number;
   onAddToCart: (id: string) => void;
 }
 
-export function RelatedProducts({ categoryId, currentProductId, onAddToCart }: RelatedProductsProps) {
+// Simple Skeleton component if not available in UI library
+const Skeleton = ({ className }: { className: string }) => (
+  <div className={`bg-gray-200 animate-pulse rounded ${className}`} />
+);
+
+export function RelatedProducts({ currentProductId, categoryId, onAddToCart }: RelatedProductsProps) {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const scrollLeft = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({
-        left: -300, // Adjust scroll distance as needed
-        behavior: 'smooth'
-      });
-    }
-  };
-
-  const scrollRight = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({
-        left: 300, // Adjust scroll distance as needed
-        behavior: 'smooth'
-      });
-    }
-  };
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchRelatedProducts = async () => {
       try {
         setLoading(true);
-        // Fetch products from the same category using the API instance
-        const response = await api.get<ApiResponse>(`/products?categoryId=${categoryId}`);
+        console.log('Fetching products...');
+        // Fetch all products and filter by category on the client side
+        const response = await api.get('/product') as { success: boolean; data: Product[] };
+        console.log('API Response:', response);
+        const products = response.data || [];
         
-        if (response.success) {
-          // Filter out the current product and limit to 15 related products
-          const filteredProducts = response.data.products
-            .filter((product) => product.id !== currentProductId)
-            .slice(0, 15);
-          
-          setRelatedProducts(filteredProducts);
-        }
-      } catch (error) {
-        console.error('Error fetching related products:', error);
+        console.log('All products:', products);
+        console.log('Current product ID:', currentProductId);
+        console.log('Category ID to match:', categoryId);
+        
+        // Filter out the current product and get products from the same category
+        const filteredProducts = products.filter(
+          (product: Product) => {
+            const isNotCurrent = String(product.id) !== String(currentProductId);
+            const isSameCategory = String(product.category) === String(categoryId);
+            console.log(`Product ${product.id}: isNotCurrent=${isNotCurrent}, isSameCategory=${isSameCategory}`);
+            return isNotCurrent && isSameCategory;
+          }
+        );
+        
+        console.log('Filtered products:', filteredProducts);
+        
+        // Limit to 4 related products
+        const limitedProducts = filteredProducts.slice(0, 4);
+        console.log('Limited products:', limitedProducts);
+        setRelatedProducts(limitedProducts);
+      } catch (err) {
+        console.error('Error fetching related products:', err);
+        setError('Failed to load related products');
       } finally {
         setLoading(false);
       }
@@ -76,66 +68,47 @@ export function RelatedProducts({ categoryId, currentProductId, onAddToCart }: R
     if (categoryId) {
       fetchRelatedProducts();
     }
-  }, [categoryId, currentProductId]);
+  }, [currentProductId, categoryId]);
+
+  if (error) {
+    return <div className="text-red-500 text-center py-4">{error}</div>;
+  }
 
   if (loading) {
-    return <div className="mt-8">Loading related products...</div>;
-  }
-
-  if (relatedProducts.length === 0) {
-    return null; // Don't render anything if no related products
-  }
-
-  return (
-    <div className="mt-12 relative">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-semibold">You may also like</h3>
-        <div className="flex space-x-2">
-          <button 
-            onClick={scrollLeft}
-            className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-            aria-label="Scroll left"
-          >
-            <FiChevronLeft className="w-5 h-5" />
-          </button>
-          <button 
-            onClick={scrollRight}
-            className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-            aria-label="Scroll right"
-          >
-            <FiChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-      
-      <div 
-        ref={scrollContainerRef}
-        className="flex overflow-x-auto pb-4 -mx-4 px-4 gap-6 no-scrollbar"
-      >
-        {relatedProducts.map((product) => (
-          <div key={product.id} className="flex-shrink-0 w-64">
-            <ProductCard
-              id={product.id.toString()}
-              name={product.name}
-              category={product.category?.name || 'Uncategorized'}
-              description={product.description || ''}
-              price={product.price}
-              imageUrl={product.imageUrl || '/placeholder-product.jpg'}
-              onAddToCart={onAddToCart}
-            />
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 py-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="space-y-3">
+            <Skeleton className="h-48 w-full rounded-lg" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
           </div>
         ))}
       </div>
-      
-      <style>{`
-        .no-scrollbar {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
-        }
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;  /* Chrome, Safari and Opera */
-        }
-      `}</style>
+    );
+  }
+
+  if (relatedProducts.length === 0) {
+    return null; // Don't show anything if no related products
+  }
+
+  return (
+    <div className="mt-12">
+      <h2 className="text-2xl font-bold mb-6">You might also like</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {relatedProducts.map((product) => (
+          <ProductCard
+            key={product.id}
+            id={product.id}
+            name={product.name}
+            description={product.description}
+            price={product.price}
+            imageUrl={product.imageUrl}
+            category={product.category}
+            onAddToCart={onAddToCart}
+          />
+        ))}
+      </div>
     </div>
   );
 }
