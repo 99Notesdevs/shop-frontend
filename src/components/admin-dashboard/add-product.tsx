@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { api } from '../api/route';
+import { api } from '../../api/route';
 
 interface Category {
   id: number;
@@ -12,9 +12,22 @@ interface Category {
   updatedAt: string;
 }
 
-export default function AddProduct() {
+interface ProductData {
+  name: string;
+  description: string;
+  price: string;
+  stock: string;
+  imageUrl: string;
+  categoryId: string;
+  validity: string;
+}
+
+export default function ProductForm() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = !!id;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(!!id);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
@@ -27,19 +40,64 @@ export default function AddProduct() {
         }
         if (data.success && data.data) {
           setCategories(data.data);
+          
+          // If in edit mode, fetch the product data
+          if (isEditMode) {
+            await fetchProduct();
+          } else {
+            setIsLoading(false);
+          }
         }
       } catch (error) {
-        console.error('Error fetching categories:', error);
-        toast.error('Failed to load categories');
+        console.error('Error:', error);
+        toast.error(`Failed to load ${isEditMode ? 'product' : 'categories'}`);
+        setIsLoading(false);
       } finally {
         setIsLoadingCategories(false);
       }
     };
 
     fetchCategories();
-  }, []);
+  }, [id]);
 
-  const [formData, setFormData] = useState({
+  const fetchProduct = async () => {
+    try {
+      const response = await api.get(`/product/${id}`) as { 
+        success: boolean; 
+        data: {
+          name: string;
+          description: string;
+          price: number;
+          stock: number;
+          imageUrl: string;
+          categoryId: number;
+          validity?: number;
+        } 
+      };
+      
+      if (response.success && response.data) {
+        const product = response.data;
+        setFormData({
+          name: product.name,
+          description: product.description,
+          price: product.price.toString(),
+          stock: product.stock.toString(),
+          imageUrl: product.imageUrl || '',
+          categoryId: product.categoryId.toString(),
+          validity: product.validity?.toString() || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      toast.error('Failed to load product data');
+      navigate('/admin/products');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initialize form with default values
+  const [formData, setFormData] = useState<ProductData>({
     name: '',
     description: '',
     price: '',
@@ -55,6 +113,7 @@ export default function AddProduct() {
       ...prev,
       [name]: value
     }));
+    console.log('Form data updated:', { ...formData, [name]: value }); // Debug log
   };
 
 
@@ -63,23 +122,55 @@ export default function AddProduct() {
     setIsSubmitting(true);
 
     try {
-      const response = await api.post(`/product`, {
-          ...formData,
-          price: parseFloat(formData.price),
-          stock: parseInt(formData.stock, 10),
-          categoryId: parseInt(formData.categoryId, 10),
-          validity: formData.validity ? parseInt(formData.validity, 10) : undefined
-        }) as { success: boolean; message?: string };
+      // Prepare the product data
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock, 10),
+        categoryId: parseInt(formData.categoryId, 10),
+        imageUrl: formData.imageUrl,
+        validity: formData.validity ? parseInt(formData.validity, 10) : undefined
+      };
 
-      if (!response.success) {
-        throw new Error('Failed to add product');
+      console.log('Submitting product data:', productData); // Debug log
+
+      let response;
+      if (isEditMode && id) {
+        // Update existing product
+        response = await api.put(`/product/${id}`, productData) as { 
+          success: boolean; 
+          data?: any;
+          message?: string;
+        };
+        
+        if (response.success) {
+          toast.success('Product updated successfully!');
+          navigate('/admin/manage-product');
+          return;
+        }
+      } else {
+        // Create new product
+        response = await api.post('/product', productData) as { 
+          success: boolean;
+          data?: any;
+          message?: string;
+        };
+        
+        if (response.success) {
+          toast.success('Product created successfully!');
+          navigate('/admin/manage-product');
+          return;
+        }
       }
+      
+      // If we get here, there was an error
+      throw new Error(response.message || 'Failed to process product');
 
-      toast.success('Product added successfully!');
-      navigate('/products');
-    } catch (error) {
-      console.error('Error adding product:', error);
-      toast.error('Failed to add product. Please try again.');
+    } catch (error: any) {
+      console.error(`Error ${isEditMode ? 'updating' : 'adding'} product:`, error);
+      const errorMessage = error.response?.data?.message || error.message || 'An unknown error occurred';
+      toast.error(`Failed to ${isEditMode ? 'update' : 'add'} product: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -93,8 +184,14 @@ export default function AddProduct() {
       <div className="max-w-3xl mx-auto">
         <div className="bg-white shadow rounded-lg p-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Add New Product</h1>
-            <p className="mt-2 text-sm text-gray-600">Fill in the details below to add a new product to the store.</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditMode ? 'Edit Product' : 'Add New Product'}
+            </h1>
+            <p className="mt-2 text-sm text-gray-600">
+              {isEditMode 
+                ? 'Update the product details below.' 
+                : 'Fill in the details below to add a new product to the store.'}
+            </p>
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -233,10 +330,12 @@ export default function AddProduct() {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                disabled={isSubmitting || isLoading}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Adding...' : 'Add Product'}
+                {isSubmitting 
+                  ? (isEditMode ? 'Updating...' : 'Adding...') 
+                  : (isEditMode ? 'Update Product' : 'Add Product')}
               </button>
             </div>
           </form>
