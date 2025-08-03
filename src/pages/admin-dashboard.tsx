@@ -20,7 +20,7 @@ const WelcomeMessage = () => (
       </Link>
 
       <Link 
-        to="/admin/edit-product" 
+        to="/admin/manage-product" 
         className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow flex flex-col items-center text-center"
       >
         <div className="bg-green-100 p-3 rounded-full mb-4">

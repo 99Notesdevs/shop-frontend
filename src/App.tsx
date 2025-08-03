@@ -8,7 +8,7 @@ import Home from './pages/home';
 import ProductPage from './pages/product-page';
 import ContactUs from './pages/contactus';
 import CartPage from './pages/cart';
-import AddProduct from './components/admin-dashboard/add-product';
+import ProductForm from './components/admin-dashboard/add-product';
 import WishlistPage from './pages/wishlist';
 import AddCategory from './components/admin-dashboard/add-category';
 import Checkout from './pages/checkout';
@@ -18,6 +18,8 @@ import PaymentSuccess from './pages/payment/success';
 import AdminLogin from './components/admin-dashboard/admin-login';
 import AdminLayout from './components/admin-dashboard/layout';
 import AdminDashboard from './pages/admin-dashboard';
+import ManageProduct from './components/admin-dashboard/manage-product';
+import ManageCategory from './components/admin-dashboard/manage-category';
 
 function App() {
   return (
@@ -31,8 +33,12 @@ function App() {
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="login" element={<AdminLogin />} />
-                <Route path="add-product" element={<AddProduct />} />
+                <Route path="add-product" element={<ProductForm />} />
+                <Route path="products/edit/:id" element={<ProductForm />} />
                 <Route path="add-category" element={<AddCategory />} />
+                <Route path="categories/edit/:id" element={<AddCategory />} />
+                <Route path="manage-product" element={<ManageProduct />} />
+                <Route path="manage-category" element={<ManageCategory />} />
               </Route>
 
               {/* Main App Routes */}

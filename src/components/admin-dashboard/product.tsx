@@ -96,7 +96,6 @@ export default function ProductForm() {
     }
   };
 
-  // Initialize form with default values
   const [formData, setFormData] = useState<ProductData>({
     name: '',
     description: '',
@@ -113,7 +112,6 @@ export default function ProductForm() {
       ...prev,
       [name]: value
     }));
-    console.log('Form data updated:', { ...formData, [name]: value }); // Debug log
   };
 
 
@@ -122,55 +120,36 @@ export default function ProductForm() {
     setIsSubmitting(true);
 
     try {
-      // Prepare the product data
       const productData = {
-        name: formData.name,
-        description: formData.description,
+        ...formData,
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock, 10),
         categoryId: parseInt(formData.categoryId, 10),
-        imageUrl: formData.imageUrl,
         validity: formData.validity ? parseInt(formData.validity, 10) : undefined
       };
 
-      console.log('Submitting product data:', productData); // Debug log
-
       let response;
-      if (isEditMode && id) {
-        // Update existing product
+      if (isEditMode) {
         response = await api.put(`/product/${id}`, productData) as { 
           success: boolean; 
-          data?: any;
-          message?: string;
+          message?: string 
         };
-        
-        if (response.success) {
-          toast.success('Product updated successfully!');
-          navigate('/admin/manage-product');
-          return;
-        }
       } else {
-        // Create new product
         response = await api.post('/product', productData) as { 
-          success: boolean;
-          data?: any;
-          message?: string;
+          success: boolean; 
+          message?: string 
         };
-        
-        if (response.success) {
-          toast.success('Product created successfully!');
-          navigate('/admin/manage-product');
-          return;
-        }
       }
-      
-      // If we get here, there was an error
-      throw new Error(response.message || 'Failed to process product');
 
-    } catch (error: any) {
+      if (!response.success) {
+        throw new Error(`Failed to ${isEditMode ? 'update' : 'add'} product`);
+      }
+
+      toast.success(`Product ${isEditMode ? 'updated' : 'added'} successfully!`);
+      navigate('/admin/products');
+    } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'adding'} product:`, error);
-      const errorMessage = error.response?.data?.message || error.message || 'An unknown error occurred';
-      toast.error(`Failed to ${isEditMode ? 'update' : 'add'} product: ${errorMessage}`);
+      toast.error(`Failed to ${isEditMode ? 'update' : 'add'} product. Please try again.`);
     } finally {
       setIsSubmitting(false);
     }
