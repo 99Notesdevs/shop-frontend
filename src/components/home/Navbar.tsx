@@ -64,12 +64,20 @@ const Navbar: React.FC = () => {
                     Your Profile
                   </Link>
                   <div className="border-t border-[var(--border-light)] my-1"></div>
+                  <Link
+                    to="/myorders"
+                    className="block px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-light-secondary)]"
+                  >
+                    My Orders
+                  </Link>
+                  <div className="border-t border-[var(--border-light)] my-1"></div>
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-2 text-sm text-[var(--red-600)] hover:bg-[var(--bg-light-secondary)]"
                   >
                     Sign out
                   </button>
+
                 </div>
               </div>
             </div>

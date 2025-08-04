@@ -43,7 +43,7 @@ export default function PaymentSuccessPage() {
             Your subscription has been activated successfully.
           </p>
           <button
-            onClick={() => navigate('/subscription')}
+            onClick={() => navigate('/myorder')}
             className="mt-6 px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
           >
             Continue to Subscription

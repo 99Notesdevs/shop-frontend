@@ -59,11 +59,7 @@ export function ProductCard({
     }
     
     try {
-      console.log('Fetching wishlist for user:', user.id);
       const response = await api.get<WishlistResponse>(`/wishlist/${user.id}`);
-      
-      // Log the raw response for debugging
-      console.log('Raw wishlist response:', JSON.stringify(response, null, 2));
       
       // Extract products from the response
       let products: any[] = [];

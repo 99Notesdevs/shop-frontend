@@ -2,6 +2,7 @@ import Navbar from './Navbar';
 import { useEffect } from 'react';
 // import { useAuth } from '../../contexts/AuthContext';
 import Footer from './footer';
+import { OfferMessageDisplay } from '../admin-dashboard/offer-message';
 
 // interface User {
 //   id: string;
@@ -32,6 +33,7 @@ export const HomeLayout: React.FC<HomeLayoutProps> = ({
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col relative">
         <Navbar />
+        <OfferMessageDisplay />
         <div className="flex flex-1 relative h-[calc(100vh-4rem)]">
             <div className="w-full">
               {children}
