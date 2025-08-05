@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { 
   FiPlus, FiEdit, FiList, FiSettings, 
-  FiChevronLeft, FiMenu, FiX, FiUser, FiLogOut 
+  FiChevronLeft, FiMenu, FiX, FiUser, FiLogOut,FiMessageCircle
 } from 'react-icons/fi';
 
 const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean; toggleSidebar: () => void }) => {
@@ -26,6 +26,8 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean; toggleS
       icon: FiSettings,
       items: [
         { icon: FiSettings, text: 'Admin Panel', path: '/admin' },
+        {icon: FiMessageCircle, text:'Offer Message', path:'/admin/offer-message'},
+        {icon: FiList, text:'Manage Orders', path:'/admin/manage-orders'},
       ],
     },
   ];

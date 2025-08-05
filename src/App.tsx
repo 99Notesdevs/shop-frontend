@@ -20,6 +20,11 @@ import AdminLayout from './components/admin-dashboard/layout';
 import AdminDashboard from './pages/admin-dashboard';
 import ManageProduct from './components/admin-dashboard/manage-product';
 import ManageCategory from './components/admin-dashboard/manage-category';
+import UserProfile from './pages/user-profile';
+import MyOrders from './pages/myorders';
+import OrderDetail from './components/order/order-detail';
+import OfferMessageAdmin from './components/admin-dashboard/offer-message';
+import ManageOrders from './components/admin-dashboard/manage-orders';
 
 function App() {
   return (
@@ -39,6 +44,8 @@ function App() {
                 <Route path="categories/edit/:id" element={<AddCategory />} />
                 <Route path="manage-product" element={<ManageProduct />} />
                 <Route path="manage-category" element={<ManageCategory />} />
+                <Route path="offer-message" element={<OfferMessageAdmin />} />
+                <Route path="manage-orders" element={<ManageOrders />} />
               </Route>
 
               {/* Main App Routes */}
@@ -55,6 +62,11 @@ function App() {
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/payment/success" element={<PaymentSuccess />} />
                     <Route path="/payment/failure" element={<PaymentFailure />} />
+
+                    {/* users route only after sign in */}
+                    <Route path="/profile" element={<UserProfile />} />
+                    <Route path="/myorders" element={<MyOrders />} />
+                    <Route path="/order/:id" element={<OrderDetail />} />
                   </Routes>
                 </HomeLayout>
               } />

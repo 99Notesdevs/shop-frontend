@@ -1,11 +1,13 @@
 import { Outlet, useLocation, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { FiPlus, FiList } from 'react-icons/fi';
+import { OfferMessageAdmin } from '../components/admin-dashboard/offer-message';
 
 const WelcomeMessage = () => (
   <div className="p-8 text-center">
     <h1 className="text-3xl font-bold text-gray-800 mb-4">Welcome to Admin Dashboard</h1>
     <p className="text-gray-600 mb-8">Manage the test portal from here. Get started with the following actions:</p>
+    <OfferMessageAdmin />
     
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
       <Link 
