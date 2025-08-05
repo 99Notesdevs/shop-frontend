@@ -97,6 +97,36 @@ export default function CartPage() {
     fetchCart();
   }, [user, isAuthLoading]);
 
+  // Handle quantity update for cart item
+  const handleUpdateQuantity = async (cartItemId: number, newQuantity: number) => {
+    if (newQuantity < 1) return; // Prevent quantity from going below 1
+    
+    try {
+      // Update the local state optimistically
+      setLocalCartItems(prevItems => 
+        prevItems.map(item => 
+          item.id === cartItemId ? { ...item, quantity: newQuantity } : item
+        )
+      );
+      
+      // Make API call to update quantity
+      await api.put(`/cart/${cartItemId}`, { quantity: newQuantity });
+      
+      // Refresh cart data to ensure consistency
+      const cartResponse = await api.get<{ success: boolean; data: CartData }>(`/cart/user/${user?.id}`);
+      if (cartResponse.success && cartResponse.data) {
+        setCartData(cartResponse.data);
+      }
+      
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      // Revert local state on error
+      setLocalCartItems(cartData?.cartItems || []);
+      // Show error message to user
+      setError('Failed to update quantity. Please try again.');
+    }
+  };
+
   // Group cart items by product ID
   const groupedItems = localCartItems.reduce((groups, item) => {
     const existingItem = groups.find(g => g.productId === item.productId);
@@ -123,63 +153,6 @@ export default function CartPage() {
   
   const shipping = subtotal > 0 ? 50 : 0; // Example shipping cost
   const total = subtotal + shipping;
-
-  const handleUpdateQuantity = async (itemId: number, newQuantity: number) => {
-    try {
-      // Find the item to update
-      const itemToUpdate = localCartItems.find(item => item.id === itemId);
-      if (!itemToUpdate) return;
-
-      // Calculate the difference in quantity
-      const quantityDiff = Math.max(1, newQuantity) - itemToUpdate.quantity;
-      if (quantityDiff === 0) return;
-
-      // Update local state optimistically for all matching product items
-      const updatedItems = localCartItems.map(item => {
-        if (item.productId === itemToUpdate.productId) {
-          // For the first item, set the new quantity
-          if (item.id === itemId) {
-            return { ...item, quantity: Math.max(1, newQuantity) };
-          }
-          // For other items of the same product, adjust their quantities proportionally
-          else if (quantityDiff > 0) {
-            // When increasing, only update the first item to avoid multiple API calls
-            return item;
-          } else {
-            // When decreasing, distribute the decrease across all items
-            const newItemQuantity = Math.max(1, item.quantity + Math.floor(quantityDiff / localCartItems.filter(i => i.productId === itemToUpdate.productId).length));
-            return { ...item, quantity: newItemQuantity };
-          }
-        }
-        return item;
-      });
-      
-      setLocalCartItems(updatedItems);
-      
-      // Call the API to update the quantity for the specific item
-      const cartId = cartData?.id;
-      if (!cartId) throw new Error('Cart not found');
-      
-      await api.put(`/cart/${cartId}/${itemId}`, { 
-        quantity: Math.max(1, newQuantity) 
-      });
-      
-      // Update cart data with the new quantities
-      if (cartData) {
-        setCartData({
-          ...cartData,
-          cartItems: cartData.cartItems.map(item => {
-            const updatedItem = updatedItems.find(ui => ui.id === item.id);
-            return updatedItem ? { ...item, quantity: updatedItem.quantity } : item;
-          })
-        });
-      }
-    } catch (error) {
-      console.error('Failed to update quantity:', error);
-      // Revert local state on error
-      setLocalCartItems([...localCartItems]);
-    }
-  };
 
   const handleRemoveItem = async (cartItemId: number) => {
     try {
@@ -310,8 +283,12 @@ export default function CartPage() {
                           )}
                         </div>
                         <div className="ml-4">
-                          <h3 className="text-base font-medium text-gray-900">{item.product?.name || 'Product'}</h3>
-                          <p className="text-sm text-gray-500 mt-1">SKU: {item.productId}</p>
+                          <Link to={`/product/${item.productId}`} className="group">
+                            <h3 className="text-base font-medium text-gray-900 group-hover:text-var(--button) transition-colors">
+                              {item.product?.name || 'Product'}
+                            </h3>
+                          </Link>
+                          <p className="text-sm text-gray-500 mt-1">Qty: {item.quantity}</p>
                         </div>
                       </div>
                       
@@ -326,7 +303,7 @@ export default function CartPage() {
                       <div className="md:w-2/12 mb-4 md:mb-0">
                         <div className="flex items-center justify-center">
                           <button
-                            onClick={() => handleUpdateQuantity(item.ids[0], item.quantity - 1)}
+                            onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                             className="text-gray-500 hover:bg-gray-100 p-1 rounded-full w-8 h-8 flex items-center justify-center"
                             disabled={item.quantity <= 1}
                           >
@@ -334,7 +311,7 @@ export default function CartPage() {
                           </button>
                           <span className="mx-3 w-6 text-center">{item.quantity}</span>
                           <button
-                            onClick={() => handleUpdateQuantity(item.ids[0], item.quantity + 1)}
+                            onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                             className="text-gray-500 hover:bg-gray-100 p-1 rounded-full w-8 h-8 flex items-center justify-center"
                           >
                             <Plus className="h-3 w-3" />
@@ -452,7 +429,7 @@ export default function CartPage() {
               <div className="mt-8 pt-6 border-t border-gray-100">
                 <h3 className="text-sm font-medium text-gray-900 mb-4">We Accept</h3>
                 <div className="grid grid-cols-4 gap-3">
-                  {['visa', 'mastercard', 'paypal', 'apple-pay'].map((method) => (
+                  {['visa', 'mastercard', 'UPI'].map((method) => (
                     <div key={method} className="h-12 bg-gray-50 rounded-lg flex items-center justify-center p-2">
                       <span className="text-xs font-medium text-gray-500">{method.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</span>
                     </div>
