@@ -174,9 +174,18 @@ export function ProductCard({
     navigate(`/product/${id}`);
   };
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    onAddToCart(id.toString());
+    try {
+      // Call the parent's onAddToCart function
+      await onAddToCart(id.toString());
+      
+      // Show the cart sidebar by dispatching a custom event
+      // The parent component should listen for this event and show the cart
+      window.dispatchEvent(new CustomEvent('showCartSidebar'));
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+    }
   };
 
   return (

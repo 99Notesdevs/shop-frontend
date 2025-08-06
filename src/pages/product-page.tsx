@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight, FiMaximize2, FiHeart, FiShare2, FiMinus, FiPlus, FiAlertCircle } from 'react-icons/fi';
 import { api } from '../api/route';
 import { useAuth } from '../contexts/AuthContext';
+import { CartSidebar } from '../components/ui/cart-sidebar';
 import toast from 'react-hot-toast';
 import { env } from '../config/env';
 import { RelatedProducts } from '../components/product/related-product';
@@ -238,6 +239,7 @@ const ProductPage = () => {
   };
 
   const { cart, updateCart } = useAuth();
+  const [isCartOpen, setIsCartOpen] = useState(false);
   
   // Check if the current product is in the cart
   const isProductInCart = useCallback(() => {
@@ -282,6 +284,7 @@ const ProductPage = () => {
       }
       if (data.success) {
         toast.success('Item added to cart successfully!');
+        setIsCartOpen(true); // Open the cart sidebar after adding item
       } else {
         throw new Error(data.message || 'Failed to add item to cart');
       }
@@ -321,7 +324,8 @@ const ProductPage = () => {
     : [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      <div className="min-h-screen bg-gray-50">
 
       <main className="max-w-7xl mx-auto">
         {/* Top Navigation */}
@@ -517,7 +521,9 @@ const ProductPage = () => {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+      <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+    </>
   );
 };
 

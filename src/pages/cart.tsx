@@ -295,7 +295,6 @@ export default function CartPage() {
             <ChevronLeft className="h-5 w-5 mr-1" />
             <span>Back to shop</span>
           </Link>
-          <h1 className="text-3xl text-var(--text-heading) text-center">Shopping Cart</h1>
         </div>
         
         <div className="lg:flex gap-8">

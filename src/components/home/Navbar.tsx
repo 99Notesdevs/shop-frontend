@@ -19,8 +19,6 @@ const Navbar: React.FC = () => {
   
   // Debug log to check cart data
   useEffect(() => {
-    console.log('Cart items in Navbar:', cartItems);
-    console.log('Cart data in Navbar:', cart);
   }, [cartItems, cart]);
 
   // Fetch wishlist count
@@ -121,7 +119,7 @@ const Navbar: React.FC = () => {
                 <button
                   key={category._id}
                   onClick={() => handleCategoryClick(category)}
-                  className="text-sm font-medium text-[var(--text-light)] hover:text-[var(--indigo-600)] transition-colors"
+                  className="text-sm font-medium text-[var(--text-light)] hover:text-[var(--indigo-600)] transition-colors cursor-pointer"
                 >
                   {category.name}
                 </button>
@@ -185,7 +183,7 @@ const Navbar: React.FC = () => {
           {/* Cart Icon */}
           <button
             onClick={() => navigate('/cart')}
-            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors relative"
+            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors relative cursor-pointer"
             aria-label="Cart"
           >
             <ShoppingCart className="w-5 h-5" />
@@ -207,7 +205,7 @@ const Navbar: React.FC = () => {
           {/* Wishlist Icon */}
           <button
             onClick={() => navigate('/wishlist')}
-            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors relative"
+            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors relative cursor-pointer"
             aria-label="Wishlist"
           >
             <Heart className="w-5 h-5" />
