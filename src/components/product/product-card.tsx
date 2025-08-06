@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
-import { ShoppingCart, Star, Heart, Check, Loader2 } from 'lucide-react';
+import { ShoppingCart, Heart, Check, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/route';
+import StarRating from '../ui/star-rating';
 
 interface ProductCardProps {
   id: string;
@@ -255,14 +256,8 @@ export function ProductCard({
         {/* Rating */}
         <div className="flex items-center mb-4">
           <div className="flex">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Star 
-                key={star} 
-                className={`w-4 h-4 ${star <= 4 ? 'text-yellow-400 fill-current' : 'text-gray-200'}`} 
-              />
-            ))}
+          {/* <StarRating productId={ProductC.id} size={16} readOnly showUserRating /> */}
           </div>
-          <span className="text-xs text-gray-500 ml-2">(24 reviews)</span>
         </div>
         
         {/* Category and Cart Status */}
