@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ProductCard } from '../components/product/product-card';
 import { Button } from '../components/ui/button';
 import { toast } from 'react-toastify';
@@ -47,6 +47,7 @@ const AllProduct: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const { cart, updateCart } = useAuth();
   const navigate = useNavigate();
+  const { categoryName } = useParams();
 
   // Fetch categories
   useEffect(() => {
@@ -64,7 +65,53 @@ const AllProduct: React.FC = () => {
     fetchCategories();
   }, []);
 
-  // Fetch products
+  useEffect(() => {
+    // Set selected category from URL if it exists
+    if (categoryName && categories.length > 0) {
+      const category = categories.find(cat => 
+        cat.name.toLowerCase() === decodeURIComponent(categoryName).toLowerCase()
+      );
+      if (category) {
+        setSelectedCategory(category.id);
+      }
+    } else {
+      setSelectedCategory(null);
+    }
+  }, [categoryName, categories]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await api.get('/product') as { success: boolean; data: Product[] };
+        if (response.success) {
+          setAllProducts(response.data);
+          
+          // Filter products based on URL category if it exists
+          if (categoryName && categories.length > 0) {
+            const category = categories.find(cat => 
+              cat.name.toLowerCase() === decodeURIComponent(categoryName).toLowerCase()
+            );
+            if (category) {
+              const filtered = response.data.filter(product => product.categoryId === category.id);
+              setFilteredProducts(filtered);
+            } else {
+              setFilteredProducts(response.data);
+            }
+          } else {
+            setFilteredProducts(response.data);
+          }
+        }
+      } catch (err) {
+        setError('Failed to fetch products');
+        console.error('Error fetching products:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [categoryName, categories]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -210,8 +257,25 @@ const AllProduct: React.FC = () => {
 
   const handleCategorySelect = (categoryId: number | string | null) => {
     setSelectedCategory(categoryId);
-    // Scroll to top when category changes
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Find category to get its name for the URL
+    const category = categories.find(cat => cat.id === categoryId);
+    
+    // Update URL based on category selection
+    if (category) {
+      const categorySlug = category.name.toLowerCase().replace(/\s+/g, '-');
+      navigate(`/products/category/${categorySlug}`, { replace: true });
+    } else {
+      navigate('/products', { replace: true });
+    }
+    
+    // Filter products based on selected category
+    if (categoryId) {
+      const filtered = allProducts.filter(product => product.categoryId === categoryId);
+      setFilteredProducts(filtered);
+    } else {
+      setFilteredProducts(allProducts);
+    }
   };
 
   return (

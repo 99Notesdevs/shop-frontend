@@ -330,7 +330,7 @@ const ProductPage = () => {
         <div className="container mx-auto px-4 py-6">
           {/* Breadcrumb */}
           <div className="mb-6">
-            <Breadcrumb />
+            <Breadcrumb  />
           </div>
           
           <div className="bg-white rounded-lg shadow-sm p-6">

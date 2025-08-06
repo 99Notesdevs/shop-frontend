@@ -208,7 +208,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const cartData = data.data || null;
         if (cartData) {
           setCart(cartData);
-          setCartItems(cartData.items || []);
+          // Use cartData.cartItems if available, otherwise fall back to empty array
+          const items = cartData.cartItems || cartData.items || [];
+          setCartItems(items);
         }
         return cartData;
       }
