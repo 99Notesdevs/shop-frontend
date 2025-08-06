@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight, FiMaximize2, FiHeart, FiShare2, FiMinus, FiPlus, FiAlertCircle } from 'react-icons/fi';
 import { api } from '../api/route';
@@ -11,6 +10,7 @@ import { Breadcrumb } from '../components/ui/breadcrumb';
 import ProductHighlights from '../components/product/product-highlights';
 import CustomerRating from '../components/product/customer-rating';
 import ServiceIcon from '../components/common/service-icon';
+import StarRating from '../components/ui/star-rating';
 
 interface Product {
   id: number;
@@ -142,8 +142,9 @@ const ProductPage = () => {
         productId: product.id,
         phonepe_transactionId: "",
         status: "",
-        amount: quantity,
+        amount: product.price * quantity,
         validity: 10,
+        quantity: quantity,
       };
   
       // Navigate to checkout with orderData and product info

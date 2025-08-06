@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/route';
 import { useAuth } from '../contexts/AuthContext';
-
+import { useNavigate } from 'react-router-dom';
 interface CartItem {
   id: number;
   cartId: number;
@@ -36,6 +36,7 @@ export default function CartPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
 
+  const navigate = useNavigate();
   const { user, isLoading: isAuthLoading } = useAuth();
 
   // Handle authentication state and fetch cart data
@@ -80,7 +81,7 @@ export default function CartPage() {
             ...cartResponse.data,
             cartItems: itemsWithProducts
           });
-          
+          console.log("cartData",cartResponse.data);
           // Initialize local cart items with products
           setLocalCartItems(itemsWithProducts);
         } else {
@@ -96,7 +97,54 @@ export default function CartPage() {
 
     fetchCart();
   }, [user, isAuthLoading]);
-
+  const handleBuyNow = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    if (!product) {
+      toast.error('Product info unavailable. Please refresh.');
+      return;
+    }
+  
+    try {
+      const data = {
+        orderDate: new Date().toISOString(),
+        totalAmount: product.price * quantity, // include quantity
+        status: "Pending",
+        billingAddress: "",
+        shippingAddress: "",
+      };
+      const response = await fetch(`${env.API}/order`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data),
+      });
+  
+      if (response.status === 403) {
+        toast.error('Please login to continue');
+        navigate('/users/login');
+        return;
+      }
+  
+      const responseData = await response.json();
+      const orderId = responseData.data.id;
+  
+      const orderData = {
+        orderId,
+        productId: product.id,
+        phonepe_transactionId: "",
+        status: "",
+        amount: quantity,
+        validity: 10,
+      };
+  
+      // Navigate to checkout with orderData and product info
+      navigate('/checkout', { state: { orderData, product } });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to create order. Please try again.');
+    }
+  };
   // Handle quantity update for cart item
   const handleUpdateQuantity = async (cartItemId: number, newQuantity: number) => {
     if (newQuantity < 1) return; // Prevent quantity from going below 1
@@ -110,7 +158,7 @@ export default function CartPage() {
       );
       
       // Make API call to update quantity
-      await api.put(`/cart/${cartItemId}`, { quantity: newQuantity });
+      await api.put(`/cart/${cartItemId}?quantity=${newQuantity}`);
       
       // Refresh cart data to ensure consistency
       const cartResponse = await api.get<{ success: boolean; data: CartData }>(`/cart/user/${user?.id}`);
@@ -416,6 +464,7 @@ export default function CartPage() {
                       backgroundColor: 'var(--button-hover)'
                     }
                   } as React.CSSProperties}
+                  onClick={handleBuyNow}
                 >
                   Proceed to Checkout
                 </button>

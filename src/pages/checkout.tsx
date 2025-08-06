@@ -49,6 +49,7 @@ interface OrderData {
   amount: number;
   redirectUrl: string;
   validity: number;
+  quantity: number;
 }
 
 interface LocationState {
@@ -265,7 +266,7 @@ const Checkout: React.FC = () => {
 
   if (!orderData || !product) return null;
 
-  const calculateTotal = () => product ? product.price : 0;
+  const calculateTotal = () => product ? product.price * orderData.quantity : 0;
   const total = calculateTotal(); // Use the function to fix the lint warning
 
   return (
@@ -439,6 +440,9 @@ const Checkout: React.FC = () => {
                       <h3 className="font-medium">{product.name}</h3>
                       <p className="text-gray-600">₹{product.price.toFixed(2)}</p>
                     </div>
+                  </div>
+                  <div>
+                    <p>Quantity: {orderData.quantity}</p>
                   </div>
                   <div className="border-t pt-4">
                     <div className="flex justify-between mb-2">
