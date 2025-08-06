@@ -7,7 +7,7 @@ import { api } from '../../api/route';
 import StarRating from '../ui/star-rating';
 
 interface ProductCardProps {
-  id: string;
+  id: number;
   name: string;
   category: string;
   description: string;
@@ -176,7 +176,7 @@ export function ProductCard({
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onAddToCart(id);
+    onAddToCart(id.toString());
   };
 
   return (

@@ -6,9 +6,9 @@ const Footer: React.FC = () => {
     const currentYear = new Date().getFullYear();
     
     return (
-        <footer className="bg-[var(--bg-light)]">
-            <div className="container mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        <footer className="bg-[var(--bg-pink)] w-full">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                     {/* Logo and About */}
                     <div className="col-span-1">
                         <div className="flex items-center mb-4">
@@ -48,17 +48,6 @@ const Footer: React.FC = () => {
                         </ul>
                     </div>
 
-                    {/* Products */}
-                    <div>
-                        <h3 className="text-gray-800 font-semibold mb-4">Products</h3>
-                        <ul className="space-y-2">
-                            <li><Link to="/products/upsc" className="text-gray-600 hover:text-blue-600 text-sm">UPSC Notes</Link></li>
-                            <li><Link to="/products/state-psc" className="text-gray-600 hover:text-blue-600 text-sm">State PSC Notes</Link></li>
-                            <li><Link to="/products/ssc" className="text-gray-600 hover:text-blue-600 text-sm">SSC Notes</Link></li>
-                            <li><Link to="/products/banking" className="text-gray-600 hover:text-blue-600 text-sm">Banking Notes</Link></li>
-                            <li><Link to="/products/defence" className="text-gray-600 hover:text-blue-600 text-sm">Defence Notes</Link></li>
-                        </ul>
-                    </div>
 
                     {/* Contact */}
                     <div>
@@ -76,14 +65,14 @@ const Footer: React.FC = () => {
                         </ul>
                     </div>
                 </div>
+            </div>
 
                 {/* Bottom Bar */}
-                <div className="bg-[var(--primary)] p-3 flex justify-center ">
-                        <p className="text-[var(--text-light)] text-sm mb-4 md:mb-0">
+                <div className="border-t border-gray-200 bg-[var(--primary)] mt-2 p-2">
+                        <p className="text-gray-600 text-sm  text-center">
                             &copy; {currentYear} 99Notes. All rights reserved.
                         </p>
                 </div>
-            </div>
         </footer>
     );
 };
