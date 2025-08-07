@@ -25,53 +25,58 @@ import MyOrders from './pages/myorders';
 import OrderDetail from './components/order/order-detail';
 import OfferMessageAdmin from './components/admin-dashboard/offer-message';
 import ManageOrders from './components/admin-dashboard/manage-orders';
+import { AdminRoute } from './components/protected-route';
 
 function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
-            <Routes>
-              <Route path="/login" element={<LogIn />} />
-              
-              {/* Admin Routes */}
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<AdminDashboard />} />
-                <Route path="login" element={<AdminLogin />} />
-                <Route path="add-product" element={<ProductForm />} />
-                <Route path="products/edit/:id" element={<ProductForm />} />
-                <Route path="add-category" element={<AddCategory />} />
-                <Route path="categories/edit/:id" element={<AddCategory />} />
-                <Route path="manage-product" element={<ManageProduct />} />
-                <Route path="manage-category" element={<ManageCategory />} />
-                <Route path="offer-message" element={<OfferMessageAdmin />} />
-                <Route path="manage-orders" element={<ManageOrders />} />
-              </Route>
+          <Routes>
+            <Route path="/login" element={<LogIn />} />
 
-              {/* Main App Routes */}
-              <Route path="/*" element={
-                <HomeLayout>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/product/:id" element={<ProductPage />} />
-                    <Route path="/contact" element={<ContactUs />} />
-                    <Route path="/products" element={<AllProduct />} />
-                    <Route path="/products/category/:categoryName" element={<AllProduct />} />
-                    <Route path="/cart" element={<CartPage />} />
-                    <Route path="/wishlist" element={<WishlistPage />} />
-                   
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/payment/success" element={<PaymentSuccess />} />
-                    <Route path="/payment/failure" element={<PaymentFailure />} />
+            {/* Admin Login Route */}
+            <Route path="/admin/login" element={<AdminLogin />} />
 
-                    {/* users route only after sign in */}
-                    <Route path="/profile" element={<UserProfile />} />
-                    <Route path="/myorders" element={<MyOrders />} />
-                    <Route path="/order/:id" element={<OrderDetail />} />
-                  </Routes>
-                </HomeLayout>
-              } />
-            </Routes>
+            {/* Protected Admin Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminRoute><AdminDashboard /></AdminRoute>}/>
+            <Route path="add-product" element={<AdminRoute><ProductForm /></AdminRoute>}/>
+            <Route path="products/edit/:id" element={<AdminRoute><ProductForm /></AdminRoute>}/>
+            <Route path="add-category" element={<AdminRoute><AddCategory /></AdminRoute>}/>
+            <Route path="categories/edit/:id" element={<AdminRoute><AddCategory /></AdminRoute>}/>
+            <Route path="manage-product" element={<AdminRoute><ManageProduct /></AdminRoute>}/>
+            <Route path="manage-category" element={<AdminRoute><ManageCategory /></AdminRoute>}/>
+            <Route path="offer-message" element={<AdminRoute><OfferMessageAdmin /></AdminRoute>}/>
+            <Route path="manage-orders" element={<AdminRoute><ManageOrders /></AdminRoute>} />
+            <Route path="manage-category" element={<AdminRoute><ManageCategory /></AdminRoute>}/>
+            <Route path="offer-message" element={<AdminRoute><OfferMessageAdmin /></AdminRoute>}/>
+            <Route path="manage-orders" element={<AdminRoute><ManageOrders /></AdminRoute>}/>
+            </Route>
+
+            {/* Main App Routes */}
+            <Route path="/*" element={
+              <HomeLayout>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/product/:id" element={<ProductPage />} />
+                  <Route path="/contact" element={<ContactUs />} />
+                  <Route path="/products" element={<AllProduct />} />
+                  <Route path="/products/category/:categoryName" element={<AllProduct />} />
+                  <Route path="/cart" element={<CartPage />} />
+                  <Route path="/wishlist" element={<WishlistPage />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/payment/success" element={<PaymentSuccess />} />
+                  <Route path="/payment/failure" element={<PaymentFailure />} />
+
+                  {/* users route only after sign in */}
+                  <Route path="/profile" element={<UserProfile />} />
+                  <Route path="/myorders" element={<MyOrders />} />
+                  <Route path="/order/:id" element={<OrderDetail />} />
+                </Routes>
+              </HomeLayout>
+            } />
+          </Routes>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
