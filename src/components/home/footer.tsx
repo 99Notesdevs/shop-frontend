@@ -44,7 +44,6 @@ const Footer: React.FC = () => {
                             <li><Link to="/about" className="text-gray-600 hover:text-blue-600 text-sm">About Us</Link></li>
                             <li><Link to="/products" className="text-gray-600 hover:text-blue-600 text-sm">Products</Link></li>
                             <li><Link to="/contact" className="text-gray-600 hover:text-blue-600 text-sm">Contact Us</Link></li>
-                            <li><Link to="/blog" className="text-gray-600 hover:text-blue-600 text-sm">Blog</Link></li>
                         </ul>
                     </div>
 
@@ -69,7 +68,7 @@ const Footer: React.FC = () => {
 
                 {/* Bottom Bar */}
                 <div className="border-t border-gray-200 bg-[var(--primary)] mt-2 p-2">
-                        <p className="text-gray-600 text-sm  text-center">
+                        <p className="text-white text-sm  text-center">
                             &copy; {currentYear} 99Notes. All rights reserved.
                         </p>
                 </div>

@@ -3,7 +3,7 @@ import { api } from '../../api/route';
 import { ProductCard } from './product-card';
 
 interface Product {
-  id: string;
+  id: number;
   name: string;
   description: string;
   price: number;
