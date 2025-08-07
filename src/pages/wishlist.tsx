@@ -1,11 +1,11 @@
 import { Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { env } from '../config/env';
 import toast from 'react-hot-toast';
 import { ProductCard } from '../components/product/product-card';
 import { useAuth } from '../contexts/AuthContext';
 import { Breadcrumb } from '../components/ui/breadcrumb';
+import { api } from '../api/route';
 
 interface Product {
   id: number;
@@ -15,6 +15,7 @@ interface Product {
   description: string;
   stock: number;
   categoryId: number;
+  category: string;
   validity: number;
   createdAt: string;
   updatedAt: string;
@@ -27,26 +28,22 @@ export default function WishlistPage() {
   console.log(currentUser?.id);
   useEffect(() => {
     const fetchWishlist = async () => {
+      if (!currentUser?.id) {
+        setLoading(false);
+        return;
+      }
+      
       setLoading(true);
       try {
-        const response = await fetch(`${env.API}/wishlist/1`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to fetch wishlist');
+        const response = await api.get(`/wishlist/${currentUser.id}`) as { success: boolean; data: { products: Product[] } };
+        if (response.success) {
+          setProducts(response.data.products || []);
+        } else {
+          throw new Error('Failed to fetch wishlist');
         }
-        
-        const data = await response.json();
-        setProducts(data.data?.products || []);
       } catch (error) {
         console.error('Error fetching wishlist:', error);
-        toast.error(error instanceof Error ? error.message : 'Failed to load wishlist');
+        toast.error('Failed to load wishlist. Please try again.');
         setProducts([]);
       } finally {
         setLoading(false);
@@ -54,41 +51,30 @@ export default function WishlistPage() {
     };
 
     fetchWishlist();
-  }, []);
-
-  const removeFromWishlist = async (productId: number) => {
-    if (!currentUser?.id) {
-      toast.error('User not authenticated');
-      return;
-    }
-    
-    try {
-      const response = await fetch(`${env.API}/wishlist/${productId}/1`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to remove from wishlist');
-      }
-
-      setProducts(prevProducts => prevProducts.filter(item => item.id !== productId));
-      toast.success('Removed from wishlist');
-    } catch (error) {
-      console.error('Error removing from wishlist:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to remove from wishlist');
-    }
-  };
+  }, [currentUser?.id]);
 
   const handleAddToCart = (productId: string) => {
     // Implement add to cart functionality
     console.log('Add to cart:', productId);
     toast.success('Added to cart');
   };
+
+  if (!currentUser) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow-md text-center max-w-md w-full">
+          <h2 className="text-xl font-semibold mb-4">Please sign in</h2>
+          <p className="text-gray-600 mb-6">You need to be signed in to view your wishlist.</p>
+          <Link
+            to="/login"
+            className="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+          >
+            Sign In
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -125,17 +111,10 @@ export default function WishlistPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
               <div key={product.id} className="relative group">
-                <button
-                  onClick={() => removeFromWishlist(product.id)}
-                  className="absolute top-2 right-2 z-10 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors duration-200"
-                  title="Remove from wishlist"
-                >
-                  <Heart className="h-5 w-5 text-red-500 fill-current" />
-                </button>
                 <ProductCard
-                  id={product.id.toString()}
+                  id={product.id}
                   name={product.name}
-                  category={`Category ${product.categoryId}`}
+                  category={product.category}
                   description={product.description}
                   price={product.price}
                   imageUrl={product.imageUrl || '/placeholder-product.jpg'}

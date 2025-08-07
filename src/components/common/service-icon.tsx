@@ -12,7 +12,7 @@ const ServiceItem: React.FC<{ icon: React.ReactNode; text: string }> = ({ icon, 
 
 const ServiceIcon: React.FC = () => {
   return (
-    <div className="bg-white py-8 px-4 sm:px-6 lg:px-8 border-t border-gray-100">
+    <div className="bg-gray-100 py-8 px-4 sm:px-6 lg:px-8 border-t border-gray-100">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8">
           <ServiceItem 
