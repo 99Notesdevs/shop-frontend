@@ -137,10 +137,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkAdminStatus = async () => {
     try {
+      console.log("Checking admin status...");
       const response = await fetch(`${env.API_MAIN}/admin/check`, {
         credentials: 'include',
       });
-      return response.ok;
+      console.log("Admin check response:", response);
+      const data = await response.json();
+      return data.success;
     } catch (error) {
       console.error("Admin check failed:", error);
       return false;
@@ -278,6 +281,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await fetch(`${env.API_MAIN}/admin`, {
         method: "POST",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, secretKey }),
       });
@@ -285,11 +289,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!response.ok) {
         throw new Error("Admin login failed");
       }
-
-      const data = await response.json();
-      const token = data.data.token;
-
-      Cookies.set("token", token, { expires: 7 });
+      
       const isAdmin = await checkAdminStatus();
 
       if (!isAdmin) {

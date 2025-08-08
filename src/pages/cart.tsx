@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/route';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 interface CartItem {
   id: number;
   cartId: number;
@@ -61,28 +62,40 @@ export default function CartPage() {
         const cartResponse = await api.get<{ success: boolean; data: CartData }>(`/cart/user/${user.id}`);
         
         if (cartResponse.success && cartResponse.data) {
-          // Fetch product details for each cart item using the API route
+          // Fetch product details for each cart item
           const itemsWithProducts = await Promise.all(
             cartResponse.data.cartItems.map(async (item: CartItem) => {
               try {
                 const productResponse = await api.get<{ success: boolean; data: any }>(`/product/${item.productId}`);
+                const product = productResponse.success ? productResponse.data : null;
+                
                 return {
                   ...item,
-                  product: productResponse.success ? productResponse.data : null
+                  product,
+                  // Calculate item total
+                  itemTotal: product ? (product.price * item.quantity) : 0
                 };
               } catch (error) {
                 console.error(`Failed to fetch product ${item.productId}:`, error);
-                return item; // Return item without product data if fetch fails
+                return {
+                  ...item,
+                  itemTotal: 0,
+                  product: null
+                };
               }
             })
           );
-          
-          setCartData({
+    
+          // Calculate cart total
+          const cartTotal = itemsWithProducts.reduce((total, item) => total + (item.itemTotal || 0), 0);
+    
+          const updatedCartData = {
             ...cartResponse.data,
-            cartItems: itemsWithProducts
-          });
-          console.log("cartData",cartResponse.data);
-          // Initialize local cart items with products
+            cartItems: itemsWithProducts,
+            totalAmount: cartTotal
+          };
+    
+          setCartData(updatedCartData);
           setLocalCartItems(itemsWithProducts);
         } else {
           setError('Failed to fetch cart data');
@@ -94,52 +107,99 @@ export default function CartPage() {
         setIsLoading(false);
       }
     };
+    
+    const handleBuyNow = async (e: React.MouseEvent) => {
+      e.preventDefault();
+      
+      if (!cartData) {
+        toast.error('Cart is empty. Please add items to your cart first.');
+        return;
+      }
+    
+      try {
+        const orderData = {
+          orderDate: new Date().toISOString(),
+          products: cartData.cartItems.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.product?.price || 0
+          })),
+          totalAmount: cartData.totalAmount,
+          status: "Pending",
+          billingAddress: "",
+          shippingAddress: "",
+          userId: user?.id
+        };
+    
+        const response = await api.post<{ success: boolean; data: any }>(`/order`, orderData);
+    
+        if (!response.success) {
+          toast.error('Failed to create order. Please try again.');
+          return;
+        }
+    
+        const responseData = response.data;
+        const orderId = responseData.id;
+    
+        navigate('/checkout', { 
+          state: { 
+            orderData: {
+              orderId,
+              phonepe_transactionId: "",
+              status: "",
+              amount: cartData.totalAmount,
+              validity: 10,
+              quantity: cartData.cartItems.reduce((total, item) => total + item.quantity, 0)
+            }, 
+            cartData 
+          } 
+        });
+      } catch (err) {
+        console.error('Order creation error:', err);
+        toast.error('Failed to create order. Please try again.');
+      }
+    };
 
     fetchCart();
   }, [user, isAuthLoading]);
   const handleBuyNow = async (e: React.MouseEvent) => {
     e.preventDefault();
     
-    if (!product) {
+    if (!cartData) {
       toast.error('Product info unavailable. Please refresh.');
       return;
     }
   
     try {
+      console.log("cartData 23",cartData);
       const data = {
         orderDate: new Date().toISOString(),
-        totalAmount: product.price * quantity, // include quantity
+        products: cartData.cartItems.map((item: CartItem) => item),
+        totalAmount: cartData.totalAmount,
         status: "Pending",
         billingAddress: "",
         shippingAddress: "",
       };
-      const response = await fetch(`${env.API}/order`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data),
-      });
+      const response = await api.post<{ success: boolean; data: any }>(`/order`, data);
   
-      if (response.status === 403) {
+      if (!response.success) {
         toast.error('Please login to continue');
         navigate('/users/login');
         return;
       }
-  
-      const responseData = await response.json();
-      const orderId = responseData.data.id;
-  
+      console.log("response",response);
+      const responseData = response.data;
+      const orderId = responseData.id;
+      console.log("orderId",orderId);
       const orderData = {
         orderId,
-        productId: product.id,
         phonepe_transactionId: "",
         status: "",
-        amount: quantity,
+        amount: cartData.totalAmount,
         validity: 10,
       };
-  
-      // Navigate to checkout with orderData and product info
-      navigate('/checkout', { state: { orderData, product } });
+      console.log("navigating");
+      navigate('/checkout', { state: { orderData, cartData } });
     } catch (err) {
       console.error(err);
       toast.error('Failed to create order. Please try again.');

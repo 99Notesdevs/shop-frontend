@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { FaStar } from 'react-icons/fa';
-import { api } from '../api/route';
+import { api } from '../../api/route';
 
 interface StarRatingProps {
   productId: number;
-  userId?: number;
+  userId?: string;
   interactive?: boolean;
   onRatingChange?: (rating: number) => void;
   initialRating?: number;

@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { ShoppingCart, Heart, Check, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/route';
-import StarRating from '../ui/star-rating';
+import StarRating from '../ui/StarRating';
 
 interface ProductCardProps {
   id: number;
