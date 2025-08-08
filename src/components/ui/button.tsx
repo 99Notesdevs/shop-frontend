@@ -6,7 +6,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', size = 'md', ...props }) => {
-  const baseStyles = 'rounded-md font-medium transition-colors duration-200';
+  const baseStyles = 'rounded-md font-medium transition-colors duration-200 cursor-pointer';
   
   const sizeStyles = {
     sm: 'px-3 py-1.5 text-sm',
