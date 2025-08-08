@@ -127,6 +127,7 @@ export default function ProductForm() {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
+        salePrice: parseFloat(formData.price),
         stock: parseInt(formData.stock, 10),
         categoryId: parseInt(formData.categoryId, 10),
         imageUrl: formData.imageUrl,

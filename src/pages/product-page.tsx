@@ -121,6 +121,7 @@ const ProductPage = () => {
         status: "Pending",
         billingAddress: "",
         shippingAddress: "",
+        productId: [product.id],
       };
       const response = await fetch(`${env.API}/order`, {
         method: 'POST',

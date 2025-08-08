@@ -52,9 +52,32 @@ interface OrderData {
   quantity: number;
 }
 
+interface CartItem {
+  id: number;
+  cartId: number;
+  productId: number;
+  quantity: number;
+  createdAt: string;
+  updatedAt: string;
+  product?: {
+    id: number;
+    name: string;
+    description: string;
+    price: number;
+    images?: Array<{ url: string }>;
+  };
+}
+interface CartData {
+  id: number;
+  userId: number;
+  totalAmount: number;
+  createdAt: string;
+  updatedAt: string;
+  cartItems: CartItem[];
+}
 interface LocationState {
   orderData: OrderData;
-  product: Product;
+  cartData: CartData;
 }
 
 const emptyAddress: Address = {
@@ -75,15 +98,15 @@ const Checkout: React.FC = () => {
   const state = location.state as LocationState | undefined;
 
   // Redirect to home if invalid access
-  useEffect(() => {
-    if (!state || !state.orderData || !state.product) {
-      toast.error("Invalid access. Please select a product first.");
-      navigate("/", { replace: true });
-    }
-  }, [state, navigate]);
+  // useEffect(() => {
+  //   if (!state || !state.orderData || !state.product) {
+  //     toast.error("Invalid access. Please select a product first.");
+  //     navigate("/", { replace: true });
+  //   }
+  // }, [state, navigate]);
 
   const orderData = state?.orderData;
-  const product = state?.product;
+  const cartData = state?.cartData;
 
   // Address states
   const [deliveryAddress, setDeliveryAddress] = useState<Address>(emptyAddress);
@@ -246,7 +269,7 @@ const Checkout: React.FC = () => {
         deliveryAddress,
         status: "Confirmed",
       };
-
+      console.log("finalOrder",finalOrder);
       const res = await fetch(`${env.API}/payment/create-order-product`, {
         method: "POST",
         credentials: "include",
@@ -255,8 +278,9 @@ const Checkout: React.FC = () => {
       });
 
       if (!res.ok) throw new Error("Order completion failed");
-
+      console.log("res",res);
       const respData = await res.json();
+      console.log("respData",respData);
       window.location.href = respData.data;
       
     } catch (error) {
@@ -264,9 +288,9 @@ const Checkout: React.FC = () => {
     }
   };
 
-  if (!orderData || !product) return null;
+  if (!orderData) return null;
 
-  const calculateTotal = () => product ? product.price * orderData.quantity : 0;
+  const calculateTotal = () => orderData ? orderData.amount : 0;
   const total = calculateTotal(); // Use the function to fix the lint warning
 
   return (
@@ -426,44 +450,59 @@ const Checkout: React.FC = () => {
           <div className="lg:w-1/3">
             <div className="bg-white shadow rounded-lg p-6 sticky top-6">
               <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-              {product && (
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-4">
-                    {product.imageUrl && (
-                      <img 
-                        src={product.imageUrl} 
-                        alt={product.name}
-                        className="w-20 h-20 object-cover rounded"
-                      />
-                    )}
-                    <div>
-                      <h3 className="font-medium">{product.name}</h3>
-                      <p className="text-gray-600">₹{product.price.toFixed(2)}</p>
+              {cartData?.cartItems && cartData.cartItems.length > 0 ? (
+              <div className="space-y-6">
+                <h3 className="font-semibold">Your Items ({cartData.cartItems.length})</h3>
+                <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                  {cartData.cartItems.map((item) => (
+                    <div key={item.id} className="flex items-start justify-between border-b pb-4">
+                      <div className="flex space-x-4">
+                        {item.product?.images?.[0]?.url ? (
+                          <img 
+                            src={item.product.images[0].url} 
+                            alt={item.product.name}
+                            className="w-20 h-20 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 bg-gray-100 rounded flex items-center justify-center">
+                            <span className="text-gray-400">No image</span>
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="font-medium">{item.product?.name || 'Product not found'}</h4>
+                          <p className="text-gray-600">Qty: {item.quantity}</p>
+                          <p className="text-gray-800 font-medium">
+                            ₹{item.product ? (item.product.price * item.quantity).toFixed(2) : '0.00'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <p>Quantity: {orderData.quantity}</p>
-                  </div>
-                  <div className="border-t pt-4">
-                    <div className="flex justify-between mb-2">
-                      <span>Subtotal</span>
-                      <span>₹{product.price.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-semibold text-lg">
-                      <span>Total</span>
-                      <span>₹{total.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  <button
-                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-                    type="submit"
-                    onClick={handleSubmit}
-                    disabled={!selectedAddressId}
-                  >
-                    Proceed to Payment
-                  </button>
+                  ))}
                 </div>
-              )}
+    
+    <div className="border-t pt-4 space-y-3">
+      <div className="flex justify-between text-lg">
+        <span className="font-medium">Subtotal</span>
+        <span>₹{cartData.totalAmount?.toFixed(2) || '0.00'}</span>
+      </div>
+      <div className="flex justify-between text-lg font-semibold">
+        <span>Total</span>
+        <span>₹{cartData.totalAmount?.toFixed(2) || '0.00'}</span>
+      </div>
+    </div>
+
+    <button
+      className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
+      type="submit"
+      onClick={handleSubmit}
+      disabled={!selectedAddressId}
+    >
+      Proceed to Payment
+    </button>
+  </div>
+) : (
+  <p className="text-gray-500">Your cart is empty</p>
+)}
             </div>
           </div>
         </div>
