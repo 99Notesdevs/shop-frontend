@@ -102,25 +102,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Check authentication status on mount
   useEffect(() => {
-    if (user?.id) {
-      fetchCartData();
-    } else {
-      setCart(null);
-      setCartItems([]);
-    }
-  }, [user]);
-
-  useEffect(() => {
     const checkAuth = async () => {
-      const token = Cookies.get("token");
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
+      // const token = Cookies.get("token"); 
+      // if (!token) {
+      //   setIsLoading(false);
+      //   return;
+      // }
 
       try {
         // Check if admin first
-        const isAdmin = await checkAdminStatus(token);
+        const isAdmin = await checkAdminStatus();
         if (isAdmin) {
           setAdmin(true);
           setIsLoading(false);
@@ -144,12 +135,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const checkAdminStatus = async (token: string) => {
+  const checkAdminStatus = async () => {
     try {
+      console.log("Checking admin status...");
       const response = await fetch(`${env.API_MAIN}/admin/check`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
-      return response.ok;
+      console.log("Admin check response:", response);
+      const data = await response.json();
+      return data.success;
     } catch (error) {
       console.error("Admin check failed:", error);
       return false;
@@ -194,7 +188,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return null;
     }
   };
-
+  
   const fetchCartData = async (): Promise<Cart | null> => {
     try {
       // First, get the current user to get their user ID
@@ -202,14 +196,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!userData?.id) {
         return null;
       }
+
       // Use the correct endpoint to get cart by user ID
-      const response = await fetch(`${env.API_MAIN}/cart/user/${userData.id}`, {
+      const response = await fetch(`${env.API}/cart/user/${userData.id}`, {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       });
+
       if (response.ok) {
         const data = await response.json();
         const cartData = data.data || null;
@@ -237,6 +233,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setCart(null);
     setCartItems([]);
   };
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
@@ -282,35 +279,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   ) => {
     setIsLoading(true);
     try {
-      // First, perform the admin login
-      const loginResponse = await fetch(`${env.API_MAIN}/admin`, {
+      const response = await fetch(`${env.API_MAIN}/admin`, {
         method: "POST",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
-        credentials: 'include', // Important for cookies
         body: JSON.stringify({ email, password, secretKey }),
       });
 
-      if (!loginResponse.ok) {
-        const errorData = await loginResponse.json().catch(() => ({}));
-        throw new Error(errorData.message || "Admin login failed");
+      if (!response.ok) {
+        throw new Error("Admin login failed");
       }
-
-      // The token is set as an HTTP-only cookie by the server
-      // Now make a separate request to verify admin status
-      const checkResponse = await fetch(`${env.API_MAIN}/admin/check`, {
-        credentials: 'include', // Important for cookies
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!checkResponse.ok) {
-        throw new Error("Failed to verify admin status");
-      }
-
-      const checkData = await checkResponse.json();
       
-      if (!checkData.success) {
+      const isAdmin = await checkAdminStatus();
+
+      if (!isAdmin) {
         throw new Error("Not authorized as admin");
       }
 
@@ -351,7 +333,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAdmin = async () => {
     const token = Cookies.get("token");
     if (!token) return false;
-    return checkAdminStatus(token);
+    return checkAdminStatus();
   };
 
   // Google OAuth implementation
@@ -399,6 +381,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return null;
   };
 
+  useEffect(() => {
+    if (user?.id) {
+      fetchCartData();
+    } else {
+      setCart(null);
+      setCartItems([]);
+    }
+  }, [user]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -410,9 +401,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         cartItems,
         login,
         adminLogin,
-        logout,
+        logout: handleLogout,
         GoogleOneTap,
-        checkAdmin,
+        checkAdmin: checkAdminStatus,
         fetchUserData,
         fetchUserDetails,
         fetchCartData,

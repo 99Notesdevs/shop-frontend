@@ -64,6 +64,7 @@ interface CartItem {
     name: string;
     description: string;
     price: number;
+    salePrice?: number;
     images?: Array<{ url: string }>;
   };
 }
@@ -290,9 +291,6 @@ const Checkout: React.FC = () => {
 
   if (!orderData) return null;
 
-  const calculateTotal = () => orderData ? orderData.amount : 0;
-  const total = calculateTotal(); // Use the function to fix the lint warning
-
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -471,9 +469,22 @@ const Checkout: React.FC = () => {
                         <div>
                           <h4 className="font-medium">{item.product?.name || 'Product not found'}</h4>
                           <p className="text-gray-600">Qty: {item.quantity}</p>
-                          <p className="text-gray-800 font-medium">
-                            ₹{item.product ? (item.product.price * item.quantity).toFixed(2) : '0.00'}
-                          </p>
+                          <div className="flex items-center space-x-2">
+                            {item.product?.salePrice ? (
+                              <>
+                                <span className="text-gray-800 font-medium">
+                                  ₹{(item.product.salePrice * item.quantity).toFixed(2)}
+                                </span>
+                                <span className="text-gray-400 line-through text-sm">
+                                  ₹{(item.product.price * item.quantity).toFixed(2)}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-gray-800 font-medium">
+                                ₹{item.product ? (item.product.price * item.quantity).toFixed(2) : '0.00'}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -483,11 +494,26 @@ const Checkout: React.FC = () => {
     <div className="border-t pt-4 space-y-3">
       <div className="flex justify-between text-lg">
         <span className="font-medium">Subtotal</span>
-        <span>₹{cartData.totalAmount?.toFixed(2) || '0.00'}</span>
+        <span>
+          {cartData.cartItems.some(item => item.product?.salePrice) ? (
+            <span className="text-gray-400 line-through mr-2">
+              ₹{cartData.cartItems.reduce((sum, item) => sum + (item.product?.price || 0) * item.quantity, 0).toFixed(2)}
+            </span>
+          ) : null}
+          ₹{cartData.cartItems.reduce((sum, item) => {
+            const itemPrice = item.product?.salePrice !== undefined ? item.product.salePrice : item.product?.price || 0;
+            return sum + (itemPrice * item.quantity);
+          }, 0).toFixed(2)}
+        </span>
       </div>
       <div className="flex justify-between text-lg font-semibold">
         <span>Total</span>
-        <span>₹{cartData.totalAmount?.toFixed(2) || '0.00'}</span>
+        <span>
+          ₹{cartData.cartItems.reduce((sum, item) => {
+            const itemPrice = item.product?.salePrice !== undefined ? item.product.salePrice : item.product?.price || 0;
+            return sum + (itemPrice * item.quantity);
+          }, 0).toFixed(2)}
+        </span>
       </div>
     </div>
 

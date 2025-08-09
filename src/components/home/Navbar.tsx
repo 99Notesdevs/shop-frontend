@@ -6,6 +6,7 @@ import logo from '../../assets/logo.png';
 import { LogIn, ChevronDown, ShoppingCart, Heart } from 'lucide-react';
 import { api } from '../../api/route';
 import { SearchBar } from './search-bar';
+import { OfferMessageDisplay } from './offer-message';
 
 interface Category {
   _id: string;
@@ -89,9 +90,13 @@ const Navbar: React.FC = () => {
     navigate('/');
   };
 
-  return (
+return (
     <>
+      
       <div className="w-full" />
+      <div className="w-full h-10">
+      <OfferMessageDisplay />
+      </div>
       <nav className="sticky top-0 w-full bg-[var(--bg-light)] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.1)] z-40 h-20 flex items-center px-10 transition-colors duration-200">
         {/* Left Section - Logo and Search */}
         <div className="flex items-center">

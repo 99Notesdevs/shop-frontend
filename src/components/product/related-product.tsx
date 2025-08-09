@@ -7,6 +7,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
+  salePrice?: number;
   imageUrl: string;
   category: string;
 }
@@ -103,6 +104,7 @@ export function RelatedProducts({ currentProductId, categoryId, onAddToCart }: R
             name={product.name}
             description={product.description}
             price={product.price}
+            salePrice={product.salePrice || product.price}
             imageUrl={product.imageUrl}
             category={product.category}
             onAddToCart={onAddToCart}

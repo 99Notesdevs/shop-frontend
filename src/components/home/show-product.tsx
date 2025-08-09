@@ -137,7 +137,7 @@ export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart }) => {
                     category={category.name}
                     description={product.description}
                     price={product.price}
-                    salePrice={product.salePrice}
+                    salePrice={product.salePrice || product.price}
                     imageUrl={product.imageUrl || 'https://via.placeholder.com/300'}
                     onAddToCart={onAddToCart}
                   />

@@ -199,7 +199,7 @@ export function ProductCard({
     >
       {/* Discount Badge */}
       {salePrice < price && (
-        <div className="absolute top-3 left-3 z-10 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full w-10 h-10 flex items-center justify-center shadow-md">
+        <div className="absolute top-3 left-3 z-10 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--text-heading)]  text-xs font-bold rounded-full w-10 h-10 flex items-center justify-center shadow-md">
           {Math.round(((price - salePrice) / price) * 100)}%
         </div>
       )}

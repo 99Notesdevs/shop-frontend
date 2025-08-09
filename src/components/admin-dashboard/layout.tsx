@@ -29,7 +29,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean; toggleS
       icon: FiSettings,
       items: [
         { icon: FiSettings, text: 'Admin Panel', path: '/admin' },
-        {icon: FiMessageCircle, text:'Offer Message', path:'/admin/offer-message'},
+        {icon: FiMessageCircle, text:'Offer Message', path:'/admin/add-offer-message'},
         {icon: FiList, text:'Manage Orders', path:'/admin/manage-orders'},
       ],
     },

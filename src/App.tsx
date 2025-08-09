@@ -23,9 +23,9 @@ import ManageCategory from './components/admin-dashboard/manage-category';
 import UserProfile from './pages/user-profile';
 import MyOrders from './pages/myorders';
 import OrderDetail from './components/order/order-detail';
-import OfferMessageAdmin from './components/admin-dashboard/offer-message';
 import ManageOrders from './components/admin-dashboard/manage-orders';
 import { AdminRoute } from './components/protected-route';
+import AddOfferMessage from './components/admin-dashboard/add-offer-message';
 
 function App() {
   return (
@@ -47,11 +47,8 @@ function App() {
             <Route path="categories/edit/:id" element={<AdminRoute><AddCategory /></AdminRoute>}/>
             <Route path="manage-product" element={<AdminRoute><ManageProduct /></AdminRoute>}/>
             <Route path="manage-category" element={<AdminRoute><ManageCategory /></AdminRoute>}/>
-            <Route path="offer-message" element={<AdminRoute><OfferMessageAdmin /></AdminRoute>}/>
             <Route path="manage-orders" element={<AdminRoute><ManageOrders /></AdminRoute>} />
-            <Route path="manage-category" element={<AdminRoute><ManageCategory /></AdminRoute>}/>
-            <Route path="offer-message" element={<AdminRoute><OfferMessageAdmin /></AdminRoute>}/>
-            <Route path="manage-orders" element={<AdminRoute><ManageOrders /></AdminRoute>}/>
+            <Route path="add-offer-message" element={<AdminRoute><AddOfferMessage /></AdminRoute>} />
             </Route>
 
             {/* Main App Routes */}

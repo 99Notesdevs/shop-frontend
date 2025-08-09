@@ -47,7 +47,7 @@ const ProductPage = () => {
     }
     
     try {
-      const response = await fetch(`${env.API}/wishlist/1`, {
+      const response = await fetch(`${env.API}/wishlist/${currentUser.id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -269,7 +269,7 @@ const ProductPage = () => {
 
       if (response.status === 401) {
         toast.error('Your session has expired. Please login again');
-        navigate('/users/login');
+        navigate('/login');
         return;
       }
 
@@ -401,7 +401,7 @@ const ProductPage = () => {
                   <div className="flex items-center">
                    <StarRating 
                      productId={product.id} 
-                     userId={currentUser?.id } 
+                     userId={currentUser?.id?.toString() } 
                      interactive={!!currentUser}
                    />
                   </div>

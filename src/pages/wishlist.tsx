@@ -11,6 +11,7 @@ interface Product {
   id: number;
   name: string;
   price: number;
+  salePrice?: number;
   imageUrl: string;
   description: string;
   stock: number;
@@ -117,6 +118,7 @@ export default function WishlistPage() {
                   category={product.category}
                   description={product.description}
                   price={product.price}
+                  salePrice={product.salePrice || product.price}
                   imageUrl={product.imageUrl || '/placeholder-product.jpg'}
                   onAddToCart={handleAddToCart}
                 />

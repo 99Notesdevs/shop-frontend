@@ -25,6 +25,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
+  salePrice?: number;
   stock: number;
   imageUrl: string;
   category: {
@@ -380,6 +381,7 @@ const AllProduct: React.FC = () => {
               category={getCategoryName(product.categoryId)}
               description={product.description}
               price={product.price}
+              salePrice={product.salePrice || product.price}
               imageUrl={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
               onAddToCart={handleAddToCart}
             />
