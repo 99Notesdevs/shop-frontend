@@ -55,7 +55,7 @@ export const StarRating = ({
 
     try {
       // Try to update existing rating
-      await api.put(`/productRating/${productId}`, { rating: selectedRating }) as {success:boolean,data:number};
+      await api.post(`/productRating/${productId}`, { rating: selectedRating }) as {success:boolean,data:number};
       setRating(selectedRating);
       if (onRatingChange) {
         onRatingChange(selectedRating);

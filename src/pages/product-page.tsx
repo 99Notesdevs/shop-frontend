@@ -119,10 +119,10 @@ const ProductPage = () => {
       const data = {
         orderDate: new Date().toISOString(),
         totalAmount: product.price * quantity, // include quantity
+        products: [{productId:product.id,product, quantity:quantity}],
         status: "Pending",
         billingAddress: "",
         shippingAddress: "",
-        productId: [product.id],
       };
       const response = await fetch(`${env.API}/order`, {
         method: 'POST',
