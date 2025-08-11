@@ -26,6 +26,7 @@ import OrderDetail from './components/order/order-detail';
 import ManageOrders from './components/admin-dashboard/manage-orders';
 import { AdminRoute } from './components/protected-route';
 import AddOfferMessage from './components/admin-dashboard/add-offer-message';
+import AddCoupon from './components/admin-dashboard/add-coupon';
 
 function App() {
   return (
@@ -49,6 +50,7 @@ function App() {
             <Route path="manage-category" element={<AdminRoute><ManageCategory /></AdminRoute>}/>
             <Route path="manage-orders" element={<AdminRoute><ManageOrders /></AdminRoute>} />
             <Route path="add-offer-message" element={<AdminRoute><AddOfferMessage /></AdminRoute>} />
+            <Route path="add-coupon" element={<AdminRoute><AddCoupon /></AdminRoute>} />
             </Route>
 
             {/* Main App Routes */}

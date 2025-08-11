@@ -31,6 +31,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean; toggleS
         { icon: FiSettings, text: 'Admin Panel', path: '/admin' },
         {icon: FiMessageCircle, text:'Offer Message', path:'/admin/add-offer-message'},
         {icon: FiList, text:'Manage Orders', path:'/admin/manage-orders'},
+        {icon: FiPlus, text:'Add Coupon', path:'/admin/add-coupon'},
       ],
     },
   ];
