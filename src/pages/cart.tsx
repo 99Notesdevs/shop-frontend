@@ -17,6 +17,7 @@ interface CartItem {
     name: string;
     description: string;
     price: number;
+    salePrice?: number;
     images?: Array<{ url: string }>;
   };
 }
@@ -254,9 +255,10 @@ export default function CartPage() {
   // Use grouped items for display
   const cartItems = groupedItems;
 
-  // Calculate subtotal by summing up all items' prices
+  // Calculate subtotal by summing up all items' prices (using sale price if available)
   const subtotal = cartItems.reduce((sum, item) => {
-    return sum + ((item.product?.price || 0) * item.quantity);
+    const price = item.product?.salePrice || item.product?.price || 0;
+    return sum + (price * item.quantity);
   }, 0);
   
   const shipping = subtotal > 0 ? 50 : 0; // Example shipping cost
@@ -401,9 +403,20 @@ export default function CartPage() {
                       
                       {/* Price */}
                       <div className="md:w-2/12 mb-4 md:mb-0 text-center">
-                        <span className="text-base font-medium text-gray-900">
-                          ₹{(item.product?.price || 0).toFixed(2)}
-                        </span>
+                        {item.product?.salePrice ? (
+                          <div className="flex flex-col">
+                            <span className="text-base font-medium text-gray-900">
+                              ₹{item.product.salePrice.toFixed(2)}
+                            </span>
+                            <span className="text-sm text-gray-500 line-through">
+                              ₹{item.product.price.toFixed(2)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-base font-medium text-gray-900">
+                            ₹{(item.product?.price || 0).toFixed(2)}
+                          </span>
+                        )}
                       </div>
                       
                       {/* Quantity */}
@@ -428,9 +441,22 @@ export default function CartPage() {
                       
                       {/* Total & Remove */}
                       <div className="md:w-2/12 flex items-center justify-between md:justify-end">
-                        <span className="text-base font-medium text-gray-900">
-                          ₹{((item.product?.price || 0) * item.quantity).toFixed(2)}
-                        </span>
+                        <div className="flex flex-col items-end">
+                          {item.product?.salePrice ? (
+                            <>
+                              <span className="text-base font-medium text-gray-900">
+                                ₹{(item.product.salePrice * item.quantity).toFixed(2)}
+                              </span>
+                              <span className="text-sm text-gray-500 line-through">
+                                ₹{(item.product.price * item.quantity).toFixed(2)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-base font-medium text-gray-900">
+                              ₹{((item.product?.price || 0) * item.quantity).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
                         <button
                           onClick={() => item.ids.forEach(id => handleRemoveItem(id))}
                           className="ml-4 text-gray-400 hover:text-red-500 p-1"

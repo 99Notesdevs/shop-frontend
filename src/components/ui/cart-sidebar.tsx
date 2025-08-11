@@ -11,6 +11,7 @@ interface CartItemProduct {
   id: number;
   name: string;
   price: number;
+  salePrice?: number;
   imageUrl: string;
 }
 
@@ -80,7 +81,7 @@ export function CartSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
   const calculateTotal = () => {
     return items.reduce((total: number, item: CartItem) => {
-      return total + (item.product?.price || 0) * item.quantity;
+      return total + (item.product?.salePrice || item.product?.price || 0) * item.quantity;
     }, 0);
   };
 
@@ -190,7 +191,7 @@ export function CartSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                           <h3 className="text-sm font-medium text-gray-900 truncate">
                             {item.product?.name || 'Product'}
                           </h3>
-                          <p className="mt-1 text-sm text-gray-600">₹{item.product?.price?.toFixed(2) || '0.00'}</p>
+                          <p className="mt-1 text-sm text-gray-600">₹{item.product?.salePrice?.toFixed(2) || item.product?.price?.toFixed(2) || '0.00'}</p>
                           
                           <div className="mt-2 flex items-center space-x-2">
                             <button 

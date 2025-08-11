@@ -14,6 +14,7 @@ interface OrderItem {
   productId: string;
   name: string;
   price: number;
+  salePrice?: number;
   quantity: number;
   image?: string;
 }

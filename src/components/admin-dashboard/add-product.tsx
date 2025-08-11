@@ -16,6 +16,7 @@ interface ProductData {
   name: string;
   description: string;
   price: string;
+  salePrice: string;
   stock: string;
   imageUrl: string;
   categoryId: string;
@@ -68,6 +69,7 @@ export default function ProductForm() {
           name: string;
           description: string;
           price: number;
+          salePrice: number | null;
           stock: number;
           imageUrl: string;
           categoryId: number;
@@ -81,6 +83,7 @@ export default function ProductForm() {
           name: product.name,
           description: product.description,
           price: product.price.toString(),
+          salePrice: product.salePrice?.toString() || '',
           stock: product.stock.toString(),
           imageUrl: product.imageUrl || '',
           categoryId: product.categoryId.toString(),
@@ -101,6 +104,7 @@ export default function ProductForm() {
     name: '',
     description: '',
     price: '',
+    salePrice: '',
     stock: '',
     imageUrl: '',
     categoryId: '',
@@ -127,7 +131,7 @@ export default function ProductForm() {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
-        salePrice: parseFloat(formData.price),
+        salePrice: formData.salePrice ? parseFloat(formData.salePrice) : null,
         stock: parseInt(formData.stock, 10),
         categoryId: parseInt(formData.categoryId, 10),
         imageUrl: formData.imageUrl,
@@ -229,36 +233,36 @@ export default function ProductForm() {
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
                 <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                  Price ($) <span className="text-red-500">*</span>
+                  Price (₹) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
                   id="price"
                   name="price"
-                  step="0.01"
                   min="0"
                   required
                   value={formData.price}
                   onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
-
               <div>
-                <label htmlFor="stock" className="block text-sm font-medium text-gray-700">
-                  Stock <span className="text-red-500">*</span>
+                <label htmlFor="salePrice" className="block text-sm font-medium text-gray-700">
+                  Sale Price (₹) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
-                  id="stock"
-                  name="stock"
+                  id="salePrice"
+                  name="salePrice"
                   min="0"
                   required
-                  value={formData.stock}
+                  value={formData.salePrice}
                   onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
+
+              
             </div>
 
             <div className="space-y-2">
@@ -304,6 +308,7 @@ export default function ProductForm() {
               />
             </div>
 
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
               <label htmlFor="validity" className="block text-sm font-medium text-gray-700">
                 Validity (in days)
@@ -319,6 +324,23 @@ export default function ProductForm() {
                 placeholder="Optional"
               />
             </div>
+            <div>
+                <label htmlFor="stock" className="block text-sm font-medium text-gray-700">
+                  Stock <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="stock"
+                  name="stock"
+                  min="0"
+                  required
+                  value={formData.stock}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                />
+              </div>
+              </div>
+
 
             <div className="flex justify-end space-x-4 pt-4">
               <button

@@ -12,6 +12,7 @@ interface ProductCardProps {
   category: string;
   description: string;
   price: number;
+  salePrice: number;
   imageUrl: string;
   onAddToCart: (id: string) => void;
 }
@@ -22,6 +23,7 @@ export function ProductCard({
   category,
   description,
   price,
+  salePrice,
   imageUrl,
   onAddToCart,
 }: ProductCardProps) {
@@ -195,6 +197,13 @@ export function ProductCard({
       onClick={handleCardClick}
       className="relative bg-white rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg h-full flex flex-col group cursor-pointer border border-gray-100 hover:border-gray-200"
     >
+      {/* Discount Badge */}
+      {salePrice < price && (
+        <div className="absolute top-3 left-3 z-10 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--text-heading)]  text-xs font-bold rounded-full w-10 h-10 flex items-center justify-center shadow-md">
+          {Math.round(((price - salePrice) / price) * 100)}%
+        </div>
+      )}
+      
       {/* Wishlist Button */}
       <button 
         className={`absolute top-3 right-3 z-10 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm transition-all duration-200 hover:scale-110 ${
@@ -257,7 +266,16 @@ export function ProductCard({
       <div className="p-5 flex-1 flex flex-col">
         <div className="flex items-start justify-between mb-2">
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{name}</h3>
-          <p className="text-lg font-bold text-gray-900">₹{price.toFixed(2)}</p>
+          <div className="text-right">
+            {salePrice && salePrice < price ? (
+              <>
+                <p className="text-lg font-bold text-gray-900">₹{salePrice?.toFixed?.(2) }</p>
+                <p className="text-sm text-gray-500 line-through">₹{price?.toFixed?.(2) }</p>
+              </>
+            ) : (
+              <p className="text-lg font-bold text-gray-900">₹{price?.toFixed?.(2)}</p>
+            )}
+          </div>
         </div>
         
         <p className="text-sm text-gray-500 mb-4 line-clamp-2">{description}</p>

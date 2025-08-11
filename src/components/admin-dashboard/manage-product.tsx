@@ -12,6 +12,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
+  salePrice?: number;
   stock: number;
   category: string;
   imageurl: string;
@@ -136,7 +137,7 @@ export function ManageProducts() {
                 </p>
                 <div className="flex justify-between items-center">
                   <div>
-                    <span className="text-lg font-semibold">${product.price?.toFixed(2)}</span>
+                    <span className="text-lg font-semibold">${product.salePrice?.toFixed(2)}</span>
                     <span className="text-sm text-muted-foreground ml-2">
                       • {product.stock} in stock
                     </span>

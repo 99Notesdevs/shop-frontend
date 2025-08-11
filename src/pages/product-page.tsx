@@ -18,6 +18,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
+  salePrice: number; 
   stock: number;
   imageUrl: string;
   category: {
@@ -46,7 +47,7 @@ const ProductPage = () => {
     }
     
     try {
-      const response = await fetch(`${env.API}/wishlist/1`, {
+      const response = await fetch(`${env.API}/wishlist/${currentUser.id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -268,7 +269,7 @@ const ProductPage = () => {
 
       if (response.status === 401) {
         toast.error('Your session has expired. Please login again');
-        navigate('/users/login');
+        navigate('/login');
         return;
       }
 
@@ -400,16 +401,18 @@ const ProductPage = () => {
                   <div className="flex items-center">
                    <StarRating 
                      productId={product.id} 
-                     userId={currentUser?.id } 
+                     userId={currentUser?.id?.toString() } 
                      interactive={!!currentUser}
                    />
                   </div>
                 </div>
 
               <div className="mb-4">
-                <span className="text-2xl font-bold text-gray-900">₹{product.price.toFixed(2)}</span>
-                <span className="ml-2 text-base text-gray-500 line-through">₹{(product.price * 1.2).toFixed(2)}</span>
-                <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-0.5 rounded">20% OFF</span>
+                <span className="text-2xl font-bold text-gray-900">₹{product.salePrice?.toFixed(2)}</span>
+                <span className="ml-2 text-base text-gray-500 line-through">₹{(product.price?.toFixed(2))}</span>
+                <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                  {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
+                </span>
               </div>
 
               <div className="mb-6">
