@@ -33,6 +33,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
+  salePrice?: number;
   stock?: number;
   imageUrl?: string;
   category?: {
@@ -65,7 +66,7 @@ interface CartItem {
     description: string;
     price: number;
     salePrice?: number;
-    images?: Array<{ url: string }>;
+    images?: string;
   };
 }
 interface CartData {
@@ -78,7 +79,8 @@ interface CartData {
 }
 interface LocationState {
   orderData: OrderData;
-  cartData: CartData;
+  cartData?: CartData;
+  product?: Product & { quantity: number };
 }
 
 const emptyAddress: Address = {
@@ -108,6 +110,7 @@ const Checkout: React.FC = () => {
 
   const orderData = state?.orderData;
   const cartData = state?.cartData;
+  const product = state?.product;
 
   // Address states
   const [deliveryAddress, setDeliveryAddress] = useState<Address>(emptyAddress);
@@ -267,8 +270,17 @@ const Checkout: React.FC = () => {
     try {
       const finalOrder = {
         ...orderData,
-        deliveryAddress,
-        status: "Confirmed",
+        deliveryAddress: {
+          fullName: selectedAddress.fullName,
+          addressLine1: selectedAddress.addressLine1,
+          addressLine2: selectedAddress.addressLine2 || '',
+          city: selectedAddress.city,
+          state: selectedAddress.state,
+          zipCode: selectedAddress.zipCode,
+          country: selectedAddress.country,
+          phoneNumber: selectedAddress.phoneNumber
+        },
+        status: "Confirmed"
       };
       console.log("finalOrder",finalOrder);
       const res = await fetch(`${env.API}/payment/create-order-product`, {
@@ -446,76 +458,167 @@ const Checkout: React.FC = () => {
 
           {/* Right Column - Order Summary */}
           <div className="lg:w-1/3">
-            <div className="bg-white shadow rounded-lg p-6 sticky top-6">
-              <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-              {cartData?.cartItems && cartData.cartItems.length > 0 ? (
-              <div className="space-y-6">
-                <h3 className="font-semibold">Your Items ({cartData.cartItems.length})</h3>
-                <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                  {cartData.cartItems.map((item) => (
-                    <div key={item.id} className="flex items-start justify-between border-b pb-4">
-                      <div className="flex space-x-4">
-                        {item.product?.images?.[0]?.url ? (
-                          <img 
-                            src={item.product.images[0].url} 
-                            alt={item.product.name}
-                            className="w-20 h-20 object-cover rounded"
-                          />
-                        ) : (
-                          <div className="w-20 h-20 bg-gray-100 rounded flex items-center justify-center">
-                            <span className="text-gray-400">No image</span>
+            <div className="bg-white shadow-xl rounded-xl p-6 sticky top-6 border border-gray-100">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 pb-4 border-b border-gray-100">Order Summary</h2>
+              
+              {(cartData?.cartItems && cartData.cartItems.length > 0) || product ? (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-lg font-semibold text-gray-700">
+                      Your Order
+                    </h3>
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      {cartData ? cartData.cartItems.length : 1} Item{(!cartData || cartData.cartItems.length !== 1) ? 's' : ''}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                    {cartData ? (
+                      cartData.cartItems.map((item) => (
+                        <div key={item.id} className="flex items-start justify-between pb-4 group hover:bg-gray-50 -mx-2 px-2 rounded-lg transition-colors">
+                          <div className="flex space-x-3 flex-1 min-w-0">
+                            <div className="flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                              {item.product?.images ? (
+                                <img 
+                                  src={item.product.images} 
+                                  alt={item.product.name}
+                                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.onerror = null;
+                                    
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 flex items-center justify-center">
+                                  <span className="text-gray-400 text-xs">No image</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-gray-900 truncate">{item.product?.name || 'Product not found'}</h4>
+                              <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                              <div className="mt-1">
+                                {item.product?.salePrice && item.product.salePrice < item.product.price ? (
+                                  <div className="flex items-baseline space-x-2">
+                                    <span className="text-base font-semibold text-gray-900">
+                                      ₹{(item.product.salePrice * item.quantity).toLocaleString('en-IN')}
+                                    </span>
+                                    <span className="text-sm text-gray-400 line-through">
+                                      ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
+                                    </span>
+                                    <span className="text-xs font-medium text-green-600 ml-1">
+                                      ({Math.round((1 - item.product.salePrice / item.product.price) * 100)}% OFF)
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-base font-semibold text-gray-900">
+                                    ₹{item.product ? (item.product.price * item.quantity).toLocaleString('en-IN') : '0.00'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        )}
-                        <div>
-                          <h4 className="font-medium">{item.product?.name || 'Product not found'}</h4>
-                          <p className="text-gray-600">Qty: {item.quantity}</p>
-                          <div className="flex items-center space-x-2">
-                            {item.product?.salePrice ? (
-                              <>
-                                <span className="text-gray-800 font-medium">
-                                  ₹{(item.product.salePrice * item.quantity).toFixed(2)}
-                                </span>
-                                <span className="text-gray-400 line-through text-sm">
-                                  ₹{(item.product.price * item.quantity).toFixed(2)}
-                                </span>
-                              </>
+                        </div>
+                      ))
+                    ) : product ? (
+                      <div className="flex items-start justify-between pb-4 group hover:bg-gray-50 -mx-2 px-2 rounded-lg transition-colors">
+                        <div className="flex space-x-3 flex-1 min-w-0">
+                          <div className="flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                            {product.imageUrl ? (
+                              <img 
+                                src={product.imageUrl} 
+                                alt={product.name}
+                                className="w-16 h-16 sm:w-20 sm:h-20 object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.onerror = null;
+                                }}
+                              />
                             ) : (
-                              <span className="text-gray-800 font-medium">
-                                ₹{item.product ? (item.product.price * item.quantity).toFixed(2) : '0.00'}
-                              </span>
+                              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 flex items-center justify-center">
+                                <span className="text-gray-400 text-xs">No image</span>
+                              </div>
                             )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900">{product.name}</h4>
+                            <p className="text-sm text-gray-500">Qty: {product.quantity || 1}</p>
+                            <div className="mt-1">
+                              {product.salePrice && product.salePrice < product.price ? (
+                                <div className="flex items-baseline space-x-2">
+                                  <span className="text-base font-semibold text-gray-900">
+                                    ₹{(product.salePrice * (product.quantity || 1)).toLocaleString('en-IN')}
+                                  </span>
+                                  <span className="text-sm text-gray-400 line-through">
+                                    ₹{(product.price * (product.quantity || 1)).toLocaleString('en-IN')}
+                                  </span>
+                                  <span className="text-xs font-medium text-green-600 ml-1">
+                                    ({Math.round((1 - product.salePrice / product.price) * 100)}% OFF)
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-base font-semibold text-gray-900">
+                                  ₹{(product.price * (product.quantity || 1)).toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
+                    ) : null}
+                  </div>
+      
+                  <div className="border-t border-gray-200 pt-4 space-y-3">
+                    <div className="flex justify-between text-base">
+                      <span className="text-gray-600">Subtotal</span>
+                      <div className="text-right">
+                        {cartData ? (
+                          <>
+                            {cartData.cartItems.some(item => item.product?.salePrice) && (
+                              <div className="text-sm text-gray-400 line-through">
+                                ₹{cartData.cartItems.reduce((sum, item) => {
+                                  const price = item.product?.price || 0;
+                                  return sum + (price * item.quantity);
+                                }, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            )}
+                            <span className="text-gray-900 font-medium">
+                              ₹{cartData.cartItems.reduce((sum, item) => {
+                                const price = item.product?.salePrice ?? item.product?.price ?? 0;
+                                return sum + (price * item.quantity);
+                              }, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </>
+                        ) : product ? (
+                          <>
+                            {product.salePrice !== undefined && product.salePrice !== product.price && (
+                              <div className="text-sm text-gray-400 line-through">
+                                ₹{(product.price * (product.quantity || 1)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            )}
+                            <span className="text-gray-900 font-medium">
+                              ₹{((product.salePrice || product.price) * (product.quantity || 1)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </>
+                        ) : null}
+                      </div>
                     </div>
-                  ))}
+                    
+                    <div className="flex justify-between text-base font-medium text-gray-900 pt-2 border-t border-gray-100">
+                      <span>Total Amount</span>
+                      <span className="text-lg">
+                        {cartData ? (
+                          `₹${cartData.cartItems.reduce((sum, item) => {
+                            const price = item.product?.salePrice ?? item.product?.price ?? 0;
+                            return sum + (price * item.quantity);
+                          }, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        ) : product ? (
+                          `₹${((product.salePrice || product.price) * (product.quantity || 1)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        ) : '₹0.00'}
+                      </span>
+                    </div>
                 </div>
-    
-    <div className="border-t pt-4 space-y-3">
-      <div className="flex justify-between text-lg">
-        <span className="font-medium">Subtotal</span>
-        <span>
-          {cartData.cartItems.some(item => item.product?.salePrice) ? (
-            <span className="text-gray-400 line-through mr-2">
-              ₹{cartData.cartItems.reduce((sum, item) => sum + (item.product?.price || 0) * item.quantity, 0).toFixed(2)}
-            </span>
-          ) : null}
-          ₹{cartData.cartItems.reduce((sum, item) => {
-            const itemPrice = item.product?.salePrice !== undefined ? item.product.salePrice : item.product?.price || 0;
-            return sum + (itemPrice * item.quantity);
-          }, 0).toFixed(2)}
-        </span>
-      </div>
-      <div className="flex justify-between text-lg font-semibold">
-        <span>Total</span>
-        <span>
-          ₹{cartData.cartItems.reduce((sum, item) => {
-            const itemPrice = item.product?.salePrice !== undefined ? item.product.salePrice : item.product?.price || 0;
-            return sum + (itemPrice * item.quantity);
-          }, 0).toFixed(2)}
-        </span>
-      </div>
-    </div>
 
     <button
       className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"

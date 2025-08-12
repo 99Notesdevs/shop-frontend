@@ -1,6 +1,7 @@
 import { Outlet, useLocation, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { FiPlus, FiList } from 'react-icons/fi';
+import RevenueDashboard from '../components/admin-dashboard/revenue';
 
 const WelcomeMessage = () => (
   <div className="p-8 text-center">
@@ -54,6 +55,9 @@ const AdminDashboard = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               {isRootPath ? <WelcomeMessage /> : <Outlet />}
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <RevenueDashboard />
             </div>
           </div>
         </main>

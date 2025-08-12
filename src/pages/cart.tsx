@@ -109,57 +109,57 @@ export default function CartPage() {
       }
     };
     
-    const handleBuyNow = async (e: React.MouseEvent) => {
-      e.preventDefault();
+    // const handleBuyNow = async (e: React.MouseEvent) => {
+    //   e.preventDefault();
       
-      if (!cartData) {
-        toast.error('Cart is empty. Please add items to your cart first.');
-        return;
-      }
+    //   if (!cartData) {
+    //     toast.error('Cart is empty. Please add items to your cart first.');
+    //     return;
+    //   }
     
-      try {
-        const orderData = {
-          orderDate: new Date().toISOString(),
-          products: cartData.cartItems.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.product?.price || 0
-          })),
-          totalAmount: cartData.totalAmount,
-          status: "Pending",
-          billingAddress: "",
-          shippingAddress: "",
-          userId: user?.id
-        };
+    //   try {
+    //     const orderData = {
+    //       orderDate: new Date().toISOString(),
+    //       products: cartData.cartItems.map(item => ({
+    //         productId: item.productId,
+    //         quantity: item.quantity,
+    //         price: item.product?.price || 0
+    //       })),
+    //       totalAmount: cartData.totalAmount,
+    //       status: "Pending",
+    //       billingAddress: "",
+    //       shippingAddress: "",
+    //       userId: user?.id
+    //     };
     
-        const response = await api.post<{ success: boolean; data: any }>(`/order`, orderData);
+    //     const response = await api.post<{ success: boolean; data: any }>(`/order`, orderData);
     
-        if (!response.success) {
-          toast.error('Failed to create order. Please try again.');
-          return;
-        }
+    //     if (!response.success) {
+    //       toast.error('Failed to create order. Please try again.');
+    //       return;
+    //     }
     
-        const responseData = response.data;
-        const orderId = responseData.id;
+    //     const responseData = response.data;
+    //     const orderId = responseData.id;
     
-        navigate('/checkout', { 
-          state: { 
-            orderData: {
-              orderId,
-              phonepe_transactionId: "",
-              status: "",
-              amount: cartData.totalAmount,
-              validity: 10,
-              quantity: cartData.cartItems.reduce((total, item) => total + item.quantity, 0)
-            }, 
-            cartData 
-          } 
-        });
-      } catch (err) {
-        console.error('Order creation error:', err);
-        toast.error('Failed to create order. Please try again.');
-      }
-    };
+    //     navigate('/checkout', { 
+    //       state: { 
+    //         orderData: {
+    //           orderId,
+    //           phonepe_transactionId: "",
+    //           status: "",
+    //           amount: cartData.totalAmount,
+    //           validity: 10,
+    //           quantity: cartData.cartItems.reduce((total, item) => total + item.quantity, 0)
+    //         }, 
+    //         cartData 
+    //       } 
+    //     });
+    //   } catch (err) {
+    //     console.error('Order creation error:', err);
+    //     toast.error('Failed to create order. Please try again.');
+    //   }
+    // };
 
     fetchCart();
   }, [user, isAuthLoading]);
@@ -172,7 +172,7 @@ export default function CartPage() {
     }
   
     try {
-      console.log("cartData 23",cartData);
+      console.log("cartData ",cartData);
       const data = {
         orderDate: new Date().toISOString(),
         products: cartData.cartItems.map((item: CartItem) => item),
