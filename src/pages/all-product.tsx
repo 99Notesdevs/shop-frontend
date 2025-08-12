@@ -4,6 +4,8 @@ import { ProductCard } from '../components/product/product-card';
 import { Button } from '../components/ui/button';
 import { toast } from 'react-toastify';
 import Categories from '../components/product/categories';
+import Filter from '../components/product/filter';
+import { SlidersHorizontal } from 'lucide-react';
 import 'react-toastify/dist/ReactToastify.css';
 import { api } from '../api/route';
 import { Breadcrumb } from '../components/ui/breadcrumb';
@@ -45,6 +47,8 @@ const AllProduct: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('default');
   const [selectedCategory, setSelectedCategory] = useState<number | string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [categories, setCategories] = useState<Category[]>([]);
   const { cart, updateCart } = useAuth();
   const navigate = useNavigate();
@@ -69,7 +73,7 @@ const AllProduct: React.FC = () => {
   useEffect(() => {
     // Set selected category from URL if it exists
     if (categoryName && categories.length > 0) {
-      const category = categories.find(cat => 
+      const category = categories.find(cat =>
         cat.name.toLowerCase() === decodeURIComponent(categoryName).toLowerCase()
       );
       if (category) {
@@ -86,10 +90,10 @@ const AllProduct: React.FC = () => {
         const response = await api.get('/product') as { success: boolean; data: Product[] };
         if (response.success) {
           setAllProducts(response.data);
-          
+
           // Filter products based on URL category if it exists
           if (categoryName && categories.length > 0) {
-            const category = categories.find(cat => 
+            const category = categories.find(cat =>
               cat.name.toLowerCase() === decodeURIComponent(categoryName).toLowerCase()
             );
             if (category) {
@@ -171,7 +175,13 @@ const AllProduct: React.FC = () => {
     return category?.name || `Category ${categoryId}`;
   };
 
-  // Filter and sort products when category or sort changes
+  // Handle filter changes from the filter component
+  const handleFilterChange = (filters: { category: string | null; priceRange: [number, number] }) => {
+    setSelectedCategory(filters.category);
+    setPriceRange(filters.priceRange);
+  };
+
+  // Filter and sort products when category, price range, or sort changes
   const filterAndSortProducts = useCallback(() => {
     let result = [...allProducts];
 
@@ -181,6 +191,11 @@ const AllProduct: React.FC = () => {
         product => product.categoryId?.toString() === selectedCategory.toString()
       );
     }
+
+    // Filter by price range
+    result = result.filter(
+      product => product.price >= priceRange[0] && product.price <= priceRange[1]
+    );
 
     // Sort products
     switch (sortBy) {
@@ -207,7 +222,7 @@ const AllProduct: React.FC = () => {
 
   const handleAddToCart = async (productId: string) => {
     if (!productId) return;
-    
+
     if (!cart?.id) {
       toast.error('Please login to add items to cart');
       navigate('/users/login');
@@ -235,7 +250,7 @@ const AllProduct: React.FC = () => {
       }
 
       const data = await response.json();
-      
+
       // Update the cart in the auth context
       if (data.data) {
         updateCart(data.data);
@@ -258,10 +273,10 @@ const AllProduct: React.FC = () => {
 
   const handleCategorySelect = (categoryId: number | string | null) => {
     setSelectedCategory(categoryId);
-    
+
     // Find category to get its name for the URL
     const category = categories.find(cat => cat.id === categoryId);
-    
+
     // Update URL based on category selection
     if (category) {
       const categorySlug = category.name.toLowerCase().replace(/\s+/g, '-');
@@ -269,7 +284,7 @@ const AllProduct: React.FC = () => {
     } else {
       navigate('/products', { replace: true });
     }
-    
+
     // Filter products based on selected category
     if (categoryId) {
       const filtered = allProducts.filter(product => product.categoryId === categoryId);
@@ -298,19 +313,29 @@ const AllProduct: React.FC = () => {
               onCategorySelect={handleCategorySelect}
               selectedCategory={selectedCategory}
             />
-            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200">
-              <span className="text-sm text-gray-700">Sort by:</span>
-              <select
-                value={sortBy}
-                onChange={handleSortChange}
-                className="border-0 focus:ring-2 focus:ring-blue-500 rounded-md cursor-pointer"
-                aria-label="Sort products"
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsFilterOpen(true)}
+                className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                aria-label="Filter products"
               >
-                <option value="default">Featured</option>
-                <option value="price-low-high">Price: Low to High</option>
-                <option value="price-high-low">Price: High to Low</option>
-                <option value="newest">Newest Arrivals</option>
-              </select>
+                <SlidersHorizontal className="w-4 h-4" />
+                <span className="text-sm font-medium">Filters</span>
+              </button>
+              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200">
+                <span className="text-sm text-gray-700">Sort by:</span>
+                <select
+                  value={sortBy}
+                  onChange={handleSortChange}
+                  className="border-0 focus:ring-2 focus:ring-blue-500 rounded-md cursor-pointer"
+                  aria-label="Sort products"
+                >
+                  <option value="default">Featured</option>
+                  <option value="price-low-high">Price: Low to High</option>
+                  <option value="price-high-low">Price: High to Low</option>
+                  <option value="newest">Newest Arrivals</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -397,6 +422,13 @@ const AllProduct: React.FC = () => {
           </p>
         </div>
       )}
+      
+      {/* Filter Sidebar */}
+      <Filter 
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        onFilterChange={handleFilterChange}
+      />
     </div>
   );
 };
