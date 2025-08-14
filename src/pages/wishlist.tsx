@@ -1,11 +1,12 @@
 import { Heart } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 import { ProductCard } from '../components/product/product-card';
 import { useAuth } from '../contexts/AuthContext';
 import { Breadcrumb } from '../components/ui/breadcrumb';
 import { api } from '../api/route';
+import { env } from '../config/env';
 
 interface Product {
   id: number;
@@ -25,8 +26,8 @@ interface Product {
 export default function WishlistPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user: currentUser } = useAuth();
-  console.log(currentUser?.id);
+  const { user: currentUser, cart, updateCart, openCart } = useAuth();
+  const navigate = useNavigate();
   useEffect(() => {
     const fetchWishlist = async () => {
       if (!currentUser?.id) {
@@ -54,10 +55,52 @@ export default function WishlistPage() {
     fetchWishlist();
   }, [currentUser?.id]);
 
-  const handleAddToCart = (productId: string) => {
-    // Implement add to cart functionality
-    console.log('Add to cart:', productId);
-    toast.success('Added to cart');
+  const handleAddToCart = async (productId: string) => {
+    if (!productId) return;
+
+    if (!cart?.id) {
+      toast.error('Please login to add items to cart');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${env.API}/cart/${cart.id}?productId=${productId}&quantity=1`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.status === 401) {
+        toast.error('Your session has expired. Please login again');
+        navigate('/login');
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add item to cart');
+      }
+
+      const data = await response.json();
+
+      // Update the cart in the auth context
+      if (data.data) {
+        updateCart(data.data);
+      }
+      if (data.success) {
+        toast.success('Item added to cart successfully!');
+        // Open the cart sidebar when an item is added
+        openCart();
+      } else {
+        throw new Error(data.message || 'Failed to add item to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to add item to cart');
+    }
   };
 
   if (!currentUser) {

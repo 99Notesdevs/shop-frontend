@@ -62,6 +62,8 @@ interface AuthContextType {
   isLoading: boolean;
   cart: Cart | null;
   cartItems: CartItem[];
+  wishlistCount: number;
+  updateWishlistCount: (count: number) => void;
   login: (email: string, password: string) => Promise<void>;
   adminLogin: (
     email: string,
@@ -99,6 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [admin, setAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [wishlistCount, setWishlistCount] = useState(0);
   const [cart, setCart] = useState<Cart | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -230,7 +233,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateCart = (updatedCart: Cart) => {
     setCart(updatedCart);
-    setCartItems(updatedCart.items || []);
+    setCartItems(updatedCart.items || updatedCart.cartItems || []);
+  };
+
+  const updateWishlistCount = (count: number) => {
+    setWishlistCount(count);
   };
 
   const clearCart = () => {
@@ -411,6 +418,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isLoading,
         cart,
         cartItems,
+        wishlistCount,
+        updateWishlistCount,
         login,
         adminLogin,
         logout: handleLogout,
