@@ -24,9 +24,10 @@ const Navbar: React.FC = () => {
     cart, 
     isCartOpen, 
     openCart, 
-    closeCart 
+    closeCart,
+    wishlistCount,
+    updateWishlistCount
   } = useAuth();
-  const [wishlistCount, setWishlistCount] = useState(0);
   
   // Debug log to check cart data
   useEffect(() => {
@@ -49,7 +50,7 @@ const Navbar: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           const wishlistProducts = data.data?.products || [];
-          setWishlistCount(wishlistProducts.length);
+          updateWishlistCount(wishlistProducts.length);
         }
       } catch (error) {
         console.error('Error fetching wishlist count:', error);
@@ -57,7 +58,7 @@ const Navbar: React.FC = () => {
     };
 
     fetchWishlistCount();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.id, updateWishlistCount]);
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);

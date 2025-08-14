@@ -31,19 +31,14 @@ export function ProductCard({
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const navigate = useNavigate();
-  const { cart, user } = useAuth();
+  const { cart, user, wishlistCount, updateWishlistCount } = useAuth();
 
   const isProductInCart = useCallback(() => {
     if (!cart || !cart.cartItems) return false;
     return cart.cartItems.some((item: any) => item.productId === id);
   }, [cart, id]);
 
-  // Define types for wishlist items
-  interface Product {
-    id: number;
-    title: string;
-    [key: string]: any;
-  }
+
 
   interface WishlistResponse {
     data?: {
@@ -159,13 +154,18 @@ export function ProductCard({
       if (isInWishlist) {
         await api.delete(`/wishlist/${id}/${user.id}`);
         setIsInWishlist(false);
+        // Decrement wishlist count
+        const currentCount = typeof wishlistCount === 'number' ? wishlistCount : 0;
+        updateWishlistCount(Math.max(0, currentCount - 1));
       } else {
         await api.post(`/wishlist/${id}/${user.id}`);
         setIsInWishlist(true);
+        // Increment wishlist count
+        const currentCount = typeof wishlistCount === 'number' ? wishlistCount : 0;
+        updateWishlistCount(currentCount + 1);
       }
     } catch (error) {
       console.error('Error updating wishlist:', error);
-      alert('Failed to update wishlist');
     } finally {
       setWishlistLoading(false);
     }

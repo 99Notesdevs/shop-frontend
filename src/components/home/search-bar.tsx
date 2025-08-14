@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { type FormEvent, useRef, useState, useEffect } from 'react';
-import { api } from '../../api/route';
+import { type FormEvent, useRef } from 'react';
 import { Search } from 'lucide-react';
 
 
@@ -15,9 +14,7 @@ export const SearchBar = () => {
     const searchQuery = searchInputRef.current?.value.trim();
     
     if (searchQuery) {
-      const searchParams = new URLSearchParams();
-      searchParams.set('q', searchQuery);
-      navigate(`/search?${searchParams.toString()}`);
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
   };
 

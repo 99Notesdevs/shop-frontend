@@ -27,6 +27,7 @@ import ManageOrders from './components/admin-dashboard/manage-orders';
 import { AdminRoute } from './components/protected-route';
 import AddOfferMessage from './components/admin-dashboard/add-offer-message';
 import AddCoupon from './components/admin-dashboard/add-coupon';
+import SearchPage from './pages/search-page';
 
 function App() {
   return (
@@ -67,6 +68,7 @@ function App() {
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/payment/success" element={<PaymentSuccess />} />
                   <Route path="/payment/failure" element={<PaymentFailure />} />
+                  <Route path="/search" element={<SearchPage />} />
 
                   {/* users route only after sign in */}
                   <Route path="/profile" element={<UserProfile />} />
