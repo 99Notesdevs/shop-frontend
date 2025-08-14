@@ -6,7 +6,7 @@ import { Label } from '../ui/label';
 import { cn } from '../../lib/utils';
 
 interface Category {
-  _id: string;
+  id: string;
   name: string;
   // Add other category properties as needed
 }
@@ -152,21 +152,21 @@ const Filter: React.FC<FilterProps> = ({ isOpen, onClose, onFilterChange }) => {
                 <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
                   {categories.map((category) => (
                     <Label 
-                      key={category._id} 
+                      key={category.id} 
                       className={cn(
                         "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors",
-                        selectedCategoryId === category._id 
+                        selectedCategoryId === category.id 
                           ? "bg-blue-50 border border-blue-100" 
                           : "hover:bg-gray-50 border border-transparent"
                       )}
                     >
                       <div className={cn(
                         "h-4 w-4 rounded-full border flex items-center justify-center transition-all",
-                        selectedCategoryId === category._id 
+                        selectedCategoryId === category.id 
                           ? "border-blue-500 bg-blue-500" 
                           : "border-gray-300"
                       )}>
-                        {selectedCategoryId === category._id && (
+                        {selectedCategoryId === category.id && (
                           <div className="h-1.5 w-1.5 rounded-full bg-white" />
                         )}
                       </div>
@@ -174,8 +174,8 @@ const Filter: React.FC<FilterProps> = ({ isOpen, onClose, onFilterChange }) => {
                       <input
                         type="radio"
                         name="category-selection"
-                        checked={selectedCategoryId === category._id}
-                        onChange={() => handleCategorySelect(category._id)}
+                        checked={selectedCategoryId === category.id}
+                        onChange={() => handleCategorySelect(category.id)}
                         className="sr-only"
                       />
                     </Label>

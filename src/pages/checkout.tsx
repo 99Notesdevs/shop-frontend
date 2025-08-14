@@ -111,11 +111,12 @@ const Checkout: React.FC = () => {
   const orderData = state?.orderData;
   const cartData = state?.cartData;
   const product = state?.product;
+  console.log("product",product);
 
   // Address states
   const [deliveryAddress, setDeliveryAddress] = useState<Address>(emptyAddress);
   const [userAddresses, setUserAddresses] = useState<UserAddress[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
@@ -140,7 +141,7 @@ const Checkout: React.FC = () => {
       const defaultAddress = response.data.find(addr => addr.isDefault);
       if (defaultAddress) {
         setDeliveryAddress(defaultAddress);
-        setSelectedAddressId(defaultAddress.id);
+        setSelectedAddress(defaultAddress);
       }
       
       // Show address form if no addresses exist
@@ -162,7 +163,7 @@ const Checkout: React.FC = () => {
   // Handle address selection
   const handleAddressSelect = (address: UserAddress) => {
     setDeliveryAddress(address);
-    setSelectedAddressId(address.id);
+    setSelectedAddress(address);
     setShowAddressForm(false);
   };
 
@@ -225,7 +226,7 @@ const Checkout: React.FC = () => {
       
       // Select the newly added address
       setDeliveryAddress(response.data);
-      setSelectedAddressId(response.data.id);
+      setSelectedAddress(response.data);
       setShowAddressForm(false);
       
       toast.success('Address saved successfully');
@@ -257,7 +258,7 @@ const Checkout: React.FC = () => {
     }
 
     // If no address is selected but there are addresses available
-    if (!selectedAddressId && userAddresses.length > 0) {
+    if (!selectedAddress && userAddresses.length > 0) {
       toast.error("Please select a delivery address");
       return;
     }
@@ -271,14 +272,14 @@ const Checkout: React.FC = () => {
       const finalOrder = {
         ...orderData,
         deliveryAddress: {
-          fullName: selectedAddress.fullName,
-          addressLine1: selectedAddress.addressLine1,
-          addressLine2: selectedAddress.addressLine2 || '',
-          city: selectedAddress.city,
-          state: selectedAddress.state,
-          zipCode: selectedAddress.zipCode,
-          country: selectedAddress.country,
-          phoneNumber: selectedAddress.phoneNumber
+          fullName: "Ritik",
+          addressLine1: selectedAddress?.addressLine1,
+          addressLine2: selectedAddress?.addressLine2 || '',
+          city: selectedAddress?.city,
+          state: selectedAddress?.state,
+          zipCode: selectedAddress?.zipCode,
+          country: selectedAddress?.country,
+          phoneNumber: selectedAddress?.phoneNumber
         },
         status: "Confirmed"
       };
@@ -334,7 +335,7 @@ const Checkout: React.FC = () => {
                   key={address.id}
                   onClick={() => handleAddressSelect(address)}
                   className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                    selectedAddressId === address.id
+                    selectedAddress?.id === address.id
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-blue-300'
                   }`}
@@ -343,7 +344,7 @@ const Checkout: React.FC = () => {
                     <input
                       type="radio"
                       name="address"
-                      checked={selectedAddressId === address.id}
+                      checked={selectedAddress?.id === address.id}
                       onChange={() => {}}
                       className="mt-1 mr-2"
                     />
@@ -543,15 +544,15 @@ const Checkout: React.FC = () => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-gray-900">{product.name}</h4>
-                            <p className="text-sm text-gray-500">Qty: {product.quantity || 1}</p>
+                            <p className="text-sm text-gray-500">Qty: {orderData.quantity || 1}</p>
                             <div className="mt-1">
                               {product.salePrice && product.salePrice < product.price ? (
                                 <div className="flex items-baseline space-x-2">
                                   <span className="text-base font-semibold text-gray-900">
-                                    ₹{(product.salePrice * (product.quantity || 1)).toLocaleString('en-IN')}
+                                    ₹{(product.salePrice * (orderData.quantity || 1)).toLocaleString('en-IN')}
                                   </span>
                                   <span className="text-sm text-gray-400 line-through">
-                                    ₹{(product.price * (product.quantity || 1)).toLocaleString('en-IN')}
+                                    ₹{(product.price * (orderData.quantity || 1)).toLocaleString('en-IN')}
                                   </span>
                                   <span className="text-xs font-medium text-green-600 ml-1">
                                     ({Math.round((1 - product.salePrice / product.price) * 100)}% OFF)
@@ -624,7 +625,7 @@ const Checkout: React.FC = () => {
       className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
       type="submit"
       onClick={handleSubmit}
-      disabled={!selectedAddressId}
+      disabled={!selectedAddress}
     >
       Proceed to Payment
     </button>

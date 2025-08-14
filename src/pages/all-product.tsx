@@ -15,7 +15,9 @@ import { env } from '../config/env';
 // Define the Category interface to match the one in categories.tsx
 interface Category {
   id: number | string;
+  _id?: string; // Add _id for MongoDB compatibility
   name: string;
+  slug?: string; // Add slug property
   description: string;
   icon: string;
   createdAt: string;
@@ -73,11 +75,17 @@ const AllProduct: React.FC = () => {
   useEffect(() => {
     // Set selected category from URL if it exists
     if (categoryName && categories.length > 0) {
-      const category = categories.find(cat =>
-        cat.name.toLowerCase() === decodeURIComponent(categoryName).toLowerCase()
+      // First try to match by slug (with hyphens)
+      const decodedCategoryName = decodeURIComponent(categoryName);
+      const category = categories.find(cat => 
+        cat.slug === decodedCategoryName || // Match by slug
+        cat.name.toLowerCase().replace(/\s+/g, '-') === decodedCategoryName || // Match by name with hyphens
+        cat.name.toLowerCase() === decodedCategoryName.replace(/-/g, ' ') // Match by name with spaces
       );
       if (category) {
         setSelectedCategory(category.id);
+      } else {
+        console.log('Category not found:', decodedCategoryName);
       }
     } else {
       setSelectedCategory(null);
@@ -93,10 +101,14 @@ const AllProduct: React.FC = () => {
 
           // Filter products based on URL category if it exists
           if (categoryName && categories.length > 0) {
-            const category = categories.find(cat =>
-              cat.name.toLowerCase() === decodeURIComponent(categoryName).toLowerCase()
+            const decodedCategoryName = decodeURIComponent(categoryName);
+            const category = categories.find(cat => 
+              cat.slug === decodedCategoryName ||
+              cat.name.toLowerCase().replace(/\s+/g, '-') === decodedCategoryName ||
+              cat.name.toLowerCase() === decodedCategoryName.replace(/-/g, ' ')
             );
             if (category) {
+              console.log('Filtering products for category:', category.name);
               const filtered = response.data.filter(product => product.categoryId === category.id);
               setFilteredProducts(filtered);
             } else {
@@ -220,6 +232,8 @@ const AllProduct: React.FC = () => {
     filterAndSortProducts();
   }, [filterAndSortProducts]);
 
+  const { openCart } = useAuth();
+
   const handleAddToCart = async (productId: string) => {
     if (!productId) return;
 
@@ -257,6 +271,8 @@ const AllProduct: React.FC = () => {
       }
       if (data.success) {
         toast.success('Item added to cart successfully!');
+        // Open the cart sidebar when an item is added
+        openCart();
       } else {
         throw new Error(data.message || 'Failed to add item to cart');
       }

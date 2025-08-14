@@ -26,6 +26,7 @@ export function CartSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const { fetchCartData } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState<Record<number, boolean>>({});
   const navigate = useNavigate();
 
   // Memoize the fetch function to prevent unnecessary re-renders
@@ -83,6 +84,56 @@ export function CartSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     return items.reduce((total: number, item: CartItem) => {
       return total + (item.product?.salePrice || item.product?.price || 0) * item.quantity;
     }, 0);
+  };
+
+  const handleUpdateQuantity = async (cartItemId: number, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    
+    try {
+      setIsUpdating(prev => ({ ...prev, [cartItemId]: true }));
+      
+      // Update local state optimistically
+      setItems(prevItems => 
+        prevItems.map(item => 
+          item.id === cartItemId ? { ...item, quantity: newQuantity } : item
+        )
+      );
+      
+      // Make API call to update quantity
+      await api.put(`/cart/${cartItemId}?quantity=${newQuantity}`);
+      
+      // Refresh cart data
+      await fetchCartItems();
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      // Revert local state on error
+      await fetchCartItems();
+    } finally {
+      setIsUpdating(prev => ({ ...prev, [cartItemId]: false }));
+    }
+  };
+
+  const { cart } = useAuth();
+
+  const handleRemoveItem = async (cartItemId: number) => {
+    if (!cart?.id) {
+      console.error('No cart ID found');
+      return;
+    }
+
+    try {
+      setIsUpdating(prev => ({ ...prev, [cartItemId]: true }));
+      
+      // Make API call to remove the item with the cartId from user
+      await api.delete(`/cart/${cart?.id}/${cartItemId}`);
+      
+      // Update local state to remove the item
+      setItems(prevItems => prevItems.filter(item => item.id !== cartItemId));
+    } catch (error) {
+      console.error('Error removing item:', error);
+    } finally {
+      setIsUpdating(prev => ({ ...prev, [cartItemId]: false }));
+    }
   };
 
   if (!isOpen) return null;
@@ -149,7 +200,7 @@ export function CartSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
             {/* Header */}
             <div className="p-6 border-b border-gray-100">
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900">Your Cart</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Shopping Cart</h2>
                 <button 
                   onClick={onClose} 
                   className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
@@ -195,16 +246,20 @@ export function CartSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                           
                           <div className="mt-2 flex items-center space-x-2">
                             <button 
-                              className="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+                              onClick={() => !isUpdating[item.id] && handleUpdateQuantity(item.id, item.quantity - 1)}
+                              disabled={isUpdating[item.id]}
+                              className={`p-1 rounded-full ${isUpdating[item.id] ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'}`}
                               aria-label="Decrease quantity"
                             >
                               <Minus className="h-4 w-4" />
                             </button>
                             <span className="w-8 text-center text-sm font-medium">
-                              {item.quantity}
+                              {isUpdating[item.id] ? '...' : item.quantity}
                             </span>
                             <button 
-                              className="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+                              onClick={() => !isUpdating[item.id] && handleUpdateQuantity(item.id, item.quantity + 1)}
+                              disabled={isUpdating[item.id]}
+                              className={`p-1 rounded-full ${isUpdating[item.id] ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'}`}
                               aria-label="Increase quantity"
                             >
                               <Plus className="h-4 w-4" />
@@ -213,7 +268,9 @@ export function CartSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                         </div>
                       </div>
                       <button 
-                        className="absolute top-3 right-3 p-1 text-gray-400 hover:text-red-500 transition-colors duration-200"
+                        onClick={() => !isUpdating[item.id] && handleRemoveItem(item.id)}
+                        disabled={isUpdating[item.id]}
+                        className={`absolute top-3 right-3 p-1 ${isUpdating[item.id] ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-red-500'} transition-colors duration-200`}
                         aria-label="Remove item"
                       >
                         <Trash2 className="h-5 w-5" />
