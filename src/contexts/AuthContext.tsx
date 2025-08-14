@@ -76,6 +76,9 @@ interface AuthContextType {
   fetchCartData: () => Promise<Cart | null>;
   updateCart: (cart: Cart) => void;
   clearCart: () => void;
+  openCart: () => void;
+  closeCart: () => void;
+  isCartOpen: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,6 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [cart, setCart] = useState<Cart | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const navigate = useNavigate();
 
   // Check authentication status on mount
@@ -232,6 +236,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const clearCart = () => {
     setCart(null);
     setCartItems([]);
+  };
+
+  const openCart = () => {
+    setIsCartOpen(true);
+  };
+
+  const closeCart = () => {
+    setIsCartOpen(false);
   };
 
   const login = async (email: string, password: string) => {
@@ -409,6 +421,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         fetchCartData,
         updateCart,
         clearCart,
+        openCart,
+        closeCart,
+        isCartOpen,
       }}
     >
       {children}

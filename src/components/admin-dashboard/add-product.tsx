@@ -21,6 +21,8 @@ interface ProductData {
   imageUrl: string;
   categoryId: string;
   validity: string;
+  shippingCharges: string;
+  type: 'softCopy' | 'hardCopy';
 }
 
 export default function ProductForm() {
@@ -74,6 +76,8 @@ export default function ProductForm() {
           imageUrl: string;
           categoryId: number;
           validity?: number;
+          shippingCharges?: number;
+          type?: 'softCopy' | 'hardCopy';
         } 
       };
       
@@ -87,7 +91,9 @@ export default function ProductForm() {
           stock: product.stock.toString(),
           imageUrl: product.imageUrl || '',
           categoryId: product.categoryId.toString(),
-          validity: product.validity?.toString() || ''
+          validity: product.validity?.toString() || '',
+          shippingCharges: product.shippingCharges?.toString() || '50',
+          type: product.type || 'softCopy',
         });
       }
     } catch (error) {
@@ -105,10 +111,12 @@ export default function ProductForm() {
     description: '',
     price: '',
     salePrice: '',
-    stock: '',
+    stock: '0',
     imageUrl: '',
     categoryId: '',
-    validity: ''
+    validity: '',
+    shippingCharges: '50',
+    type: 'softCopy',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -135,7 +143,9 @@ export default function ProductForm() {
         stock: parseInt(formData.stock, 10),
         categoryId: parseInt(formData.categoryId, 10),
         imageUrl: formData.imageUrl,
-        validity: formData.validity ? parseInt(formData.validity, 10) : undefined
+        validity: formData.validity ? parseInt(formData.validity, 10) : undefined,
+        shippingCharges: parseFloat(formData.shippingCharges) || 0,
+        type: formData.type || 'softCopy'
       };
 
       console.log('Submitting product data:', productData); // Debug log
@@ -163,7 +173,16 @@ export default function ProductForm() {
         };
         
         if (response.success) {
-          toast.success('Product created successfully!');
+          toast.success('Product created successfully!', {
+            position: 'top-center',
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            theme: 'light',
+          });
           navigate('/admin/manage-product');
           return;
         }
@@ -306,6 +325,43 @@ export default function ProductForm() {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                 placeholder="https://example.com/image.jpg"
               />
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div>
+                <label htmlFor="shippingCharges" className="block text-sm font-medium text-gray-700">
+                  Shipping Charges (₹) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="shippingCharges"
+                  name="shippingCharges"
+                  min="0"
+                  required
+                  value={formData.shippingCharges}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+              <div>
+                <label htmlFor="salePrice" className="block text-sm font-medium text-gray-700">
+                  Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="type"
+                  name="type"
+                  required
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                >
+                  <option value="">Select Type</option>
+                  <option value="softCopy">Soft Copy</option>
+                  <option value="hardCopy">Hard Copy</option>
+                </select>
+              </div>
+
+              
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">

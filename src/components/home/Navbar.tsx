@@ -7,6 +7,7 @@ import { LogIn, ChevronDown, ShoppingCart, Heart } from 'lucide-react';
 import { api } from '../../api/route';
 import { SearchBar } from './search-bar';
 import { OfferMessageDisplay } from './offer-message';
+import { CartSidebar } from '../ui/cart-sidebar';
 
 interface Category {
   _id: string;
@@ -15,7 +16,16 @@ interface Category {
 }
 
 const Navbar: React.FC = () => {
-  const { isAuthenticated, logout, user, cartItems, cart } = useAuth();
+  const { 
+    isAuthenticated, 
+    logout, 
+    user, 
+    cartItems, 
+    cart, 
+    isCartOpen, 
+    openCart, 
+    closeCart 
+  } = useAuth();
   const [wishlistCount, setWishlistCount] = useState(0);
   
   // Debug log to check cart data
@@ -98,6 +108,7 @@ return (
       <OfferMessageDisplay />
       </div>
       <nav className="sticky top-0 w-full bg-[var(--bg-light)] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.1)] z-40 h-20 flex items-center px-10 transition-colors duration-200">
+        <CartSidebar isOpen={isCartOpen} onClose={closeCart} />
         {/* Left Section - Logo and Search */}
         <div className="flex items-center">
           <Link to="/" className="mr-4">
@@ -186,25 +197,17 @@ return (
             </div>
           )}
           {/* Cart Icon */}
-          <button
-            onClick={() => navigate('/cart')}
-            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors relative cursor-pointer"
-            aria-label="Cart"
+          <button 
+            onClick={openCart}
+            className="relative p-2 text-gray-700 hover:text-gray-900 cursor-pointer"
+            aria-label="Open cart"
           >
-            <ShoppingCart className="w-5 h-5" />
-            {(cartItems && cartItems.length > 0) || (cart && cart.cartItems && cart.cartItems.length > 0) ? (
+            <ShoppingCart className="w-6 h-6" />
+            {cartItems?.length > 0 && (
               <span className="absolute -top-1 -right-1 bg-[var(--primary)] text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                {Math.max(
-                  cartItems?.length || 0,
-                  cart?.cartItems?.length || 0,
-                  cart?.items?.length || 0
-                ) > 9 ? '9+' : Math.max(
-                  cartItems?.length || 0,
-                  cart?.cartItems?.length || 0,
-                  cart?.items?.length || 0
-                )}
+                {cartItems.length}
               </span>
-            ) : null}
+            )}
           </button>
 
           {/* Wishlist Icon */}
