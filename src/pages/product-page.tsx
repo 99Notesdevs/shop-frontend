@@ -516,7 +516,7 @@ const ProductPage = () => {
           <div className="mt-12">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Related Products</h2>
             <RelatedProducts 
-              categoryId={product.category?.id || 0} 
+              categoryId={product.category?.id} 
               currentProductId={product.id} 
               onAddToCart={handleAddToCart} 
             />

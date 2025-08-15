@@ -79,108 +79,107 @@ function ManageCategories() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="sm:flex sm:items-center sm:justify-between mb-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {loading ? 'Loading...' : `${categories.length} ${categories.length === 1 ? 'category' : 'categories'} in total`}
+          <h1 className="text-2xl font-bold text-gray-900">Category Management</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            Manage your product categories
           </p>
         </div>
         <Button 
           onClick={() => navigate('/admin/categories/add')}
-          className="mt-3 sm:mt-0"
+          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
         >
-          Add Category
+          + Add New Category
         </Button>
       </div>
 
       {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse bg-gray-100 rounded-lg p-4 h-20" />
-          ))}
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       ) : categories.length === 0 ? (
-        <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1}
-              d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No categories</h3>
-          <p className="mt-1 text-sm text-gray-500">Get started by creating a new category.</p>
+        <div className="bg-white rounded-lg shadow-sm p-8 text-center border border-gray-200">
+          <div className="mx-auto h-24 w-24 text-gray-300 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 7v10c0 1.1.9 2 2 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H6a2 2 0 00-2 2z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900">No categories</h3>
+          <p className="mt-1 text-sm text-gray-600">
+            Get started by creating your first category.
+          </p>
           <div className="mt-6">
-            <Button
+            <Button 
               onClick={() => navigate('/admin/categories/add')}
-              className="inline-flex items-center px-4 py-2"
+              className="bg-blue-600 hover:bg-blue-700"
             >
-              New Category
+              Add Category
             </Button>
           </div>
         </div>
       ) : (
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg divide-y divide-gray-200">
-          {categories.map((category) => (
-            <div key={category.id} className="px-4 py-5 sm:px-6 hover:bg-gray-50 transition-colors duration-150">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center">
-                    <h3 className="text-lg font-medium text-gray-900 truncate">{category.name}</h3>
-                    <span className="ml-2 px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+        <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Last Updated
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {categories.map((category) => (
+                  <tr key={category.id} className="hover:bg-gray-50 h-20">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {category.name}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-500 line-clamp-1">
+                        {category.description || 'No description'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(category.updatedAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  {category.description && (
-                    <p className="mt-1 text-sm text-gray-500 line-clamp-2">
-                      {category.description}
-                    </p>
-                  )}
-                </div>
-                <div className="ml-4 flex-shrink-0 flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(category)}
-                    className="text-gray-600 hover:text-gray-900 border-0 shadow-none"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    <span className="sr-only">Edit</span>
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(category.id)}
-                    disabled={deletingId === category.id}
-                    className="text-red-600 hover:text-red-900 hover:bg-red-50 bg-transparent border-0 shadow-none"
-                  >
-                    {deletingId === category.id ? (
-                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    )}
-                    <span className="sr-only">Delete</span>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(category)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDelete(category.id)}
+                          disabled={deletingId === category.id}
+                        >
+                          {deletingId === category.id ? 'Deleting...' : 'Delete'}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

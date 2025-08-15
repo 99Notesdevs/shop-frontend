@@ -10,17 +10,18 @@ interface Product {
   salePrice?: number;
   imageUrl: string;
   category: string;
+  stock: number;
 }
 
 interface RelatedProductsProps {
   currentProductId: string | number;
   categoryId: string | number;
-  onAddToCart: (id: string) => void;
+  onAddToCart: (productId: number) => void;
 }
 
-// Simple Skeleton component if not available in UI library
+// Simple Skeleton component
 const Skeleton = ({ className }: { className: string }) => (
-  <div className={`bg-gray-200 animate-pulse rounded ${className}`} />
+  <div className={`bg-gray-100 animate-pulse rounded ${className}`} />
 );
 
 export function RelatedProducts({ currentProductId, categoryId, onAddToCart }: RelatedProductsProps) {
@@ -30,34 +31,26 @@ export function RelatedProducts({ currentProductId, categoryId, onAddToCart }: R
 
   useEffect(() => {
     const fetchRelatedProducts = async () => {
+      if (!categoryId) return;
+      
       try {
         setLoading(true);
-        console.log('Fetching products...');
-        // Fetch all products and filter by category on the client side
-        const response = await api.get('/product') as { success: boolean; data: Product[] };
-        console.log('API Response:', response);
-        const products = response.data || [];
+        setError(null);
         
-        console.log('All products:', products);
-        console.log('Current product ID:', currentProductId);
-        console.log('Category ID to match:', categoryId);
+        // Fetch all products from the same category
+        const response = await api.get(`/product`) as { success: boolean; data: Product[] };
         
-        // Filter out the current product and get products from the same category
-        const filteredProducts = products.filter(
-          (product: Product) => {
-            const isNotCurrent = String(product.id) !== String(currentProductId);
-            const isSameCategory = String(product.category) === String(categoryId);
-            console.log(`Product ${product.id}: isNotCurrent=${isNotCurrent}, isSameCategory=${isSameCategory}`);
-            return isNotCurrent && isSameCategory;
-          }
-        );
-        
-        console.log('Filtered products:', filteredProducts);
-        
-        // Limit to 4 related products
-        const limitedProducts = filteredProducts.slice(0, 4);
-        console.log('Limited products:', limitedProducts);
-        setRelatedProducts(limitedProducts);
+        if (response.success) {
+          // Filter out the current product and limit to 4 related products
+          console.log("related products",response.data);
+          const filteredProducts = response.data
+            .filter((product: Product) => product.id.toString() !== currentProductId.toString())
+            .slice(0, 4);
+            
+          setRelatedProducts(filteredProducts);
+        } else {
+          throw new Error('Failed to fetch related products');
+        }
       } catch (err) {
         console.error('Error fetching related products:', err);
         setError('Failed to load related products');
@@ -66,25 +59,31 @@ export function RelatedProducts({ currentProductId, categoryId, onAddToCart }: R
       }
     };
 
-    if (categoryId) {
-      fetchRelatedProducts();
-    }
-  }, [currentProductId, categoryId]);
-
-  if (error) {
-    return <div className="text-red-500 text-center py-4">{error}</div>;
-  }
+    fetchRelatedProducts();
+  }, [categoryId, currentProductId]);
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 py-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="space-y-3">
-            <Skeleton className="h-48 w-full rounded-lg" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
-          </div>
-        ))}
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold mb-6">You might also like</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white rounded-lg shadow-sm p-4">
+              <Skeleton className="w-full h-48 mb-4" />
+              <Skeleton className="h-4 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/2 mb-4" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mt-12 text-center py-8">
+        <p className="text-gray-500">{error}</p>
       </div>
     );
   }
@@ -105,9 +104,9 @@ export function RelatedProducts({ currentProductId, categoryId, onAddToCart }: R
             description={product.description}
             price={product.price}
             salePrice={product.salePrice || product.price}
-            imageUrl={product.imageUrl}
+            imageUrl={product.imageUrl || '/placeholder-product.jpg'}
             category={product.category}
-            onAddToCart={onAddToCart}
+            onAddToCart={() => onAddToCart(product.id)}
           />
         ))}
       </div>

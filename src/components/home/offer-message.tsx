@@ -1,30 +1,71 @@
-import { useState, useEffect } from 'react';
-import { FiX,FiAlertTriangle } from 'react-icons/fi';
+import { useState, useEffect, useCallback } from 'react';
+import { FiX, FiAlertTriangle } from 'react-icons/fi';
+import { api } from '../../api/route';
 
-const OFFER_MESSAGE_KEY = 'site_offer_message';
+interface Offer {
+  id: string;
+  description: string;
+  // Add other offer properties as needed
+}
 
 export const OfferMessageDisplay = () => {
-  const [message, setMessage] = useState('');
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
+  const [isAnimating, setIsAnimating] = useState(false);
 
-  useEffect(() => {
-    // Load message from local storage
-    const savedMessage = localStorage.getItem(OFFER_MESSAGE_KEY);
-    if (savedMessage) {
-      setMessage(savedMessage);
+  const fetchOffers = useCallback(async () => {
+    try {
+      const response = await api.get('/offers') as { success: boolean; data: Offer[] };
+      if (response.success && response.data.length > 0) {
+        setOffers(response.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch offers', err);
     }
   }, []);
 
-  if (!message || !isVisible) return null;
+  useEffect(() => {
+    fetchOffers();
+  }, [fetchOffers]);
+
+  useEffect(() => {
+    if (offers.length <= 1) return;
+
+    const timer = setInterval(() => {
+      setIsAnimating(true);
+      setTimeout(() => {
+        setCurrentIndex((prevIndex) => (prevIndex + 1) % offers.length);
+        setIsAnimating(false);
+      }, 500);
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [offers.length]);
+
+  if (!offers.length || !isVisible) return null;
 
   return (
-    <div className="bg-[var(--primary)] border-l-4 border-yellow-400 p-4 mb-2 relative">
-      <div className="flex items-center pb-2">
-        <FiAlertTriangle className="text-[var(--text-light)] mr-2 flex-shrink-0" />
-        <p className="text-yellow-700">{message}</p>
+    <div className="bg-[var(--primary)] border-l-4 border-yellow-400 p-3 mb-2 relative overflow-hidden">
+      <div className="flex items-center">
+        <div className="relative w-full">
+          <div className="relative h-6 overflow-hidden">
+            <div 
+              className={`absolute left-0 right-0 transition-all duration-500 ${
+                isAnimating ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'
+              }`}
+              style={{ top: '50%', transform: 'translateY(-50%)' }}
+            >
+              <div className="flex items-center justify-center">
+                <FiAlertTriangle className="text-[var(--text-light)] mr-2 flex-shrink-0" />
+                <p className="text-[var(--text-light)] font-medium text-sm">{offers[currentIndex]?.description}</p>
+              </div>
+            </div>
+          </div>
+        </div>
         <button
           onClick={() => setIsVisible(false)}
-          className="ml-auto text-yellow-600 hover:text-yellow-800"
+          className="ml-4 text-[var(--text-light)] hover:text-[var(--text-light)] flex-shrink-0 self-start"
           aria-label="Dismiss"
         >
           <FiX size={18} />
