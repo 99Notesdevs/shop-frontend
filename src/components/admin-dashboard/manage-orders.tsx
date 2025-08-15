@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/route';
 
-type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+type PaymentStatus = 'pending' | 'completed';
+type ShippingStatus = 'processing' | 'shipped' | 'delivered';
 
 interface OrderItem {
   productId: number;
@@ -18,7 +19,8 @@ interface Order {
   id: number;
   orderDate: string;
   totalAmount: number;
-  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  shippingStatus: ShippingStatus;
   userId: number;
   orderItems: OrderItem[];
   user: {
@@ -27,27 +29,30 @@ interface Order {
   };
 }
 
-const statusStyles = {
-  pending: 'bg-amber-50 text-amber-800 border-amber-200',
+const paymentStatusStyles = {
+  pending: 'bg-red-50 text-red-800 border-red-200',
+  completed: 'bg-green-50 text-green-800 border-green-200',
+};
+
+const shippingStatusStyles = {
   processing: 'bg-blue-50 text-blue-800 border-blue-200',
   shipped: 'bg-indigo-50 text-indigo-800 border-indigo-200',
   delivered: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  cancelled: 'bg-rose-50 text-rose-800 border-rose-200',
 };
 
 const statusIcons = {
   pending: '⏳',
+  completed: '✅',
   processing: '⚙️',
   shipped: '🚚',
-  delivered: '✅',
-  cancelled: '❌',
+  delivered: '🎯',
 };
 
 export default function ManageOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<ShippingStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -67,24 +72,25 @@ export default function ManageOrders() {
     fetchOrders();
   }, []);
 
-  const filteredOrders = orders.filter(order => 
-    statusFilter === 'all' || order.status === statusFilter
-  );
+  const filteredOrders = orders.filter(order => {
+    if (!order) return false;
+    return statusFilter === 'all' || (order.shippingStatus && order.shippingStatus === statusFilter);
+  });
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
 
-  const updateOrderStatus = async (orderId: number, newStatus: OrderStatus) => {
+  const updateShippingStatus = async (orderId: number, newStatus: ShippingStatus) => {
     try {
       await api.put(`/order/status/${orderId}`, { status: newStatus });
       setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
+        order.id === orderId ? { ...order, shippingStatus: newStatus } : order
       ));
     } catch (err) {
-      console.error('Error updating status:', err);
-      setError('Failed to update status');
+      console.error('Error updating shipping status:', err);
+      setError('Failed to update shipping status');
     }
   };
 
@@ -127,12 +133,12 @@ export default function ManageOrders() {
               className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm"
               value={statusFilter}
               onChange={(e) => {
-                setStatusFilter(e.target.value as OrderStatus | 'all');
+                setStatusFilter(e.target.value as ShippingStatus | 'all');
                 setCurrentPage(1);
               }}
             >
               <option value="all">All Statuses</option>
-              {Object.entries(statusStyles).map(([status, _]) => (
+              {Object.entries(shippingStatusStyles).map(([status, _]) => (
                 <option key={status} value={status}>
                   {status.charAt(0).toUpperCase() + status.slice(1)}
                 </option>
@@ -150,7 +156,8 @@ export default function ManageOrders() {
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Status</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shipping Status</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -189,13 +196,18 @@ export default function ManageOrders() {
                     ${order.totalAmount.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${paymentStatusStyles[order.paymentStatus || 'pending']}`}>
+                      {statusIcons[order.paymentStatus as keyof typeof statusIcons] || '⏳'} {order.paymentStatus ? (order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)) : 'Pending'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="relative">
                       <select
-                        value={order.status}
-                        onChange={(e) => updateOrderStatus(order.id, e.target.value as OrderStatus)}
-                        className={`block w-full pl-3 pr-10 py-1.5 text-sm rounded-md border ${statusStyles[order.status]} focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm cursor-pointer appearance-none`}
+                        value={order.shippingStatus || 'processing'}
+                        onChange={(e) => updateShippingStatus(order.id, (e.target.value as ShippingStatus) || 'processing')}
+                        className={`block w-full pl-3 pr-10 py-1.5 text-sm rounded-md border ${shippingStatusStyles[order.shippingStatus as keyof typeof shippingStatusStyles] || shippingStatusStyles.processing} focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm cursor-pointer appearance-none`}
                       >
-                        {Object.entries(statusStyles).map(([status, _]) => (
+                        {Object.entries(shippingStatusStyles).map(([status, _]) => (
                           <option key={status} value={status}>
                             <span className="mr-2">{statusIcons[status as keyof typeof statusIcons]}</span>
                             {status.charAt(0).toUpperCase() + status.slice(1)}
