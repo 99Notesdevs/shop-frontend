@@ -145,7 +145,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAdminStatus = async () => {
     try {
       console.log("Checking admin status...");
-      const response = await fetch(`${env.API_MAIN}/admin/check`, {
+      const response = await fetch(`${env.API_AUTH}/admin/check`, {
         credentials: 'include',
       });
       console.log("Admin check response:", response);
@@ -159,7 +159,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch(`${env.API_MAIN}/user`, {
+      const response = await fetch(`${env.API_AUTH}/user`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -178,7 +178,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
   const fetchUserDetails = async () => {
     try {
-      const response = await fetch(`${env.API_MAIN}/user/validate`, {
+      const response = await fetch(`${env.API_AUTH}/user/validate`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -256,7 +256,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${env.API_MAIN}/user`, {
+      const response = await fetch(`${env.API_AUTH}/user`, {
         method: "POST",
         credentials: 'include',
         headers: { "Content-Type": "application/json" },
@@ -298,7 +298,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   ) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${env.API_MAIN}/admin`, {
+      const response = await fetch(`${env.API_AUTH}/admin`, {
         method: "POST",
         credentials: 'include',
         headers: { "Content-Type": "application/json" },
@@ -337,7 +337,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const token = Cookies.get("token");
       if (token) {
-        await fetch(`${env.API_MAIN}/logout`, {
+        await fetch(`${env.API_AUTH}/logout`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -364,7 +364,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         client_id: env.REACT_APP_GOOGLE_CLIENT_ID,
         callback: async (response: { credential: string }) => {
           try {
-            const res = await fetch(`${env.API_MAIN}/user/google`, {
+            const res = await fetch(`${env.API_AUTH}/user/google`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ credential: response.credential }),
