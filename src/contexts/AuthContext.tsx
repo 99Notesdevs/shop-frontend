@@ -153,6 +153,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return data.success;
     } catch (error) {
       console.error("Admin check failed:", error);
+      setAdmin(false);
       return false;
     }
   };

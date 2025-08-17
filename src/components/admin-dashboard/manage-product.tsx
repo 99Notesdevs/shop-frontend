@@ -53,7 +53,7 @@ export function ManageProducts() {
     try {
       setLoading(true);
       await fetchCategories(); // Fetch categories first
-      const response = await api.get<{ success: boolean; data: Product[] }>('/product');
+      const response = await api.get<{ success: boolean; data: Product[] }>('/product?skip=0&take=10');
       console.log('Fetched products:', response); // Debug log
       if (response.success && Array.isArray(response.data)) {
         // Filter out any products without an ID and ensure _id is always defined

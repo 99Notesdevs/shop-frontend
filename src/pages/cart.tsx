@@ -18,6 +18,7 @@ interface CartItem {
     description: string;
     price: number;
     salePrice?: number;
+    shippingCharge?: number;
     images?: Array<{ url: string }>;
   };
 }
@@ -26,6 +27,9 @@ interface CartData {
   id: number;
   userId: number;
   totalAmount: number;
+  shippingCharge?: number;
+  couponDiscount?: number;
+  couponCode?: string;
   createdAt: string;
   updatedAt: string;
   cartItems: CartItem[];
@@ -262,7 +266,57 @@ export default function CartPage() {
   }, 0);
   
   const shipping = subtotal > 0 ? 50 : 0; // Example shipping cost
-  const total = subtotal + shipping;
+  const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponError, setCouponError] = useState('');
+  const total = Math.max(0, subtotal + shipping - couponDiscount);
+
+  // Apply coupon
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+
+    try {
+      const response = await api.get(`/coupon/use/${couponCode}`) as {success: boolean; data: { discount: number; discountType: string }} ;
+      if (response.success) {
+        const { discount, discountType } = response.data;
+        let discountAmount = 0;
+        
+        if (discountType === 'percentage') {
+          discountAmount = (subtotal * discount) / 100;
+        } else {
+          discountAmount = discount;
+        }
+        
+        setCouponDiscount(discountAmount);
+        setCouponError('');
+        toast.success('Coupon applied successfully!');
+      } else {
+        setCouponError('Invalid coupon code');
+        setCouponDiscount(0);
+      }
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      setCouponError('Failed to apply coupon. Please try again.');
+      setCouponDiscount(0);
+    }
+  };
+
+  // Remove coupon
+  const removeCoupon = async () => {
+    try {
+      await api.get(`/coupon/remove/${couponCode}`);
+      setCouponCode('');
+      setCouponDiscount(0);
+      setCouponError('');
+      toast.success('Coupon removed successfully');
+    } catch (error) {
+      console.error('Error removing coupon:', error);
+      toast.error('Failed to remove coupon');
+    }
+  };
 
   const handleRemoveItem = async (cartItemId: number) => {
     try {
@@ -496,19 +550,40 @@ export default function CartPage() {
               <div className="flex">
                 <input
                   type="text"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
                   placeholder="Enter coupon code"
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-var(--button) focus:border-transparent"
+                  disabled={couponDiscount > 0}
                 />
-                <button 
-                  className="px-6 py-3 bg-var(--button) text-white font-medium rounded-r-lg hover:bg-var(--button-hover) transition-colors"
-                  style={{
-                    '--button': '#FBAB3B',
-                    '--button-hover': '#DC7E00'
-                  } as React.CSSProperties}
-                >
-                  Apply
-                </button>
+                {couponDiscount > 0 ? (
+                  <button 
+                    onClick={removeCoupon}
+                    className="px-6 py-3 bg-red-500 text-white font-medium rounded-r-lg hover:bg-red-600 transition-colors"
+                  >
+                    Remove
+                  </button>
+                ) : (
+                  <button 
+                    onClick={applyCoupon}
+                    className="px-6 py-3 bg-var(--button) text-white font-medium rounded-r-lg hover:bg-var(--button-hover) transition-colors"
+                    style={{
+                      '--button': '#FBAB3B',
+                      '--button-hover': '#DC7E00'
+                    } as React.CSSProperties}
+                  >
+                    Apply
+                  </button>
+                )}
               </div>
+              {couponError && (
+                <p className="mt-2 text-sm text-red-600">{couponError}</p>
+              )}
+              {couponDiscount > 0 && (
+                <p className="mt-2 text-sm text-green-600">
+                  Coupon applied! You saved ₹{couponDiscount.toFixed(2)}
+                </p>
+              )}
             </div>
           </div>
 
@@ -528,7 +603,7 @@ export default function CartPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Discount</span>
-                  <span className="font-medium text-red-500">-₹0.00</span>
+                  <span className="font-medium text-red-500">-₹{couponDiscount.toFixed(2)}</span>
                 </div>
                 <div className="border-t border-gray-200 pt-4 mt-4">
                   <div className="flex items-center justify-between">

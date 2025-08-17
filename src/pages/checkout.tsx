@@ -40,6 +40,7 @@ interface Product {
     id: number;
     name: string;
   };
+  shippingCharge?: number;
 }
 
 interface OrderData {
@@ -67,12 +68,16 @@ interface CartItem {
     price: number;
     salePrice?: number;
     images?: string;
+    shippingCharge?: number;
   };
 }
 interface CartData {
   id: number;
   userId: number;
   totalAmount: number;
+  shippingCharge?: number;
+  couponDiscount?: number;
+  couponCode?: string;
   createdAt: string;
   updatedAt: string;
   cartItems: CartItem[];
@@ -123,6 +128,13 @@ const Checkout: React.FC = () => {
   
   // Validation error state
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  // Coupon states
+  const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(cartData?.couponDiscount || 0);
+  const [couponError, setCouponError] = useState('');
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(cartData?.couponCode || '');
 
   // Fetch user addresses
   const fetchUserAddresses = useCallback(async () => {
@@ -239,6 +251,97 @@ const Checkout: React.FC = () => {
       setIsAddingAddress(false);
     }
   };
+
+  // Apply coupon function
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+
+    try {
+      setIsApplyingCoupon(true);
+      setCouponError('');
+      
+      const response = await api.get(`/coupon/use/${couponCode}`) as { 
+        success: boolean; 
+        data: { 
+          discount: number; 
+          discountType: string;
+          code: string;
+        } 
+      };
+
+      if (response.success) {
+        const { discount, discountType } = response.data;
+        let discountAmount = 0;
+        
+        if (discountType === 'percentage') {
+          const subtotal = cartData 
+            ? cartData.cartItems.reduce((sum, item) => {
+                const price = item.product?.salePrice ?? item.product?.price ?? 0;
+                return sum + (price * item.quantity);
+              }, 0)
+            : product
+            ? (product.salePrice || product.price) * (product.quantity || 1)
+            : 0;
+          discountAmount = (subtotal * discount) / 100;
+        } else {
+          discountAmount = discount;
+        }
+        
+        setCouponDiscount(discountAmount);
+        setAppliedCoupon(response.data.code);
+        setCouponCode('');
+        toast.success('Coupon applied successfully!');
+      } else {
+        setCouponError('Invalid or expired coupon code');
+        setCouponDiscount(0);
+      }
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      setCouponError('Failed to apply coupon. Please try again.');
+      setCouponDiscount(0);
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  // Remove coupon function
+  const removeCoupon = async () => {
+    try {
+      if (appliedCoupon) {
+        await api.get(`/coupon/remove/${appliedCoupon}`);
+      }
+      setAppliedCoupon('');
+      setCouponDiscount(0);
+      setCouponError('');
+      toast.success('Coupon removed');
+    } catch (error) {
+      console.error('Error removing coupon:', error);
+      toast.error('Failed to remove coupon');
+    }
+  };
+
+  // Calculate subtotal
+  const subtotal = cartData 
+    ? cartData.cartItems.reduce((sum, item) => {
+        const price = item.product?.salePrice ?? item.product?.price ?? 0;
+        return sum + (price * item.quantity);
+      }, 0)
+    : product
+    ? (product.salePrice || product.price) * (product.quantity || 1)
+    : 0;
+
+  // Calculate shipping
+  const shipping = cartData 
+    ? cartData.shippingCharge || 0
+    : product 
+    ? (product.shippingCharge || 0) * (product.quantity || 1)
+    : 0;
+
+  // Calculate total
+  const total = Math.max(0, subtotal + shipping - couponDiscount);
 
   // Submit handler
   const handleSubmit = async (e: FormEvent) => {
@@ -560,7 +663,7 @@ const Checkout: React.FC = () => {
                                 </div>
                               ) : (
                                 <span className="text-base font-semibold text-gray-900">
-                                  ₹{(product.price * (product.quantity || 1)).toLocaleString('en-IN')}
+                                  ₹{(product.price * (orderData.quantity || 1)).toLocaleString('en-IN')}
                                 </span>
                               )}
                             </div>
@@ -574,51 +677,88 @@ const Checkout: React.FC = () => {
                     <div className="flex justify-between text-base">
                       <span className="text-gray-600">Subtotal</span>
                       <div className="text-right">
-                        {cartData ? (
-                          <>
-                            {cartData.cartItems.some(item => item.product?.salePrice) && (
-                              <div className="text-sm text-gray-400 line-through">
-                                ₹{cartData.cartItems.reduce((sum, item) => {
-                                  const price = item.product?.price || 0;
-                                  return sum + (price * item.quantity);
-                                }, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </div>
-                            )}
-                            <span className="text-gray-900 font-medium">
-                              ₹{cartData.cartItems.reduce((sum, item) => {
-                                const price = item.product?.salePrice ?? item.product?.price ?? 0;
-                                return sum + (price * item.quantity);
-                              }, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </>
-                        ) : product ? (
-                          <>
-                            {product.salePrice !== undefined && product.salePrice !== product.price && (
-                              <div className="text-sm text-gray-400 line-through">
-                                ₹{(product.price * (product.quantity || 1)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </div>
-                            )}
-                            <span className="text-gray-900 font-medium">
-                              ₹{((product.salePrice || product.price) * (product.quantity || 1)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </>
-                        ) : null}
+                        <span>₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
+                    </div>
+                    
+                    <div className="flex justify-between text-base">
+                      <span className="text-gray-600">Shipping</span>
+                      <span className="text-gray-900">
+                        {cartData?.shippingCharge !== undefined ? (
+                          `₹${cartData.shippingCharge.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        ) : product?.shippingCharge !== undefined ? (
+                          `₹${(product.shippingCharge * (product.quantity || 1)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        ) : 'Free'}
+                      </span>
+                    </div>
+
+                    {/* Coupon Section */}
+                    <div className="border-t border-gray-100 pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-gray-600">Coupon</span>
+                        {appliedCoupon ? (
+                          <div className="flex items-center">
+                            <span className="text-green-600 text-sm mr-2">
+                              {appliedCoupon} (-₹{couponDiscount.toFixed(2)})
+                            </span>
+                            <button 
+                              type="button"
+                              onClick={removeCoupon}
+                              className="text-red-500 hover:text-red-700 text-sm"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <button 
+                            type="button"
+                            onClick={() => document.getElementById('coupon-input')?.focus()}
+                            className="text-yellow-600 hover:text-yellow-700 text-sm font-medium"
+                          >
+                            + Add coupon
+                          </button>
+                        )}
+                      </div>
+                      
+                      {couponError && !appliedCoupon && (
+                        <p className="text-red-500 text-sm mt-1">{couponError}</p>
+                      )}
+                      
+                      {!appliedCoupon && (
+                        <div className="flex mt-2">
+                          <input
+                            id="coupon-input"
+                            type="text"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value)}
+                            placeholder="Enter coupon code"
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md text-sm focus:outline-none focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={applyCoupon}
+                            disabled={isApplyingCoupon || !couponCode.trim()}
+                            className="px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-r-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isApplyingCoupon ? 'Applying...' : 'Apply'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="flex justify-between text-base font-medium text-gray-900 pt-2 border-t border-gray-100">
                       <span>Total Amount</span>
-                      <span className="text-lg">
-                        {cartData ? (
-                          `₹${cartData.cartItems.reduce((sum, item) => {
-                            const price = item.product?.salePrice ?? item.product?.price ?? 0;
-                            return sum + (price * item.quantity);
-                          }, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        ) : product ? (
-                          `₹${((product.salePrice || product.price) * (product.quantity || 1)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        ) : '₹0.00'}
-                      </span>
+                      <div className="text-right">
+                        {couponDiscount > 0 && (
+                          <div className="text-sm text-gray-400 line-through mb-1">
+                            ₹{(subtotal + shipping).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        )}
+                        <span className="text-lg">
+                          ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
                     </div>
+                  </div>
                 </div>
 
     <button
