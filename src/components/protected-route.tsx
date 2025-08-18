@@ -9,20 +9,29 @@ interface AdminRouteProps {
 export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const { admin, checkAdmin } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const verifyAdmin = async () => {
-      await checkAdmin();
-      setIsLoading(false);
+      try {
+        const isAdminUser = await checkAdmin();
+        setIsAdmin(isAdminUser);
+      } catch (error) {
+        console.error('Error verifying admin:', error);
+        setIsAdmin(false);
+      } finally {
+        setIsLoading(false);
+      }
     };
+    
     verifyAdmin();
   }, [checkAdmin]);
 
   if (isLoading) {
-    return <div>Loading...</div>; // Or a loading spinner
+    return <div>Loading...</div>;
   }
 
-  return admin ? <>{children}</> : <Navigate to="/admin/login" replace />;
+  return isAdmin ? <>{children}</> : <Navigate to="/admin/login" replace />;
 };
 
 export const ProtectedRoute = () => {
