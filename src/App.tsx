@@ -1,7 +1,6 @@
 import { Route, BrowserRouter, Routes } from 'react-router-dom';
 import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
-import LogIn from './pages/login';
 import { HomeLayout } from './components/home/layout';
 import { ThemeProvider } from './components/ui/themeprovider';
 import Home from './pages/home';
@@ -35,8 +34,6 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/login" element={<LogIn />} />
-
             {/* Admin Login Route */}
             <Route path="/admin/login" element={<AdminLogin />} />
 
