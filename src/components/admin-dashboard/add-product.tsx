@@ -89,6 +89,7 @@ export default function ProductForm() {
           validity?: number;
           shippingCharges?: number;
           type?: 'softCopy' | 'hardCopy';
+
           metadata?: {
             author?: string;
             language?: string;
@@ -97,6 +98,7 @@ export default function ProductForm() {
             weight?: string;
             dimensions?: string;
             edition?: string;
+
           };
         } 
       };
@@ -449,7 +451,106 @@ export default function ProductForm() {
                 />
               </div>
               </div>
-
+            
+            <div className='flex justify-center bg-gray-200 h-8 font-semibold' >
+            <p>Optional Fields</p>
+            </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              
+              <div>
+                <label htmlFor="author" className="block text-sm font-medium text-gray-700">
+                  Author
+                </label>
+                <input
+                  type="text"
+                  id="author"
+                  name="author"
+                  value={formData.author}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                />
+              </div>
+              <div>
+                <label htmlFor="language" className="block text-sm font-medium text-gray-700">
+                  Language
+                </label>
+                <input
+                  type="text"
+                  id="language"
+                  name="language"
+                  value={formData.language}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                />
+              </div>
+              <div>
+                <label htmlFor="publisher" className="block text-sm font-medium text-gray-700">
+                  Publisher
+                </label>
+                <input
+                  type="text"
+                  id="publisher"
+                  name="publisher"
+                  value={formData.publisher}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                />
+              </div>
+              <div>
+                <label htmlFor="pages" className="block text-sm font-medium text-gray-700">
+                  Pages
+                </label>
+                <input
+                  type="text"
+                  id="pages"
+                  name="pages"
+                  value={formData.pages}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                />
+              </div>
+              <div>
+                <label htmlFor="weight" className="block text-sm font-medium text-gray-700">
+                  Weight
+                </label>
+                <input
+                  type="text"
+                  id="weight"
+                  name="weight"
+                  value={formData.weight}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                />
+              </div>
+              <div>
+                <label htmlFor="dimensions" className="block text-sm font-medium text-gray-700">
+                  Dimensions
+                </label>
+                <input
+                  type="text"
+                  id="dimensions"
+                  name="dimensions"
+                  value={formData.dimensions}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                  placeholder="e.g., 8.5 x 11 x 1 inches"
+                />
+              </div>
+              <div>
+                <label htmlFor="edition" className="block text-sm font-medium text-gray-700">
+                  Edition
+                </label>
+                <input
+                  type="text"
+                  id="edition"
+                  name="edition"
+                  value={formData.edition}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                  placeholder="e.g., 1st Edition"
+                />
+              </div>
+            </div>
 
             <div className="flex justify-end space-x-4 pt-4">
               <button

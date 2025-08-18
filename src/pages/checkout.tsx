@@ -30,7 +30,6 @@ interface Product {
     id: number;
     name: string;
   };
-
 }
 
 interface OrderData {
@@ -58,12 +57,16 @@ interface CartItem {
     price: number;
     salePrice?: number;
     images?: string;
+    shippingCharge?: number;
   };
 }
 interface CartData {
   id: number;
   userId: number;
   totalAmount: number;
+  shippingCharge?: number;
+  couponDiscount?: number;
+  couponCode?: string;
   createdAt: string;
   updatedAt: string;
   cartItems: CartItem[];

@@ -27,6 +27,9 @@ interface CartData {
   id: number;
   userId: number;
   totalAmount: number;
+  shippingCharge?: number;
+  couponDiscount?: number;
+  couponCode?: string;
   createdAt: string;
   updatedAt: string;
   cartItems: CartItem[];
@@ -210,6 +213,7 @@ export default function CartPage() {
     return sum + (price * item.quantity);
   }, 0);
   
+
   // Calculate maximum shipping charge from all products in cart
   const maxShippingCharge = Math.max(
     ...cartItems.map(item => item.product?.shippingCharge || 0),
