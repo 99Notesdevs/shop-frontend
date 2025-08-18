@@ -45,7 +45,7 @@ export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart }) => {
         // Fetch all categories and products in parallel
         const [categoriesResponse, productsResponse] = await Promise.all([
           api.get<{ success: boolean; data: Category[] }>('/category'),
-          api.get<{ success: boolean; data: Product[] }>('/product')
+          api.get<{ success: boolean; data: Product[] }>('/product?skip=0&take=16')
         ]);
         
         console.log('Categories response:', categoriesResponse);

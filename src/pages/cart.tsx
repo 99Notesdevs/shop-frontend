@@ -18,7 +18,8 @@ interface CartItem {
     description: string;
     price: number;
     salePrice?: number;
-    images?: Array<{ url: string }>;
+    shippingCharge?: number;
+    images: string;
   };
 }
 
@@ -108,58 +109,6 @@ export default function CartPage() {
         setIsLoading(false);
       }
     };
-    
-    // const handleBuyNow = async (e: React.MouseEvent) => {
-    //   e.preventDefault();
-      
-    //   if (!cartData) {
-    //     toast.error('Cart is empty. Please add items to your cart first.');
-    //     return;
-    //   }
-    
-    //   try {
-    //     const orderData = {
-    //       orderDate: new Date().toISOString(),
-    //       products: cartData.cartItems.map(item => ({
-    //         productId: item.productId,
-    //         quantity: item.quantity,
-    //         price: item.product?.price || 0
-    //       })),
-    //       totalAmount: cartData.totalAmount,
-    //       status: "Pending",
-    //       billingAddress: "",
-    //       shippingAddress: "",
-    //       userId: user?.id
-    //     };
-    
-    //     const response = await api.post<{ success: boolean; data: any }>(`/order`, orderData);
-    
-    //     if (!response.success) {
-    //       toast.error('Failed to create order. Please try again.');
-    //       return;
-    //     }
-    
-    //     const responseData = response.data;
-    //     const orderId = responseData.id;
-    
-    //     navigate('/checkout', { 
-    //       state: { 
-    //         orderData: {
-    //           orderId,
-    //           phonepe_transactionId: "",
-    //           status: "",
-    //           amount: cartData.totalAmount,
-    //           validity: 10,
-    //           quantity: cartData.cartItems.reduce((total, item) => total + item.quantity, 0)
-    //         }, 
-    //         cartData 
-    //       } 
-    //     });
-    //   } catch (err) {
-    //     console.error('Order creation error:', err);
-    //     toast.error('Failed to create order. Please try again.');
-    //   }
-    // };
 
     fetchCart();
   }, [user, isAuthLoading]);
@@ -261,9 +210,88 @@ export default function CartPage() {
     return sum + (price * item.quantity);
   }, 0);
   
-  const shipping = subtotal > 0 ? 50 : 0; // Example shipping cost
-  const total = subtotal + shipping;
+  // Calculate maximum shipping charge from all products in cart
+  const maxShippingCharge = Math.max(
+    ...cartItems.map(item => item.product?.shippingCharge || 0),
+    0 // Default to 0 if no products have shipping charges
+  );
+  
+  // Apply free shipping if subtotal is 500 or more, otherwise use max shipping charge
+  const shipping = subtotal >= 499 ? 0 : maxShippingCharge;
+  
+  // Calculate amount needed for free shipping
+  const amountNeededForFreeShipping = Math.max(0, 500 - subtotal);
+  
+  const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponError, setCouponError] = useState('');
 
+  useEffect(() => {
+    const savedCoupon = localStorage.getItem('appliedCoupon');
+    if (savedCoupon) {
+      const { code, discount } = JSON.parse(savedCoupon);
+      setCouponCode(code);
+      setCouponDiscount(discount);
+    }
+  }, []);
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+
+    try {
+      const response = await api.post(`/coupon/use/${couponCode}`,{totalAmount:cartData?.totalAmount}) as {success: boolean; data: any};
+      console.log("Coupon response", response);
+      
+      if (response.success) {
+        const { discount, type: discountType } = response.data;
+        console.log("discounttype:", discountType, "discount:", discount);
+        let discountAmount = 0;
+        
+        if (discountType === 'percentage') {
+          discountAmount = (subtotal * discount) / 100;
+        } else {
+          discountAmount = discount;
+        }
+        
+        setCouponDiscount(discountAmount);
+        setCouponError('');
+        localStorage.setItem('appliedCoupon', JSON.stringify({
+          code: couponCode,
+          discount: discountAmount
+        }));
+        toast.success('Coupon applied successfully!');
+      } else {
+        setCouponError('Invalid coupon code');
+        setCouponDiscount(0);
+        toast.error('Failed to apply coupon');
+      }
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      setCouponError('Failed to apply coupon. Please try again.');
+      setCouponDiscount(0);
+      toast.error('Failed to apply coupon. Please try again.');
+    }
+  };
+
+  const removeCoupon = async () => {
+    try {
+      await api.post(`/coupon/remove/${couponCode}`, {credentials: 'include'});
+      setCouponCode('');
+      setCouponDiscount(0);
+      localStorage.removeItem('appliedCoupon');
+      toast.success('Coupon removed successfully');
+    } catch (error) {
+      console.error('Error removing coupon:', error);
+      toast.error('Failed to remove coupon');
+    }
+  };
+
+  const total = Math.max(0, subtotal + shipping - couponDiscount);
+
+  // Handle remove item from cart
   const handleRemoveItem = async (cartItemId: number) => {
     try {
       // Get the cart ID from cartData
@@ -379,9 +407,9 @@ export default function CartPage() {
                       {/* Product Info */}
                       <div className="flex items-center md:w-6/12 mb-4 md:mb-0">
                         <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-50">
-                          {item.product?.images?.[0]?.url ? (
+                          {item.product?.images ? (
                             <img
-                              src={item.product.images[0].url}
+                              src={item.product.images}
                               alt={item.product.name}
                               className="h-full w-full object-cover object-center"
                             />
@@ -491,24 +519,64 @@ export default function CartPage() {
             </div>
             
             {/* Coupon Code */}
-            <div className="mt-6 bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Have a coupon code?</h3>
-              <div className="flex">
-                <input
-                  type="text"
-                  placeholder="Enter coupon code"
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-var(--button) focus:border-transparent"
-                />
-                <button 
-                  className="px-6 py-3 bg-var(--button) text-white font-medium rounded-r-lg hover:bg-var(--button-hover) transition-colors"
-                  style={{
-                    '--button': '#FBAB3B',
-                    '--button-hover': '#DC7E00'
-                  } as React.CSSProperties}
-                >
-                  Apply
-                </button>
+            <div className="mt-6 bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <svg className="w-5 h-5 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                Have a coupon code?
+              </h3>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="Enter coupon code"
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    disabled={couponDiscount > 0}
+                  />
+                  {couponCode && !couponDiscount && (
+                    <button 
+                      onClick={() => setCouponCode('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {couponDiscount > 0 ? (
+                  <button 
+                    onClick={removeCoupon}
+                    className="px-6 py-3 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Remove Coupon
+                  </button>
+                ) : (
+                  <button 
+                    onClick={applyCoupon}
+                    className="px-6 py-3 bg-[var(--button)] text-white font-medium rounded-lg hover:bg-[var(--button-hover)] transition-colors flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Apply Coupon
+                  </button>
+                )}
               </div>
+              {couponDiscount > 0 && (
+                <p className="mt-3 text-sm text-green-600 flex items-center">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Coupon applied! ₹{couponDiscount} discount has been applied to your order.
+                </p>
+              )}
             </div>
           </div>
 
@@ -524,11 +592,20 @@ export default function CartPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium">{shipping > 0 ? `₹${shipping.toFixed(2)}` : 'Free'}</span>
+                  <div className="text-right">
+                    <div className="font-medium">
+                      {shipping > 0 ? `₹${shipping.toFixed(2)}` : 'Free'}
+                    </div>
+                    {shipping > 0 && (
+                      <div className="text-xs text-green-600 mt-1">
+                        Add ₹{amountNeededForFreeShipping.toFixed(2)} more for free shipping
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Discount</span>
-                  <span className="font-medium text-red-500">-₹0.00</span>
+                  <span className="font-medium text-red-500">-₹{couponDiscount.toFixed(2)}</span>
                 </div>
                 <div className="border-t border-gray-200 pt-4 mt-4">
                   <div className="flex items-center justify-between">
@@ -541,7 +618,7 @@ export default function CartPage() {
               <div className="mt-8">
                 <button
                   type="button"
-                  className="w-full flex justify-center items-center px-6 py-3 border border-transparent rounded-lg text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
+                  className="w-full flex justify-center items-center px-6 py-3 border border-transparent rounded-lg text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors cursor-pointer"
                   style={{
                     backgroundColor: '#FBAB3B',
                     '--button-hover': '#DC7E00',

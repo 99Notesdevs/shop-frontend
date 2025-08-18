@@ -206,7 +206,7 @@ export function ProductCard({
       
       {/* Wishlist Button */}
       <button 
-        className={`absolute top-3 right-3 z-10 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm transition-all duration-200 hover:scale-110 ${
+        className={`absolute top-3 right-3 z-10 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm transition-all duration-200 hover:scale-110 cursor-pointer ${
           isInWishlist ? 'text-rose-500' : 'text-gray-400 hover:text-rose-500'
         }`}
         onClick={toggleWishlist}

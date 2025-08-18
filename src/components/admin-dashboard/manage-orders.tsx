@@ -178,7 +178,7 @@ export default function ManageOrders() {
                         </span>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{order.user?.name || 'Guest'}</div>
+                        <div className="text-sm font-medium text-gray-900">{order.user?.name}</div>
                         <div className="text-sm text-gray-500">{order.user?.email || 'N/A'}</div>
                       </div>
                     </div>
@@ -193,7 +193,7 @@ export default function ManageOrders() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ${order.totalAmount.toFixed(2)}
+                  ₹{order.totalAmount.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${paymentStatusStyles[order.paymentStatus || 'pending']}`}>

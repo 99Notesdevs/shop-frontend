@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { env } from '../../config/env';
 import logo from '../../assets/logo.png';
-import { LogIn, ChevronDown, ShoppingCart, Heart } from 'lucide-react';
+import { LogIn, ChevronDown, ShoppingCart, Heart, Menu, X } from 'lucide-react';
 import { api } from '../../api/route';
 import { SearchBar } from './search-bar';
 import { OfferMessageDisplay } from './offer-message';
@@ -63,6 +63,7 @@ const Navbar: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -101,6 +102,10 @@ const Navbar: React.FC = () => {
     navigate('/');
   };
 
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
 return (
     <>
       
@@ -108,13 +113,27 @@ return (
       <div className="w-full h-10">
       <OfferMessageDisplay />
       </div>
-      <nav className="sticky top-0 w-full bg-[var(--bg-light)] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.1)] z-40 h-20 flex items-center px-10 transition-colors duration-200">
+      <nav className="sticky top-0 w-full bg-[var(--bg-light)] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.1)] z-40 h-20 flex items-center px-4 md:px-10 transition-colors duration-200">
         <CartSidebar isOpen={isCartOpen} onClose={closeCart} />
+        
+        {/* Mobile Menu Button */}
+        <button
+          className="hidden p-2 mr-2"
+          onClick={toggleMobileMenu}
+          aria-label="Toggle menu"
+        >
+          {isMobileMenuOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
+        </button>
+
         {/* Left Section - Logo and Search */}
-        <div className="flex items-center">
+        <div className="flex items-center flex-1">
           <Link to="/" className="mr-4">
             <img
-              className="md:w-25 md:h-10 w-22 h-8 ml-5"
+              className="md:w-25 md:h-10 w-20 h-7"
               src={logo}
               alt="99notes"
             />
@@ -124,9 +143,9 @@ return (
           </div>
         </div>
 
-        {/* Center Section - Categories */}
-        <div className="flex-1 flex justify-end mr-6">
-          <div className="hidden md:flex items-center space-x-6">
+        {/* Center Section - Categories (Desktop Only) */}
+        <div className="hidden xl:flex flex-1 justify-end mr-6">
+          <div className="flex items-center space-x-6">
             {loading ? (
               <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
             ) : error ? (
@@ -146,14 +165,14 @@ return (
         </div>
 
         {/* Right Section - Navigation */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           {!isAuthenticated ? (
             <button
-              onClick={() => window.location.href = `${env.API}/login`}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--indigo-600)] rounded-md hover:bg-[var(--indigo-700)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--indigo-500)] transition-colors"
+              onClick={() => window.location.href = `${env.AUTH_PORTAL_API}/login`}
+              className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm font-medium text-white bg-[var(--indigo-600)] rounded-md hover:bg-[var(--indigo-700)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--indigo-500)] transition-colors"
             >
               <LogIn className="w-4 h-4" />
-              <span>Login</span>
+              <span className="hidden md:inline">Login</span>
             </button>
           ) : (
             <div className="relative group">
@@ -226,6 +245,41 @@ return (
           </button>
         </div>
       </nav>
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-[var(--bg-light)]">
+          <div className="p-4 pt-20">
+            {/* Mobile Search */}
+            <div className="mb-6">
+              <SearchBar />
+            </div>
+
+            {/* Mobile Categories */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold mb-2">Categories</h3>
+              {loading ? (
+                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+              ) : error ? (
+                <span className="text-sm text-red-500">{error}</span>
+              ) : (
+                categories.map((category) => (
+                  <button
+                    key={category._id}
+                    onClick={() => {
+                      handleCategoryClick(category);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-[var(--text-light)] hover:bg-[var(--bg-light-secondary)] rounded-md transition-colors"
+                  >
+                    {category.name}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
