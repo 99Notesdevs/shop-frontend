@@ -1,7 +1,6 @@
 import { Route, BrowserRouter, Routes } from 'react-router-dom';
 import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
-import LogIn from './pages/login';
 import { HomeLayout } from './components/home/layout';
 import { ThemeProvider } from './components/ui/themeprovider';
 import Home from './pages/home';
@@ -28,6 +27,7 @@ import { AdminRoute } from './components/protected-route';
 import AddOfferMessage from './components/admin-dashboard/add-offer-message';
 import AddCoupon from './components/admin-dashboard/add-coupon';
 import SearchPage from './pages/search-page';
+import ManageBanner from './components/admin-dashboard/manage-banner';
 
 function App() {
   return (
@@ -35,8 +35,6 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/login" element={<LogIn />} />
-
             {/* Admin Login Route */}
             <Route path="/admin/login" element={<AdminLogin />} />
 
@@ -52,6 +50,7 @@ function App() {
             <Route path="manage-orders" element={<AdminRoute><ManageOrders /></AdminRoute>} />
             <Route path="add-offer-message" element={<AdminRoute><AddOfferMessage /></AdminRoute>} />
             <Route path="add-coupon" element={<AdminRoute><AddCoupon /></AdminRoute>} />
+            <Route path="manage-banner" element={<AdminRoute><ManageBanner /></AdminRoute>} />
             </Route>
 
             {/* Main App Routes */}

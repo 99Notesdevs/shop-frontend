@@ -15,33 +15,50 @@ interface ApiResponse<T = any> {
 interface Coupon {
   id: number;
   code: string;
+  description?: string;
   discount: number;
   validity: number;
   type: string;
+  minOrderValue?: number;
+  startDate?: string;
+  endDate?: string;
   usageLimit?: number;
+  usageLimitPerUser?: number;
   timesUsed: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  users?: any[]; // Assuming UserData type is not critical for the frontend
+  users?: any[];
 }
 
 interface CouponFormData {
   code: string;
+  description?: string;
   discount: number;
   validity: number;
   type: string;
+  minOrderValue?: number;
+  startDate?: string;
+  endDate?: string;
   usageLimit?: number;
+  usageLimitPerUser?: number;
+  isActive: boolean;
 }
 
 export default function AddCoupon() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [formData, setFormData] = useState<CouponFormData>({
     code: '',
+    description: '',
     discount: 0,
     validity: 30, // Default validity of 30 days
     type: 'percentage', // Default type
-    usageLimit: undefined
+    minOrderValue: undefined,
+    startDate: new Date().toISOString().split('T')[0], // Today's date as default
+    endDate: undefined,
+    usageLimit: undefined,
+    usageLimitPerUser: undefined,
+    isActive: true
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -50,7 +67,7 @@ export default function AddCoupon() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'discount' || name === 'validity' || name === 'usageLimit'
+      [name]: name === 'discount' || name === 'validity' || name === 'minOrderValue' || name === 'usageLimit' || name === 'usageLimitPerUser'
         ? value ? Number(value) : undefined 
         : value
     }));
@@ -97,11 +114,17 @@ export default function AddCoupon() {
     setIsSubmitting(true);
 
     try {
-      const couponData = {
+      // Format dates to ISO strings
+      const formattedData = {
         ...formData,
-        // Remove any undefined values
-        ...(formData.usageLimit === undefined ? {} : { usageLimit: formData.usageLimit })
+        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
+        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
       };
+      
+      // Remove undefined values
+      const couponData = Object.fromEntries(
+        Object.entries(formattedData).filter(([_, v]) => v !== undefined)
+      );
       
       if (editingId) {
         const response: AxiosResponse<ApiResponse> = await api.put(`/coupon/${editingId}`, couponData);
@@ -129,11 +152,16 @@ export default function AddCoupon() {
   const handleEdit = (coupon: Coupon) => {
     setFormData({
       code: coupon.code,
+      description: coupon.description,
       discount: coupon.discount,
       validity: coupon.validity,
       type: coupon.type,
+      minOrderValue: coupon.minOrderValue,
+      startDate: coupon.startDate,
+      endDate: coupon.endDate,
       usageLimit: coupon.usageLimit,
-      // Remove minPurchaseAmount since it's not in the Coupon interface
+      usageLimitPerUser: coupon.usageLimitPerUser,
+      isActive: coupon.isActive
     });
     setEditingId(coupon.id);
     // Scroll to the form header
@@ -161,11 +189,16 @@ export default function AddCoupon() {
   const resetForm = () => {
     setFormData({
       code: '',
+      description: '',
       discount: 0,
       validity: 30,
       type: 'percentage',
-      usageLimit: undefined
-      // Removed minPurchaseAmount since it's not in the Coupon interface
+      minOrderValue: undefined,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: undefined,
+      usageLimit: undefined,
+      usageLimitPerUser: undefined,
+      isActive: true
     });
   };
 
@@ -177,25 +210,70 @@ export default function AddCoupon() {
         </h2>
       
       <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="code" className="block text-sm font-medium text-gray-700">
+              Coupon Code *
+            </label>
+            <input
+              type="text"
+              id="code"
+              name="code"
+              value={formData.code}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              required
+            />
+          </div>
+
+          <div className="relative">
+            <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+              Coupon Type <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <select
+                id="type"
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                className="appearance-none block w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 cursor-pointer"
+                required
+              >
+                <option value="percentage">Percentage Discount</option>
+                <option value="fixed">Fixed Amount Discount</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 pt-6">
+                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 011.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <div className="mt-1 text-xs text-gray-500">
+              {formData.type === 'percentage' 
+                ? 'Discount will be applied as a percentage of the total' 
+                : 'Fixed amount will be deducted from the total'}
+            </div>
+          </div>
+        </div>
+
         <div>
-          <label htmlFor="code" className="block text-sm font-medium text-gray-700">
-            Coupon Code *
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+            Description
           </label>
           <input
             type="text"
-            id="code"
-            name="code"
-            value={formData.code}
+            id="description"
+            name="description"
+            value={formData.description || ''}
             onChange={handleChange}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            required
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="discount" className="block text-sm font-medium text-gray-700">
-              Discount Amount *
+              {formData.type === 'percentage' ? 'Discount Percentage *' : 'Fixed Discount Amount *'}
             </label>
             <div className="mt-1 relative">
               <input
@@ -203,18 +281,70 @@ export default function AddCoupon() {
                 id="discount"
                 name="discount"
                 min="0"
-                step="0.01"
+                step={formData.type === 'percentage' ? '0.01' : '1'}
                 value={formData.discount}
                 onChange={handleChange}
                 className="block w-full pr-10 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 appearance-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 required
               />
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                <span className="text-gray-500 sm:text-sm">%</span>
+                <span className="text-gray-500 sm:text-sm">
+                  {formData.type === 'percentage' ? '%' : '₹'}
+                </span>
               </div>
             </div>
           </div>
 
+          <div>
+            <label htmlFor="minOrderValue" className="block text-sm font-medium text-gray-700">
+              Minimum Order Value (₹)
+            </label>
+            <input
+              type="number"
+              id="minOrderValue"
+              name="minOrderValue"
+              min="0"
+              step="1"
+              value={formData.minOrderValue || ''}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 appearance-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">
+              Start Date *
+            </label>
+            <input
+              type="date"
+              id="startDate"
+              name="startDate"
+              value={formData.startDate}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">
+              End Date (leave empty for no expiry)
+            </label>
+            <input
+              type="date"
+              id="endDate"
+              name="endDate"
+              value={formData.endDate || ''}
+              min={formData.startDate}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="validity" className="block text-sm font-medium text-gray-700">
               Validity (days) *
@@ -233,7 +363,7 @@ export default function AddCoupon() {
 
           <div>
             <label htmlFor="usageLimit" className="block text-sm font-medium text-gray-700">
-              Maximum Usage per User (leave empty for unlimited)
+              Maximum Total Usage (leave empty for unlimited)
             </label>
             <input
               type="number"
@@ -245,27 +375,41 @@ export default function AddCoupon() {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 appearance-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
-
-          <div>
-            <label htmlFor="type" className="block text-sm font-medium text-gray-700">
-              Type *
-            </label>
-            <select
-              id="type"
-              name="type"
-              value={formData.type}
-              onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-              required
-            >
-              <option value="percentage">Percentage</option>
-              <option value="fixed">Fixed Amount</option>
-            </select>
-          </div>
-
-
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="usageLimitPerUser" className="block text-sm font-medium text-gray-700">
+              Maximum Usage Per User (leave empty for unlimited)
+            </label>
+            <input
+              type="number"
+              id="usageLimitPerUser"
+              name="usageLimitPerUser"
+              min="1"
+              value={formData.usageLimitPerUser || ''}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 appearance-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+
+          <div className="flex items-end">
+            <div className="flex items-center h-5">
+              <input
+                id="isActive"
+                name="isActive"
+                type="checkbox"
+                checked={formData.isActive}
+                onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+            </div>
+            <div className="ml-3 text-sm">
+              <label htmlFor="isActive" className="font-medium text-gray-700">Active Coupon</label>
+              <p className="text-gray-500">Uncheck to deactivate this coupon</p>
+            </div>
+          </div>
+        </div>
         <div className="pt-2">
           
           <button

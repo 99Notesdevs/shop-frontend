@@ -3,7 +3,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { 
   FiPlus, FiEdit, FiList, FiSettings, 
-  FiChevronLeft, FiMenu, FiX, FiUser, FiLogOut,FiMessageCircle
+  FiChevronLeft, FiMenu, FiX, FiUser, FiLogOut,FiMessageCircle,
+  FiImage
 } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -32,6 +33,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean; toggleS
         {icon: FiMessageCircle, text:'Offer Message', path:'/admin/add-offer-message'},
         {icon: FiList, text:'Manage Orders', path:'/admin/manage-orders'},
         {icon: FiPlus, text:'Add Coupon', path:'/admin/add-coupon'},
+        {icon: FiImage, text:'Manage Banner', path:'/admin/manage-banner'},
       ],
     },
   ];

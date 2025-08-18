@@ -95,7 +95,7 @@ const AllProduct: React.FC = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await api.get('/product') as { success: boolean; data: Product[] };
+        const response = await api.get('/product?skip=0&take=20') as { success: boolean; data: Product[] };
         if (response.success) {
           setAllProducts(response.data);
 
@@ -128,57 +128,6 @@ const AllProduct: React.FC = () => {
 
     fetchProducts();
   }, [categoryName, categories]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchProducts = async () => {
-      try {
-        console.log('Fetching products from:', `/product`);
-        const data = await api.get(`/product`) as { success: boolean; data: Product[] };
-
-        if (!data.success) {
-          console.error('API Error Response:', data);
-          throw new Error(`API error`);
-        }
-
-        console.log('API Response:', data);
-
-        // Handle different response formats
-        let productsArray = [];
-        if (Array.isArray(data)) {
-          productsArray = data;
-        } else if (data && Array.isArray(data.data)) {
-          productsArray = data.data;
-        } else {
-          console.warn('Unexpected API response format:', data);
-          throw new Error('Unexpected response format from the server');
-        }
-
-        if (isMounted) {
-          setAllProducts(productsArray);
-          setError(null);
-        }
-      } catch (err) {
-        console.error('Error fetching products:', err);
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-        if (isMounted) {
-          setError(`Failed to load products: ${errorMessage}`);
-          toast.error('Failed to load products');
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchProducts();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   // Function to get category name by ID
   const getCategoryName = (categoryId: string | number) => {

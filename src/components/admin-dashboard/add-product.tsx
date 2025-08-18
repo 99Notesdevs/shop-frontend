@@ -13,6 +13,7 @@ interface Category {
 }
 
 interface ProductData {
+  id?: string;
   name: string;
   description: string;
   price: string;
@@ -23,13 +24,15 @@ interface ProductData {
   validity: string;
   shippingCharges: string;
   type: 'softCopy' | 'hardCopy';
-  author?: string;
-  language?: string;
-  publisher?: string;
-  pages?: string;
-  weight?: string;
-  dimensions?: string;
-  edition?: string;
+  metadata?: {
+    author?: string;
+    language?: string;
+    publisher?: string;
+    pages?: string | number;
+    weight?: string | number;
+    dimensions?: string;
+    edition?: string;
+  };
 }
 
 export default function ProductForm() {
@@ -72,6 +75,7 @@ export default function ProductForm() {
 
   const fetchProduct = async () => {
     try {
+      console.log('Fetching product with ID:', id); // Debug log
       const response = await api.get(`/product/${id}`) as { 
         success: boolean; 
         data: {
@@ -85,7 +89,8 @@ export default function ProductForm() {
           validity?: number;
           shippingCharges?: number;
           type?: 'softCopy' | 'hardCopy';
-          metadata: {
+
+          metadata?: {
             author?: string;
             language?: string;
             publisher?: string;
@@ -93,36 +98,45 @@ export default function ProductForm() {
             weight?: string;
             dimensions?: string;
             edition?: string;
-          }
+
+          };
         } 
       };
       
-      if (response.success && response.data) {
+      console.log('Product API response:', response); // Debug log
+      
+      if (response && response.success && response.data) {
         const product = response.data;
         setFormData({
-          name: product.name,
-          description: product.description,
-          price: product.price.toString(),
+          name: product.name || '',
+          description: product.description || '',
+          price: product.price?.toString() || '',
           salePrice: product.salePrice?.toString() || '',
-          stock: product.stock.toString(),
+          stock: product.stock?.toString() || '0',
           imageUrl: product.imageUrl || '',
-          categoryId: product.categoryId.toString(),
+          categoryId: product.categoryId?.toString() || '',
           validity: product.validity?.toString() || '',
           shippingCharges: product.shippingCharges?.toString() || '50',
           type: product.type || 'softCopy',
-          author: product.metadata.author || '',
-          language: product.metadata.language || '',
-          publisher: product.metadata.publisher || '',
-          pages: product.metadata.pages || '',
-          weight: product.metadata.weight || '',
-          dimensions: product.metadata.dimensions || '',
-          edition: product.metadata.edition || '',
+          metadata: {
+            author: product.metadata?.author || '',
+            language: product.metadata?.language || '',
+            publisher: product.metadata?.publisher || '',
+            pages: product.metadata?.pages || '',
+            weight: product.metadata?.weight || '',
+            dimensions: product.metadata?.dimensions || '',
+            edition: product.metadata?.edition || '',
+          },
         });
+      } else {
+        console.error('Invalid product data format:', response);
+        toast.error('Failed to load product data');
+        navigate('/admin/manage-product');
       }
     } catch (error) {
       console.error('Error fetching product:', error);
-      toast.error('Failed to load product data');
-      navigate('/admin/products');
+      toast.error('Failed to load product');
+      navigate('/admin/manage-product');
     } finally {
       setIsLoading(false);
     }
@@ -140,13 +154,15 @@ export default function ProductForm() {
     validity: '',
     shippingCharges: '50',
     type: 'softCopy',
-    author: '',
-    language: '',
-    publisher: '',
-    pages: '',
-    weight: '',
-    dimensions: '',
-    edition: '',
+    metadata: {
+      author: '',
+      language: '',
+      publisher: '',
+      pages: '',
+      weight: '',
+      dimensions: '',
+      edition: '',
+    },
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -176,15 +192,15 @@ export default function ProductForm() {
         validity: formData.validity ? parseInt(formData.validity, 10) : undefined,
         shippingCharges: parseFloat(formData.shippingCharges) || 0,
         type: formData.type || 'softCopy',
-        metadata: JSON.stringify({
-          author: formData.author,
-          language: formData.language,
-          publisher: formData.publisher,
-          pages: formData.pages,
-          weight: formData.weight,
-          dimensions: formData.dimensions,
-          edition: formData.edition,
-        })
+        metadata: {
+          author: formData.metadata?.author,
+          language: formData.metadata?.language,
+          publisher: formData.metadata?.publisher,
+          pages: formData.metadata?.pages,
+          weight: formData.metadata?.weight,
+          dimensions: formData.metadata?.dimensions,
+          edition: formData.metadata?.edition,
+        },
       };
 
       console.log('Submitting product data:', productData); // Debug log

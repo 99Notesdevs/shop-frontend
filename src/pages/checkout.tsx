@@ -4,21 +4,9 @@ import toast from "react-hot-toast";
 import { env } from "../config/env";
 import { api } from "../api/route";
 
-interface UserAddress {
-  id: string;
-  fullName: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  phoneNumber: string;
-  isDefault: boolean;
-}
-
 interface Address {
-  fullName: string;
+  id?: string;  // Optional since it might not be needed in all contexts
+  name: string;
   addressLine1: string;
   addressLine2?: string;
   city: string;
@@ -26,6 +14,7 @@ interface Address {
   zipCode: string;
   country: string;
   phoneNumber: string;
+  isDefault?: boolean;  // Optional since it might not be needed in all contexts
 }
 
 interface Product {
@@ -36,11 +25,11 @@ interface Product {
   salePrice?: number;
   stock?: number;
   imageUrl?: string;
+  shippingCharge?: number;
   category?: {
     id: number;
     name: string;
   };
-  shippingCharge?: number;
 }
 
 interface OrderData {
@@ -81,6 +70,8 @@ interface CartData {
   createdAt: string;
   updatedAt: string;
   cartItems: CartItem[];
+  couponDiscount?: number;
+  shippingCharge?: number;
 }
 interface LocationState {
   orderData: OrderData;
@@ -89,7 +80,7 @@ interface LocationState {
 }
 
 const emptyAddress: Address = {
-  fullName: "",
+  name: "",
   addressLine1: "",
   addressLine2: "",
   city: "",
@@ -120,21 +111,31 @@ const Checkout: React.FC = () => {
 
   // Address states
   const [deliveryAddress, setDeliveryAddress] = useState<Address>(emptyAddress);
-  const [userAddresses, setUserAddresses] = useState<UserAddress[]>([]);
-  const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
+  const [userAddresses, setUserAddresses] = useState<Address[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<Address| null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(0);
   
   // Validation error state
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  // Coupon states
-  const [couponCode, setCouponCode] = useState('');
-  const [couponDiscount, setCouponDiscount] = useState(cartData?.couponDiscount || 0);
-  const [couponError, setCouponError] = useState('');
-  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
-  const [appliedCoupon, setAppliedCoupon] = useState(cartData?.couponCode || '');
+  // Restore applied coupon from localStorage if it was applied on cart page
+  useEffect(() => {
+    try {
+      const savedCouponRaw = localStorage.getItem('appliedCoupon');
+      if (savedCouponRaw) {
+        const saved = JSON.parse(savedCouponRaw) as { code?: string; discount?: number };
+        if (saved?.code) setAppliedCoupon(saved.code);
+        if (typeof saved?.discount === 'number') setCouponDiscount(saved.discount);
+      }
+    } catch {
+      // ignore JSON parse errors
+    }
+  }, []);
 
   // Fetch user addresses
   const fetchUserAddresses = useCallback(async () => {
@@ -146,7 +147,7 @@ const Checkout: React.FC = () => {
         return;
       }
       
-      const response = await api.get<{ data: UserAddress[] }>(`/address/${userId}`);
+      const response = await api.get<{ data: Address[] }>(`/address/${userId}`);
       setUserAddresses(response.data);
       
       // Select default address if available
@@ -173,7 +174,7 @@ const Checkout: React.FC = () => {
   }, [fetchUserAddresses]);
 
   // Handle address selection
-  const handleAddressSelect = (address: UserAddress) => {
+  const handleAddressSelect = (address:Address) => {
     setDeliveryAddress(address);
     setSelectedAddress(address);
     setShowAddressForm(false);
@@ -190,25 +191,24 @@ const Checkout: React.FC = () => {
   const validateAddress = (address: Address): boolean => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!address.fullName.trim()) newErrors.fullName = "Full Name is required.";
-    if (!address.addressLine1.trim()) newErrors.addressLine1 = "Address Line 1 is required.";
-    if (!address.city.trim()) newErrors.city = "City is required.";
-    if (!address.state.trim()) newErrors.state = "State is required.";
-    if (!address.zipCode.trim()) newErrors.zipCode = "Postal Code is required.";
-    if (!address.country.trim()) newErrors.country = "Country is required.";
-    if (!address.phoneNumber.trim()) {
+    if (!address.name?.trim()) newErrors.name = "Name is required.";
+    if (!address.addressLine1?.trim()) newErrors.addressLine1 = "Address Line 1 is required.";
+    if (!address.city?.trim()) newErrors.city = "City is required.";
+    if (!address.state?.trim()) newErrors.state = "State is required.";
+    if (!address.zipCode?.trim()) newErrors.zipCode = "Postal Code is required.";
+    if (!address.country?.trim()) newErrors.country = "Country is required.";
+    if (!address.phoneNumber?.trim()) {
       newErrors.phoneNumber = "Phone number is required.";
     } else if (!/^\+?[0-9\- ]{7,15}$/.test(address.phoneNumber)) {
       newErrors.phoneNumber = "Phone number format is invalid.";
     }
 
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   };
 
   // Save a new address
-  const saveNewAddress = async (address: Omit<UserAddress, 'id' | 'isDefault'>) => {
+  const saveNewAddress = async (address: Omit<Address, 'id' | 'isDefault'>) => {
     try {
       setIsAddingAddress(true);
       const userId = localStorage.getItem('userId');
@@ -219,7 +219,7 @@ const Checkout: React.FC = () => {
 
       // Prepare the address data in the format expected by the backend
       const addressData = {
-        fullName: address.fullName,
+        name: address.name,
         addressLine1: address.addressLine1,
         addressLine2: address.addressLine2 || '',
         city: address.city,
@@ -231,7 +231,7 @@ const Checkout: React.FC = () => {
         userId: userId // Include userId in the request body
       };
 
-      const response = await api.post<{ data: UserAddress }>('/address', addressData);
+      const response = await api.post<{ data: Address }>('/address', addressData);
       
       // Refresh the addresses list
       await fetchUserAddresses();
@@ -251,79 +251,56 @@ const Checkout: React.FC = () => {
       setIsAddingAddress(false);
     }
   };
-
   // Apply coupon function
   const applyCoupon = async () => {
-    if (!couponCode.trim()) {
-      setCouponError('Please enter a coupon code');
-      return;
-    }
+    if (!couponCode.trim()) return;
+    
+    const response = await api.post(`/coupon/use/${couponCode}`, {credentials: 'include'}) as { 
+      success: boolean; 
+      data: any
+    };
 
-    try {
-      setIsApplyingCoupon(true);
-      setCouponError('');
+    if (response.success) {
+      const { discount, discountType } = response.data;
+      let discountAmount = 0;
       
-      const response = await api.get(`/coupon/use/${couponCode}`) as { 
-        success: boolean; 
-        data: { 
-          discount: number; 
-          discountType: string;
-          code: string;
-        } 
-      };
-
-      if (response.success) {
-        const { discount, discountType } = response.data;
-        let discountAmount = 0;
-        
-        if (discountType === 'percentage') {
-          const subtotal = cartData 
-            ? cartData.cartItems.reduce((sum, item) => {
-                const price = item.product?.salePrice ?? item.product?.price ?? 0;
-                return sum + (price * item.quantity);
-              }, 0)
-            : product
-            ? (product.salePrice || product.price) * (product.quantity || 1)
-            : 0;
-          discountAmount = (subtotal * discount) / 100;
-        } else {
-          discountAmount = discount;
-        }
-        
-        setCouponDiscount(discountAmount);
-        setAppliedCoupon(response.data.code);
-        setCouponCode('');
-        toast.success('Coupon applied successfully!');
+      if (discountType === 'percentage') {
+        const subtotal = cartData 
+          ? cartData.cartItems.reduce((sum, item) => {
+              const price = item.product?.salePrice ?? item.product?.price ?? 0;
+              return sum + (price * item.quantity);
+            }, 0)
+          : product
+          ? (product.salePrice || product.price) * (product.quantity || 1)
+          : 0;
+        discountAmount = (subtotal * discount) / 100;
       } else {
-        setCouponError('Invalid or expired coupon code');
-        setCouponDiscount(0);
+        discountAmount = discount;
       }
-    } catch (error) {
-      console.error('Error applying coupon:', error);
-      setCouponError('Failed to apply coupon. Please try again.');
-      setCouponDiscount(0);
-    } finally {
-      setIsApplyingCoupon(false);
+      
+      setCouponDiscount(discountAmount);
+      setAppliedCoupon(response.data.code);
+      setCouponCode('');
+
+      // Persist coupon across pages
+      localStorage.setItem('appliedCoupon', JSON.stringify({
+        code: response.data.code,
+        discount: discountAmount,
+      }));
     }
   };
 
   // Remove coupon function
   const removeCoupon = async () => {
-    try {
-      if (appliedCoupon) {
-        await api.get(`/coupon/remove/${appliedCoupon}`);
-      }
-      setAppliedCoupon('');
-      setCouponDiscount(0);
-      setCouponError('');
-      toast.success('Coupon removed');
-    } catch (error) {
-      console.error('Error removing coupon:', error);
-      toast.error('Failed to remove coupon');
+    if (appliedCoupon) {
+      await api.post(`/coupon/remove/${appliedCoupon}`, {credentials: 'include'});
     }
+    setAppliedCoupon('');
+    setCouponDiscount(0);
+    localStorage.removeItem('appliedCoupon');
   };
 
-  // Calculate subtotal
+  // Calculate subtotalremove error
   const subtotal = cartData 
     ? cartData.cartItems.reduce((sum, item) => {
         const price = item.product?.salePrice ?? item.product?.price ?? 0;
@@ -342,7 +319,6 @@ const Checkout: React.FC = () => {
 
   // Calculate total
   const total = Math.max(0, subtotal + shipping - couponDiscount);
-
   // Submit handler
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -374,17 +350,20 @@ const Checkout: React.FC = () => {
     try {
       const finalOrder = {
         ...orderData,
+        // Ensure discounted amount is sent for payment
+        amount: total,
         deliveryAddress: {
-          fullName: "Ritik",
-          addressLine1: selectedAddress?.addressLine1,
+          name: selectedAddress?.name || "",
+          addressLine1: selectedAddress?.addressLine1 || "",
           addressLine2: selectedAddress?.addressLine2 || '',
-          city: selectedAddress?.city,
-          state: selectedAddress?.state,
-          zipCode: selectedAddress?.zipCode,
-          country: selectedAddress?.country,
-          phoneNumber: selectedAddress?.phoneNumber
+          city: selectedAddress?.city || "",
+          state: selectedAddress?.state || "",
+          zipCode: selectedAddress?.zipCode || "",
+          country: selectedAddress?.country || "",
+          phoneNumber: selectedAddress?.phoneNumber || ""
         },
-        status: "Confirmed"
+        status: "Confirmed",
+        ...(appliedCoupon ? { couponCode: appliedCoupon, couponDiscount } : {})
       };
       console.log("finalOrder",finalOrder);
       const res = await fetch(`${env.API}/payment/create-order-product`, {
@@ -415,364 +394,253 @@ const Checkout: React.FC = () => {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Left Column - Delivery Address */}
-          <div className="lg:w-2/3">
-            <form onSubmit={handleSubmit} noValidate className="space-y-8">
-        {!showAddressForm && (
-          <section>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Select Delivery Address</h2>
-              <button
-                type="button"
-                onClick={() => setShowAddressForm(true)}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                + Add New Address
-              </button>
-            </div>
+          {/* Left Column - Delivery Address and Coupon */}
+          <div className="lg:w-2/3 space-y-6">
+            {/* Delivery Address Section */}
+            {!showAddressForm && (
+              <section>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">Select Delivery Address</h2>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddressForm(true)}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
+                    + Add New Address
+                  </button>
+                </div>
 
-          {!showAddressForm && userAddresses.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {userAddresses.map((address) => (
-                <div
-                  key={address.id}
-                  onClick={() => handleAddressSelect(address)}
-                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                    selectedAddress?.id === address.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
-                >
-                  <div className="flex items-start">
-                    <input
-                      type="radio"
-                      name="address"
-                      checked={selectedAddress?.id === address.id}
-                      onChange={() => {}}
-                      className="mt-1 mr-2"
-                    />
-                    <div>
-                      <p className="font-medium">{address.fullName}</p>
-                      <p className="text-gray-700">{address.addressLine1}</p>
-                      {address.addressLine2 && (
-                        <p className="text-gray-700">{address.addressLine2}</p>
-                      )}
-                      <p className="text-gray-700">
-                        {address.city}, {address.state} {address.zipCode}
+              {!showAddressForm && userAddresses.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {userAddresses.map((address) => (
+                    <div
+                      key={address.id}
+                      onClick={() => handleAddressSelect(address)}
+                      className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                        selectedAddress?.id === address.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-blue-300'
+                      }`}
+                    >
+                      <div className="flex items-start">
+                        <input
+                          type="radio"
+                          name="address"
+                          checked={selectedAddress?.id === address.id}
+                          onChange={() => {}}
+                          className="mt-1 mr-2"
+                        />
+                        <div>
+                          <p className="font-medium">{address.name}</p>
+                          <p className="text-gray-700">{address.addressLine1}</p>
+                          {address.addressLine2 && (
+                            <p className="text-gray-700">{address.addressLine2}</p>
+                          )}
+                          <p className="text-gray-700">
+                            {address.city}, {address.state} {address.zipCode}
+                          </p>
+                          <p className="text-gray-700">{address.country}</p>
+                          <p className="text-gray-700 mt-1">Phone: {address.phoneNumber}</p>
+                          {address.isDefault && (
+                            <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded mt-1">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!showAddressForm && userAddresses.length === 0 && !isLoading && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-yellow-700">
+                        No saved addresses found. Please add a new delivery address.
                       </p>
-                      <p className="text-gray-700">{address.country}</p>
-                      <p className="text-gray-700 mt-1">Phone: {address.phoneNumber}</p>
-                      {address.isDefault && (
-                        <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded mt-1">
-                          Default
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              )}
+              </section>
+            )}
 
-          {!showAddressForm && userAddresses.length === 0 && !isLoading && (
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
+            {/* Delivery Address Form */}
+            {showAddressForm && (
+              <section>
+              <h2 className="text-xl font-semibold mb-4">Delivery Address</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {[
+                  { label: "Name", name: "name", required: true },
+                  { label: "Address Line 1", name: "addressLine1", required: true },
+                  { label: "Address Line 2", name: "addressLine2", required: false },
+                  { label: "City", name: "city", required: true },
+                  { label: "State", name: "state", required: true },
+                  { label: "Postal Code", name: "zipCode", required: true },
+                  { label: "Country", name: "country", required: true },
+                  { label: "Phone Number", name: "phoneNumber", required: true, type: "tel" },
+                ].map(({ label, name, required, type }) => (
+                  <div key={`delivery-${name}`} className="flex flex-col">
+                    <label htmlFor={`delivery-${name}`} className="mb-1 font-medium">
+                      {label}
+                      {required && <span className="text-red-500 ml-1">*</span>}
+                    </label>
+                    <input
+                      id={`delivery-${name}`}
+                      name={name}
+                      type={type || "text"}
+                      value={String(deliveryAddress[name as keyof Address] || "")}
+                      onChange={handleInputChange}
+                      className={`border rounded px-3 py-2 focus:outline-none focus:ring ${
+                        errors[name] ? "border-red-500 focus:ring-red-300" : "border-gray-300 focus:ring-blue-300"
+                      }`}
+                      required={required}
                     />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    No saved addresses found. Please add a new delivery address.
-                  </p>
-                </div>
+                    {errors[name] && (
+                      <span className="mt-1 text-xs text-red-600">{errors[name]}</span>
+                    )}
+                  </div>
+                ))}
               </div>
-            </div>
-          )}
-          </section>
-        )}
+              
+              {/* Save Address Button - Only shown when adding/editing address */}
+              {showAddressForm && (
+                <div className="mt-6">
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-[var(--button)] hover:bg-[var(--button-hover)] text-white font-semibold rounded-lg transition disabled:opacity-50 cursor-pointer"
+                    disabled={isAddingAddress}
+                  >
+                    {isAddingAddress ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving...
+                      </span>
+                    ) : 'Save Address'}
+                  </button>
+                </div>
+              )}
+            </section>
+            )}
 
-        {/* Delivery Address Form */}
-        {showAddressForm && (
-          <section>
-          <h2 className="text-xl font-semibold mb-4">Delivery Address</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {[
-              { label: "Full Name", name: "fullName", required: true },
-              { label: "Address Line 1", name: "addressLine1", required: true },
-              { label: "Address Line 2", name: "addressLine2", required: false },
-              { label: "City", name: "city", required: true },
-              { label: "State", name: "state", required: true },
-              { label: "Postal Code", name: "zipCode", required: true },
-              { label: "Country", name: "country", required: true },
-              { label: "Phone Number", name: "phoneNumber", required: true, type: "tel" },
-            ].map(({ label, name, required, type }) => (
-              <div key={`delivery-${name}`} className="flex flex-col">
-                <label htmlFor={`delivery-${name}`} className="mb-1 font-medium">
-                  {label}
-                  {required && <span className="text-red-500 ml-1">*</span>}
-                </label>
-                <input
-                  id={`delivery-${name}`}
-                  name={name}
-                  type={type || "text"}
-                  value={deliveryAddress[name as keyof Address] || ""}
-                  onChange={handleInputChange}
-                  className={`border rounded px-3 py-2 focus:outline-none focus:ring ${
-                    errors[name] ? "border-red-500 focus:ring-red-300" : "border-gray-300 focus:ring-blue-300"
-                  }`}
-                  required={required}
-                />
-                {errors[name] && (
-                  <span className="mt-1 text-xs text-red-600">{errors[name]}</span>
+            {/* Coupon Code - Moved from right column */}
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <svg className="w-5 h-5 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                Have a coupon code?
+              </h3>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="Enter coupon code"
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    disabled={couponDiscount > 0}
+                  />
+                  {couponCode && !couponDiscount && (
+                    <button 
+                      onClick={() => setCouponCode('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {couponDiscount > 0 ? (
+                  <button 
+                    onClick={removeCoupon}
+                    className="px-6 py-3 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Remove Coupon
+                  </button>
+                ) : (
+                  <button 
+                    onClick={applyCoupon}
+                    className="px-6 py-3 bg-[var(--button)] text-white font-medium rounded-lg hover:bg-[var(--button-hover)] transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Apply Coupon
+                  </button>
                 )}
               </div>
-            ))}
-          </div>
-          
-          {/* Save Address Button - Only shown when adding/editing address */}
-          {showAddressForm && (
-            <div className="mt-6">
-              <button
-                type="submit"
-                className="w-full py-3 bg-[var(--button)] hover:bg-[var(--button-hover)] text-white font-semibold rounded-lg transition disabled:opacity-50"
-                disabled={isAddingAddress}
-              >
-                {isAddingAddress ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving...
-                  </span>
-                ) : 'Save Address'}
-              </button>
+              {couponDiscount > 0 && (
+                <p className="mt-3 text-sm text-green-600 flex items-center">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Coupon applied! ₹{couponDiscount} discount has been applied to your order.
+                </p>
+              )}
             </div>
-          )}
-        </section>
-        )}
-            </form>
           </div>
 
           {/* Right Column - Order Summary */}
           <div className="lg:w-1/3">
-            <div className="bg-white shadow-xl rounded-xl p-6 sticky top-6 border border-gray-100">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6 pb-4 border-b border-gray-100">Order Summary</h2>
+            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-6 border border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h2>
               
-              {(cartData?.cartItems && cartData.cartItems.length > 0) || product ? (
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-semibold text-gray-700">
-                      Your Order
-                    </h3>
-                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                      {cartData ? cartData.cartItems.length : 1} Item{(!cartData || cartData.cartItems.length !== 1) ? 's' : ''}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                </div>
+                
+                {couponDiscount > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Coupon Discount</span>
+                    <span className="text-green-600 font-medium">-₹{couponDiscount.toFixed(2)}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Shipping</span>
+                  <span className="font-medium">
+                    {shipping > 0 ? `₹${shipping.toFixed(2)}` : 'Free'}
+                  </span>
+                </div>
+                
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-semibold">Total</span>
+                    <span className="text-xl font-bold text-gray-900">
+                      ₹{(subtotal + shipping - (couponDiscount || 0)).toFixed(2)}
                     </span>
                   </div>
-                  
-                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-                    {cartData ? (
-                      cartData.cartItems.map((item) => (
-                        <div key={item.id} className="flex items-start justify-between pb-4 group hover:bg-gray-50 -mx-2 px-2 rounded-lg transition-colors">
-                          <div className="flex space-x-3 flex-1 min-w-0">
-                            <div className="flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
-                              {item.product?.images ? (
-                                <img 
-                                  src={item.product.images} 
-                                  alt={item.product.name}
-                                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.onerror = null;
-                                    
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 flex items-center justify-center">
-                                  <span className="text-gray-400 text-xs">No image</span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-gray-900 truncate">{item.product?.name || 'Product not found'}</h4>
-                              <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-                              <div className="mt-1">
-                                {item.product?.salePrice && item.product.salePrice < item.product.price ? (
-                                  <div className="flex items-baseline space-x-2">
-                                    <span className="text-base font-semibold text-gray-900">
-                                      ₹{(item.product.salePrice * item.quantity).toLocaleString('en-IN')}
-                                    </span>
-                                    <span className="text-sm text-gray-400 line-through">
-                                      ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
-                                    </span>
-                                    <span className="text-xs font-medium text-green-600 ml-1">
-                                      ({Math.round((1 - item.product.salePrice / item.product.price) * 100)}% OFF)
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-base font-semibold text-gray-900">
-                                    ₹{item.product ? (item.product.price * item.quantity).toLocaleString('en-IN') : '0.00'}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : product ? (
-                      <div className="flex items-start justify-between pb-4 group hover:bg-gray-50 -mx-2 px-2 rounded-lg transition-colors">
-                        <div className="flex space-x-3 flex-1 min-w-0">
-                          <div className="flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
-                            {product.imageUrl ? (
-                              <img 
-                                src={product.imageUrl} 
-                                alt={product.name}
-                                className="w-16 h-16 sm:w-20 sm:h-20 object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.onerror = null;
-                                }}
-                              />
-                            ) : (
-                              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 flex items-center justify-center">
-                                <span className="text-gray-400 text-xs">No image</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-gray-900">{product.name}</h4>
-                            <p className="text-sm text-gray-500">Qty: {orderData.quantity || 1}</p>
-                            <div className="mt-1">
-                              {product.salePrice && product.salePrice < product.price ? (
-                                <div className="flex items-baseline space-x-2">
-                                  <span className="text-base font-semibold text-gray-900">
-                                    ₹{(product.salePrice * (orderData.quantity || 1)).toLocaleString('en-IN')}
-                                  </span>
-                                  <span className="text-sm text-gray-400 line-through">
-                                    ₹{(product.price * (orderData.quantity || 1)).toLocaleString('en-IN')}
-                                  </span>
-                                  <span className="text-xs font-medium text-green-600 ml-1">
-                                    ({Math.round((1 - product.salePrice / product.price) * 100)}% OFF)
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-base font-semibold text-gray-900">
-                                  ₹{(product.price * (orderData.quantity || 1)).toLocaleString('en-IN')}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-      
-                  <div className="border-t border-gray-200 pt-4 space-y-3">
-                    <div className="flex justify-between text-base">
-                      <span className="text-gray-600">Subtotal</span>
-                      <div className="text-right">
-                        <span>₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between text-base">
-                      <span className="text-gray-600">Shipping</span>
-                      <span className="text-gray-900">
-                        {cartData?.shippingCharge !== undefined ? (
-                          `₹${cartData.shippingCharge.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        ) : product?.shippingCharge !== undefined ? (
-                          `₹${(product.shippingCharge * (product.quantity || 1)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        ) : 'Free'}
-                      </span>
-                    </div>
-
-                    {/* Coupon Section */}
-                    <div className="border-t border-gray-100 pt-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-gray-600">Coupon</span>
-                        {appliedCoupon ? (
-                          <div className="flex items-center">
-                            <span className="text-green-600 text-sm mr-2">
-                              {appliedCoupon} (-₹{couponDiscount.toFixed(2)})
-                            </span>
-                            <button 
-                              type="button"
-                              onClick={removeCoupon}
-                              className="text-red-500 hover:text-red-700 text-sm"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ) : (
-                          <button 
-                            type="button"
-                            onClick={() => document.getElementById('coupon-input')?.focus()}
-                            className="text-yellow-600 hover:text-yellow-700 text-sm font-medium"
-                          >
-                            + Add coupon
-                          </button>
-                        )}
-                      </div>
-                      
-                      {couponError && !appliedCoupon && (
-                        <p className="text-red-500 text-sm mt-1">{couponError}</p>
-                      )}
-                      
-                      {!appliedCoupon && (
-                        <div className="flex mt-2">
-                          <input
-                            id="coupon-input"
-                            type="text"
-                            value={couponCode}
-                            onChange={(e) => setCouponCode(e.target.value)}
-                            placeholder="Enter coupon code"
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md text-sm focus:outline-none focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={applyCoupon}
-                            disabled={isApplyingCoupon || !couponCode.trim()}
-                            className="px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-r-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isApplyingCoupon ? 'Applying...' : 'Apply'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex justify-between text-base font-medium text-gray-900 pt-2 border-t border-gray-100">
-                      <span>Total Amount</span>
-                      <div className="text-right">
-                        {couponDiscount > 0 && (
-                          <div className="text-sm text-gray-400 line-through mb-1">
-                            ₹{(subtotal + shipping).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
-                        )}
-                        <span className="text-lg">
-                          ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                    </div>
-                  </div>
                 </div>
-
-    <button
-      className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
-      type="submit"
-      onClick={handleSubmit}
-      disabled={!selectedAddress}
-    >
-      Proceed to Payment
-    </button>
-  </div>
-) : (
-  <p className="text-gray-500">Your cart is empty</p>
-)}
+              </div>
+              
+              <button
+                type="submit"
+                onClick={handleSubmit}
+                className="w-full mt-6 py-3 px-4 rounded-lg font-medium text-white transition-colors bg-[var(--button)] hover:bg-[var(--button-hover)]"
+              >
+                Proceed to Payment
+              </button>
             </div>
           </div>
         </div>

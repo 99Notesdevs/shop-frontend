@@ -20,14 +20,14 @@ const WelcomeMessage = () => (
       </Link>
 
       <Link 
-        to="/admin/manage-product" 
+        to="/admin/manage-orders" 
         className="group bg-white p-8 rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl hover:border-primary/20 transition-all duration-300 flex flex-col items-center text-center transform hover:-translate-y-1"
       >
         <div className="bg-primary/10 p-4 rounded-2xl mb-6 group-hover:bg-primary/20 transition-colors">
           <FiList className="h-8 w-8 text-primary" />
         </div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-3">Manage Product</h3>
-        <p className="text-gray-500">View and modify products</p>
+        <h3 className="text-xl font-semibold text-gray-800 mb-3">Manage Orders</h3>
+        <p className="text-gray-500">View and modify orders</p>
       </Link>
 
       <Link 

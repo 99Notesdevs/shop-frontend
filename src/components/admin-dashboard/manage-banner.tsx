@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api } from "../../api/route";
+import { env } from "../../config/env";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -33,7 +33,7 @@ export default function ManageBanner() {
   const fetchBannerData = async () => {
     try {
       setIsLoading(true);
-      const data = await api.get<BannerData>("/about99/banner");
+      const data = await env.API_MAIN.get("/about99/banner") as BannerData;
       setBannerData(data);
     } catch (error) {
       console.error("Error fetching banner data:", error);
@@ -47,7 +47,7 @@ export default function ManageBanner() {
     e.preventDefault();
     try {
       setIsSaving(true);
-      await api.put("/about99/banner", bannerData);
+      await env.API_MAIN.put("/about99/banner", bannerData) as BannerData;
       toast.success("Banner updated successfully!");
     } catch (error) {
       console.error("Error updating banner:", error);

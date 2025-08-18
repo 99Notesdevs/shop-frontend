@@ -7,8 +7,7 @@ import { api } from "../../api/route";
 import { toast } from "react-toastify";
 
 interface Product {
-  _id: string;
-  id?: string; // Add optional id field for API compatibility
+  id?: string; 
   name: string;
   description: string;
   price: number;
@@ -32,6 +31,9 @@ export function ManageProducts() {
   const [loading, setLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 10;
+  const [hasMore, setHasMore] = useState<boolean>(false);
 
   const fetchCategories = async () => {
     try {
@@ -49,38 +51,46 @@ export function ManageProducts() {
     }
   };
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (page: number = 1): Promise<number> => {
     try {
       setLoading(true);
       await fetchCategories(); // Fetch categories first
-      const response = await api.get<{ success: boolean; data: Product[] }>('/product?skip=0&take=10');
+      const skip = (page - 1) * pageSize;
+      const response = await api.get<{ success: boolean; data: Product[] }>(`/product?skip=${skip}&take=${pageSize}`);
       console.log('Fetched products:', response); // Debug log
       if (response.success && Array.isArray(response.data)) {
         // Filter out any products without an ID and ensure _id is always defined
         const validProducts = response.data
-          .filter(product => product._id || product.id) // Only include products with an ID
+          .filter(product => product.id) // Only include products with an ID
           .map(product => ({
             ...product,
-            _id: (product._id || product.id) as string // We know at least one is defined due to the filter
+            _id: (product.id) as string // We know at least one is defined due to the filter
           }));
         console.log('Processed products:', validProducts); // Debug log
         setProducts(validProducts);
+        setHasMore(validProducts.length === pageSize);
+        setCurrentPage(page);
+        return validProducts.length;
       } else {
         console.error('Unexpected API response format:', response);
         toast.error('Failed to load products: Invalid response format');
         setProducts([]);
+        setHasMore(false);
+        return 0;
       }
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('Failed to load products');
       setProducts([]);
+      setHasMore(false);
+      return 0;
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchProducts(1);
   }, []);
 
   const handleDelete = async (productId: string | undefined) => {
@@ -98,7 +108,10 @@ export function ManageProducts() {
       const response = await api.delete(`/product/${productId}`);
       console.log('Delete response:', response);
       toast.success('Product deleted successfully');
-      fetchProducts(); // Refresh the list
+      const count = await fetchProducts(currentPage); // Refresh the current page
+      if (count === 0 && currentPage > 1) {
+        await fetchProducts(currentPage - 1);
+      }
     } catch (error) {
       console.error('Error deleting product:', error);
       toast.error('Failed to delete product. Please try again.');
@@ -133,23 +146,39 @@ export function ManageProducts() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <select
-            value={selectedCategory || ''}
-            onChange={(e) => setSelectedCategory(e.target.value ? Number(e.target.value) : null)}
-            className="block w-full sm:w-48 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          >
-            <option value="">All Categories</option>
-            {Object.entries(categories).map(([id, name]) => (
-              <option key={id} value={id}>
-                {name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={selectedCategory || ''}
+              onChange={(e) => setSelectedCategory(e.target.value ? Number(e.target.value) : null)}
+              className="appearance-none bg-white w-full sm:w-56 px-4 py-2.5 border border-gray-200 rounded-lg shadow-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10 transition-all duration-200 hover:border-gray-300"
+            >
+              <option value="">All Categories</option>
+              {Object.entries(categories).map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+          
           <Button 
             onClick={() => window.location.href = '/admin/add-product'}
-            className="bg-blue-600 hover:bg-blue-700 rounded-md"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg shadow-sm transition-all duration-200 flex items-center justify-center gap-2 hover:shadow-md active:transform active:scale-95"
           >
-            + Add New Product
+            <svg 
+              className="w-5 h-5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span>Add Product</span>
           </Button>
         </div>
       </div>
@@ -199,7 +228,7 @@ export function ManageProducts() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredProducts.map((product) => (
-                  <tr key={product._id} className="hover:bg-gray-50 h-20">
+                  <tr key={product.id} className="hover:bg-gray-50 h-20">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-12 w-12">
@@ -257,7 +286,7 @@ export function ManageProducts() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => navigate(`/admin/products/edit/${product._id}`)}
+                          onClick={() => navigate(`/admin/products/edit/${product.id}`)}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           Edit
@@ -265,10 +294,10 @@ export function ManageProducts() {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleDelete(product._id)}
-                          disabled={deleteLoading === product._id}
+                          onClick={() => handleDelete(product.id)}
+                          disabled={deleteLoading === product.id}
                         >
-                          {deleteLoading === product._id ? 'Deleting...' : 'Delete'}
+                          {deleteLoading === product.id ? 'Deleting...' : 'Delete'}
                         </Button>
                       </div>
                     </td>
@@ -277,6 +306,98 @@ export function ManageProducts() {
               </tbody>
             </table>
           </div>
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+  <div className="flex items-center justify-between">
+    <div className="flex-1 flex justify-between sm:hidden">
+      <Button
+        variant="outline"
+        onClick={() => fetchProducts(currentPage - 1)}
+        disabled={loading || currentPage === 1}
+        className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md
+          ${currentPage === 1 
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+            : 'text-gray-700 hover:bg-gray-50'}`}
+      >
+        Previous
+      </Button>
+      <Button
+        variant="outline"
+        onClick={() => fetchProducts(currentPage + 1)}
+        disabled={loading || !hasMore}
+        className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md
+          ${!hasMore 
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+            : 'text-gray-700 hover:bg-gray-50'}`}
+      >
+        Next
+      </Button>
+    </div>
+    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+      <div>
+        <p className="text-sm text-gray-700">
+          Showing page <span className="font-medium">{currentPage}</span>
+          {hasMore && <span> (More products available)</span>}
+        </p>
+      </div>
+      <div>
+        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+          <button
+            onClick={() => fetchProducts(currentPage - 1)}
+            disabled={loading || currentPage === 1}
+            className={`relative inline-flex items-center px-3 py-2 rounded-l-md border text-sm font-medium
+              ${currentPage === 1
+                ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`}
+          >
+            <span className="sr-only">Previous</span>
+            <svg
+              className="h-5 w-5"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+          
+          {/* Current Page Number */}
+          <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+            Page {currentPage}
+          </span>
+
+          <button
+            onClick={() => fetchProducts(currentPage + 1)}
+            disabled={loading || !hasMore}
+            className={`relative inline-flex items-center px-3 py-2 rounded-r-md border text-sm font-medium
+              ${!hasMore
+                ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`}
+          >
+            <span className="sr-only">Next</span>
+            <svg
+              className="h-5 w-5"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
         </div>
       )}
     </div>
