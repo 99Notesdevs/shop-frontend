@@ -107,6 +107,8 @@ export default function ProductForm() {
       
       if (response && response.success && response.data) {
         const product = response.data;
+        const metadata = typeof product.metadata === 'string' ? JSON.parse(product.metadata) : {};
+        
         setFormData({
           name: product.name || '',
           description: product.description || '',
@@ -119,13 +121,13 @@ export default function ProductForm() {
           shippingCharges: product.shippingCharges?.toString() || '50',
           type: product.type || 'softCopy',
           metadata: {
-            author: product.metadata?.author || '',
-            language: product.metadata?.language || '',
-            publisher: product.metadata?.publisher || '',
-            pages: product.metadata?.pages || '',
-            weight: product.metadata?.weight || '',
-            dimensions: product.metadata?.dimensions || '',
-            edition: product.metadata?.edition || '',
+            author: metadata?.author || '',
+            language: metadata?.language || '',
+            publisher: metadata?.publisher || '',
+            pages: metadata?.pages || '',
+            weight: metadata?.weight || '',
+            dimensions: metadata?.dimensions || '',
+            edition: metadata?.edition || '',
           },
         });
       } else {
@@ -192,15 +194,7 @@ export default function ProductForm() {
         validity: formData.validity ? parseInt(formData.validity, 10) : undefined,
         shippingCharges: parseFloat(formData.shippingCharges) || 0,
         type: formData.type || 'softCopy',
-        metadata: {
-          author: formData.metadata?.author,
-          language: formData.metadata?.language,
-          publisher: formData.metadata?.publisher,
-          pages: formData.metadata?.pages,
-          weight: formData.metadata?.weight,
-          dimensions: formData.metadata?.dimensions,
-          edition: formData.metadata?.edition,
-        },
+        metadata: JSON.stringify(formData.metadata || {}), // Stringify the metadata object
       };
 
       console.log('Submitting product data:', productData); // Debug log
