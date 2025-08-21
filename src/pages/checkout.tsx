@@ -58,6 +58,7 @@ interface CartItem {
     price: number;
     salePrice?: number;
     images?: string;
+    shippingCharge?: number;
   };
 }
 interface CartData {
@@ -89,8 +90,6 @@ const emptyAddress: Address = {
 
 const Checkout: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-
   const state = location.state as LocationState | undefined;
 
   // Redirect to home if invalid access
@@ -256,9 +255,9 @@ const Checkout: React.FC = () => {
       success: boolean; 
       data: any
     };
-
+    console.log("data", response.data);
     if (response.success) {
-      const { discount, discountType } = response.data;
+      const { discount , type:discountType } = response.data;
       let discountAmount = 0;
       
       if (discountType === 'percentage') {
@@ -297,7 +296,7 @@ const Checkout: React.FC = () => {
     localStorage.removeItem('appliedCoupon');
   };
 
-  // Calculate subtotalremove error
+  // Calculate subtotal
   const subtotal = cartData 
     ? cartData.cartItems.reduce((sum, item) => {
         const price = item.product?.salePrice ?? item.product?.price ?? 0;
@@ -307,15 +306,30 @@ const Checkout: React.FC = () => {
     ? (product.salePrice || product.price) * (product.quantity || 1)
     : 0;
 
-  // Calculate shipping
-  const shipping = cartData 
-    ? cartData.shippingCharge || 0
-    : product 
-    ? (product.shippingCharge || 0) * (product.quantity || 1)
-    : 0;
+  // Calculate shipping charge
+  const calculateShipping = () => {
+    if (cartData) {
+      // If cartData has shippingCharge, use it (passed from cart page)
+      if (cartData.shippingCharge !== undefined) {
+        return cartData.shippingCharge;
+      }
+      
+      // Otherwise calculate it like in the cart page
+      const maxShippingCharge = cartData.cartItems.length > 0 
+        ? Math.max(...cartData.cartItems.map(item => item.product?.shippingCharge ?? 0).filter(charge => charge > 0))
+        : 0;
+      
+      return subtotal >= 499 ? 0 : (maxShippingCharge > 0 ? maxShippingCharge : 50);
+    } else if (product) {
+      // For single product checkout
+      const productShipping = product.shippingCharge || 50; // Default to 50 if not specified
+      return subtotal >= 499 ? 0 : productShipping * (product.quantity || 1);
+    }
+    return 0;
+  };
 
-  // Calculate total
-  const total = Math.max(0, subtotal + shipping - couponDiscount);
+  const shipping = calculateShipping();
+  const total = Math.max(0, subtotal + shipping - (couponDiscount || 0));
   // Submit handler
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -548,14 +562,14 @@ const Checkout: React.FC = () => {
                     type="text"
                     placeholder="Enter coupon code"
                     className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-200"
-                    value={couponCode}
+                    value={appliedCoupon || couponCode}
                     onChange={(e) => setCouponCode(e.target.value)}
                     disabled={couponDiscount > 0}
                   />
                   {couponCode && !couponDiscount && (
                     <button 
                       onClick={() => setCouponCode('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -576,7 +590,7 @@ const Checkout: React.FC = () => {
                 ) : (
                   <button 
                     onClick={applyCoupon}
-                    className="px-6 py-3 bg-[var(--button)] text-white font-medium rounded-lg hover:bg-[var(--button-hover)] transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                    className="px-6 py-3 bg-[var(--button)] text-white font-medium rounded-lg hover:bg-[var(--button-hover)] transition-colors flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -590,7 +604,7 @@ const Checkout: React.FC = () => {
                   <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
-                  Coupon applied! ₹{couponDiscount} discount has been applied to your order.
+                  Coupon <span className="font-semibold mx-1">{appliedCoupon}</span> applied! ₹{couponDiscount.toFixed(2)} discount has been applied to your order.
                 </p>
               )}
             </div>
@@ -634,7 +648,7 @@ const Checkout: React.FC = () => {
               <button
                 type="submit"
                 onClick={handleSubmit}
-                className="w-full mt-6 py-3 px-4 rounded-lg font-medium text-white transition-colors bg-[var(--button)] hover:bg-[var(--button-hover)]"
+                className="w-full mt-6 py-3 px-4 rounded-lg font-medium text-white transition-colors bg-[var(--button)] hover:bg-[var(--button-hover)] cursor-pointer"
               >
                 Proceed to Payment
               </button>

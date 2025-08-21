@@ -148,8 +148,15 @@ export default function CartPage() {
         amount: cartData.totalAmount,
         validity: 10,
       };
-      console.log("navigating");
-      navigate('/checkout', { state: { orderData, cartData } });
+      
+      // Include shipping charge in the cartData passed to checkout
+      const cartDataWithShipping = {
+        ...cartData,
+        shippingCharge: shipping // Add the calculated shipping charge
+      };
+      
+      console.log("navigating to checkout");
+      navigate('/checkout', { state: { orderData, cartData: cartDataWithShipping } });
     } catch (err) {
       console.error(err);
       toast.error('Failed to create order. Please try again.');
@@ -211,13 +218,12 @@ export default function CartPage() {
   }, 0);
   
   // Calculate maximum shipping charge from all products in cart
-  const maxShippingCharge = Math.max(
-    ...cartItems.map(item => item.product?.shippingCharge || 0),
-    0 // Default to 0 if no products have shipping charges
-  );
+  const maxShippingCharge = cartItems.length > 0 
+    ? Math.max(...cartItems.map(item => item.product?.shippingCharge ?? 0).filter(charge => charge > 0))
+    : 0;
   
   // Apply free shipping if subtotal is 500 or more, otherwise use max shipping charge
-  const shipping = subtotal >= 499 ? 0 : maxShippingCharge;
+  const shipping = subtotal >= 499 ? 0 : (maxShippingCharge > 0 ? maxShippingCharge : 50); // Default to 50 if no shipping charge specified
   
   // Calculate amount needed for free shipping
   const amountNeededForFreeShipping = Math.max(0, 500 - subtotal);
@@ -539,7 +545,7 @@ export default function CartPage() {
                   {couponCode && !couponDiscount && (
                     <button 
                       onClick={() => setCouponCode('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -588,29 +594,29 @@ export default function CartPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                  <span className="font-medium">₹{(subtotal || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Shipping</span>
                   <div className="text-right">
                     <div className="font-medium">
-                      {shipping > 0 ? `₹${shipping.toFixed(2)}` : 'Free'}
+                      {(shipping || 0) > 0 ? `₹${(shipping || 0).toFixed(2)}` : 'Free'}
                     </div>
-                    {shipping > 0 && (
+                    {(shipping || 0) > 0 && (
                       <div className="text-xs text-green-600 mt-1">
-                        Add ₹{amountNeededForFreeShipping.toFixed(2)} more for free shipping
+                        Add ₹{(amountNeededForFreeShipping || 0).toFixed(2)} more for free shipping
                       </div>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Discount</span>
-                  <span className="font-medium text-red-500">-₹{couponDiscount.toFixed(2)}</span>
+                  <span className="font-medium text-red-500">-₹{(couponDiscount || 0).toFixed(2)}</span>
                 </div>
                 <div className="border-t border-gray-200 pt-4 mt-4">
                   <div className="flex items-center justify-between">
                     <span className="text-lg font-bold text-gray-900">Total</span>
-                    <span className="text-xl font-bold" style={{ color: '#FBAB3B' }}>₹{total.toFixed(2)}</span>
+                    <span className="text-xl font-bold" style={{ color: '#FBAB3B' }}>₹{(total || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
