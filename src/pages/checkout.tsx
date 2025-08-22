@@ -1,5 +1,5 @@
 import React, { useState, useEffect, type ChangeEvent, type FormEvent, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { env } from "../config/env";
 import { api } from "../api/route";
@@ -70,8 +70,6 @@ interface CartData {
   createdAt: string;
   updatedAt: string;
   cartItems: CartItem[];
-  couponDiscount?: number;
-  shippingCharge?: number;
 }
 interface LocationState {
   orderData: OrderData;
@@ -625,8 +623,8 @@ const Checkout: React.FC = () => {
                 
                 {couponDiscount > 0 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Coupon Discount</span>
-                    <span className="text-green-600 font-medium">-₹{couponDiscount.toFixed(2)}</span>
+                    <span className="text-red-600">Coupon Discount</span>
+                    <span className="text-red-600 font-medium">-₹{couponDiscount.toFixed(2)}</span>
                   </div>
                 )}
                 

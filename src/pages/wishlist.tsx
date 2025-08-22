@@ -105,15 +105,18 @@ export default function WishlistPage() {
 
   if (!currentUser) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <div className="bg-white p-8 rounded-lg shadow-md text-center max-w-md w-full">
-          <h2 className="text-xl font-semibold mb-4">Please sign in</h2>
-          <p className="text-gray-600 mb-6">You need to be signed in to view your wishlist.</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 px-4">
+        <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md w-full border border-gray-100 transform transition-all hover:shadow-xl">
+          <div className="bg-[var(--primary)] w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Heart className="h-10 w-10 text-[var(--primary)]" fill="currentColor" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Your Wishlist Awaits</h2>
+          <p className="text-gray-600 mb-6">Sign in to view and manage your saved items</p>
           <Link
             to="/login"
-            className="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-lg text-white bg-[var(--button)] hover:bg-[var(--button-hover)] font-medium shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 w-full sm:w-auto"
           >
-            Sign In
+            Sign In to Continue
           </Link>
         </div>
       </div>
@@ -122,8 +125,11 @@ export default function WishlistPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-16 w-16 rounded-full bg-[var(--primary)] mb-4"></div>
+          <p className="text-gray-500">Loading your wishlist...</p>
+        </div>
       </div>
     );
   }
@@ -136,25 +142,34 @@ export default function WishlistPage() {
         </div>
       </div>
       
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl mb-8 text-center text-var(--text-heading)">Wishlist</h1>
+      <div className="container mx-auto px-4 py-12">
+        <h1 className="text-3xl font-bold text-center text-gray-900 mb-2">Your Wishlist</h1>
+        <p className="text-center text-gray-500 mb-8">All your favorite items in one place</p>
         
         {products.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
-            <Heart className="mx-auto h-16 w-16 text-gray-300 mb-4" strokeWidth={1} />
-            <h2 className="text-xl font-medium text-var(--text-primary) mb-2">Your wishlist is empty</h2>
-            <p className="text-var(--text-secondary) mb-6">Save items you love for later</p>
+          <div className="max-w-2xl mx-auto text-center py-16 px-4 sm:px-6 lg:px-8 bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-[var(--primary)] mb-6">
+              <Heart className="h-12 w-12 text-gray-900" strokeWidth={1.5} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Your wishlist is empty</h2>
+            <p className="text-gray-500 mb-8 max-w-md mx-auto">Save items you love by clicking the heart icon on any product</p>
             <Link
               to="/products"
-              className="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              className="inline-flex items-center px-6 py-3 rounded-lg text-white bg-[var(--button)] hover:bg-[var(--button-hover)] font-medium shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--button)] focus:ring-offset-2"
             >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
               Continue Shopping
             </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
-              <div key={product.id} className="relative group">
+              <div 
+                key={product.id} 
+                className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100"
+              >
                 <ProductCard
                   id={product.id}
                   name={product.name}

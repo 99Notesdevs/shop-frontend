@@ -336,7 +336,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      const token = Cookies.get("token");
+      // const token = Cookies.get("token");
       if (token) {
         await fetch(`${env.API_AUTH}/logout`, {
           method: "POST",

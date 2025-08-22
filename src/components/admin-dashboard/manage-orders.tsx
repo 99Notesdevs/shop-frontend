@@ -3,65 +3,72 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api/route';
 
-type PaymentStatus = 'pending' | 'completed';
-type ShippingStatus = 'processing' | 'shipped' | 'delivered';
+type OrderStatus = 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
 
 interface OrderItem {
-  productId: number;
+  id: number;
   quantity: number;
   price: number;
-  product: {
-    name: string;
-  };
+  productId: number;
+  orderId: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Order {
   id: number;
   orderDate: string;
   totalAmount: number;
-  paymentStatus: PaymentStatus;
-  shippingStatus: ShippingStatus;
+  status: OrderStatus;
   userId: number;
+  createdAt: string;
+  updatedAt: string;
+  billingAddressId: number | null;
+  shippingAddressId: number | null;
   orderItems: OrderItem[];
   user: {
-    name: string;
+    id: number;
+    firstName: string;
+    lastName: string;
     email: string;
+    phone: string | null;
+    password: string;
+    oauthId: string | null;
+    oauthProvider: string;
+    createdAt: string;
+    updatedAt: string;
   };
 }
 
-const paymentStatusStyles = {
-  pending: 'bg-red-50 text-red-800 border-red-200',
-  completed: 'bg-green-50 text-green-800 border-green-200',
-};
-
-const shippingStatusStyles = {
-  processing: 'bg-blue-50 text-blue-800 border-blue-200',
-  shipped: 'bg-indigo-50 text-indigo-800 border-indigo-200',
-  delivered: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+const orderStatusStyles = {
+  'Pending': 'bg-yellow-50 text-yellow-800 border-yellow-200',
+  'Processing': 'bg-blue-50 text-blue-800 border-blue-200',
+  'Shipped': 'bg-indigo-50 text-indigo-800 border-indigo-200',
+  'Delivered': 'bg-green-50 text-green-800 border-green-200',
+  'Cancelled': 'bg-red-50 text-red-800 border-red-200',
 };
 
 const statusIcons = {
-  pending: '⏳',
-  completed: '✅',
-  processing: '⚙️',
-  shipped: '🚚',
-  delivered: '🎯',
+  'Pending': '⏳',
+  'Processing': '⚙️',
+  'Shipped': '🚚',
+  'Delivered': '✅',
+  'Cancelled': '❌',
 };
 
 export default function ManageOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<ShippingStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const data = await api.get<{ data: Order[] }>('/order');
-        console.log(data);
-        setOrders(data.data);
+        const { data: ordersData } = await api.get<{ data: Order[] }>('/order');
+        setOrders(ordersData);
       } catch (err) {
         console.error('Error fetching orders:', err);
         setError('Failed to load orders');
@@ -74,7 +81,7 @@ export default function ManageOrders() {
 
   const filteredOrders = orders.filter(order => {
     if (!order) return false;
-    return statusFilter === 'all' || (order.shippingStatus && order.shippingStatus === statusFilter);
+    return statusFilter === 'all' || order.status === statusFilter;
   });
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -82,15 +89,15 @@ export default function ManageOrders() {
   const currentItems = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
 
-  const updateShippingStatus = async (orderId: number, newStatus: ShippingStatus) => {
+  const updateOrderStatus = async (orderId: number, newStatus: OrderStatus) => {
     try {
       await api.put(`/order/status/${orderId}`, { status: newStatus });
       setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, shippingStatus: newStatus } : order
+        order.id === orderId ? { ...order, status: newStatus } : order
       ));
     } catch (err) {
-      console.error('Error updating shipping status:', err);
-      setError('Failed to update shipping status');
+      console.error('Error updating order status:', err);
+      setError('Failed to update order status');
     }
   };
 
@@ -133,14 +140,14 @@ export default function ManageOrders() {
               className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm"
               value={statusFilter}
               onChange={(e) => {
-                setStatusFilter(e.target.value as ShippingStatus | 'all');
+                setStatusFilter(e.target.value as OrderStatus | 'all');
                 setCurrentPage(1);
               }}
             >
               <option value="all">All Statuses</option>
-              {Object.entries(shippingStatusStyles).map(([status, _]) => (
+              {Object.keys(orderStatusStyles).map((status) => (
                 <option key={status} value={status}>
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status}
                 </option>
               ))}
             </select>
@@ -156,8 +163,8 @@ export default function ManageOrders() {
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Status</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shipping Status</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -171,61 +178,52 @@ export default function ManageOrders() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                        <span className="text-indigo-600 font-medium">
-                          {order.user?.name?.charAt(0) || '?'}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{order.user?.name}</div>
-                        <div className="text-sm text-gray-500">{order.user?.email || 'N/A'}</div>
-                      </div>
+                    <div className="text-sm text-gray-900 font-medium">
+                      {order.user.firstName} {order.user.lastName}
                     </div>
+                    <div className="text-sm text-gray-500">{order.user.email}</div>
+                    {order.user.phone && (
+                      <div className="text-sm text-gray-500">{order.user.phone}</div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {(order.orderItems || []).reduce((sum, item) => sum + (item?.quantity || 0), 0)} items
+                      {order.orderItems.length} items
                     </div>
-                    <div className="text-xs text-gray-500">
-                      {order.orderItems?.[0]?.product?.name || ''}
-                      {order.orderItems?.length > 1 ? ` +${order.orderItems.length - 1} more` : ''}
+                    <div className="text-xs text-gray-500 space-y-1">
+                      {order.orderItems.map((item, index) => (
+                        <div key={item.id}>
+                          Product #{item.productId} - Qty: {item.quantity} - ₹{item.price}
+                        </div>
+                      ))}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  ₹{order.totalAmount.toFixed(2)}
+                    ₹{order.totalAmount.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${paymentStatusStyles[order.paymentStatus || 'pending']}`}>
-                      {statusIcons[order.paymentStatus as keyof typeof statusIcons] || '⏳'} {order.paymentStatus ? (order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)) : 'Pending'}
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${orderStatusStyles[order.status]}`}>
+                      {statusIcons[order.status]} {order.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="relative">
-                      <select
-                        value={order.shippingStatus || 'processing'}
-                        onChange={(e) => updateShippingStatus(order.id, (e.target.value as ShippingStatus) || 'processing')}
-                        className={`block w-full pl-3 pr-10 py-1.5 text-sm rounded-md border ${shippingStatusStyles[order.shippingStatus as keyof typeof shippingStatusStyles] || shippingStatusStyles.processing} focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm cursor-pointer appearance-none`}
-                      >
-                        {Object.entries(shippingStatusStyles).map(([status, _]) => (
-                          <option key={status} value={status}>
-                            <span className="mr-2">{statusIcons[status as keyof typeof statusIcons]}</span>
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                        </svg>
-                      </div>
-                    </div>
+                    <select
+                      className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                      value={order.status}
+                      onChange={(e) => updateOrderStatus(order.id, e.target.value as OrderStatus)}
+                    >
+                      {Object.keys(orderStatusStyles).map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center">
+                <td colSpan={6} className="px-6 py-12 text-center">
                   <svg
                     className="mx-auto h-12 w-12 text-gray-400"
                     fill="none"
