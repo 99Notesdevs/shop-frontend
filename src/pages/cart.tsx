@@ -125,32 +125,6 @@ export default function CartPage() {
   
     try {
       console.log("cartData ",cartData);
-      const data = {
-        orderDate: new Date().toISOString(),
-        products: cartData.cartItems.map((item: CartItem) => item),
-        totalAmount: cartData.totalAmount,
-        status: "Pending",
-        billingAddress: "",
-        shippingAddress: "",
-      };
-      const response = await api.post<{ success: boolean; data: any }>(`/order`, data);
-  
-      if (!response.success) {
-        toast.error('Please login to continue');
-        navigate('/users/login');
-        return;
-      }
-      console.log("response",response);
-      const responseData = response.data;
-      const orderId = responseData.id;
-      console.log("orderId",orderId);
-      const orderData = {
-        orderId,
-        phonepe_transactionId: "",
-        status: "",
-        amount: cartData.totalAmount,
-        validity: 10,
-      };
       
       // Include shipping charge in the cartData passed to checkout
       const cartDataWithShipping = {
@@ -159,7 +133,7 @@ export default function CartPage() {
       };
       
       console.log("navigating to checkout");
-      navigate('/checkout', { state: { orderData, cartData: cartDataWithShipping } });
+      navigate('/checkout', { state: { cartData: cartDataWithShipping } });
     } catch (err) {
       console.error(err);
       toast.error('Failed to create order. Please try again.');

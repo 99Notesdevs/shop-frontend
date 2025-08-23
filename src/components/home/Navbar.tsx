@@ -178,12 +178,12 @@ return (
             <div className="relative group">
               <div className="flex items-center gap-2 focus:outline-none cursor-pointer py-2 px-1 rounded-md hover:bg-[var(--bg-light-secondary)] transition-colors">
                 <img
-                  src={`https://ui-avatars.com/api/?name=${user?.firstName ? `${user.firstName}+${user.lastName || ''}` : 'User'}&background=random`}
+                  src={`https://ui-avatars.com/api/?name=${user?.firstName}&background=random`}
                   alt="User Avatar"
                   className="w-8 h-8 rounded-full border-2 border-[var(--border-light)] object-cover"
                 />
                 <span className="hidden md:inline text-sm font-medium text-[var(--text-light)]">
-                  {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User'}
+                  {user?.firstName}
                 </span>
                 <ChevronDown className="w-4 h-4 text-[var(--text-light)]" />
               </div>
