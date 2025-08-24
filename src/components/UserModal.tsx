@@ -2,6 +2,7 @@
 
 import { X, Eye, EyeOff } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -10,6 +11,7 @@ import { env } from '../config/env';
 
 export function AuthModal() {
   const { isUserModalOpen, userModalType, closeUserModal } = useUser();
+  const { login } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(userModalType || 'login');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -75,20 +77,9 @@ export function AuthModal() {
     
     try {
       if(type === 'login') {
-        const response = await fetch(`${env.API_AUTH}/user`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(formData),
-        });
-        const responseData = await response.json() as { success: boolean };
-        console.log(responseData);
-        if (!responseData.success) throw new Error('Failed to login');
-      }
-      
-      if(type === 'register') {
+        await login(formData.email, formData.password);
+        closeUserModal();
+      } else {
         const response = await fetch(`${env.API_AUTH}/user/signup`, {
           method: 'POST',
           headers: {
@@ -97,14 +88,17 @@ export function AuthModal() {
           credentials: 'include',
           body: JSON.stringify(formData),
         });
-        const responseData = await response.json() as { success: boolean };
+        const responseData = await response.json();
         console.log(responseData);
         if (!responseData.success) throw new Error('Failed to register');
+        
+        // After successful registration, log the user in
+        await login(formData.email, formData.password);
+        closeUserModal();
       }
-      
-      closeUserModal();
     } catch (error) {
       console.error(`${type} error:`, error);
+      // You might want to show an error message to the user here
     } finally {
       setIsLoading(false);
     }
