@@ -89,7 +89,6 @@ export default function ProductForm() {
           validity?: number;
           shippingCharges?: number;
           type?: 'softCopy' | 'hardCopy';
-
           metadata?: {
             author?: string;
             language?: string;
@@ -98,7 +97,6 @@ export default function ProductForm() {
             weight?: string;
             dimensions?: string;
             edition?: string;
-
           };
         } 
       };
@@ -459,7 +457,7 @@ export default function ProductForm() {
                   type="text"
                   id="author"
                   name="author"
-                  value={formData.author}
+                  value={formData.metadata?.author || ''}
                   onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                 />
@@ -472,7 +470,7 @@ export default function ProductForm() {
                   type="text"
                   id="language"
                   name="language"
-                  value={formData.language}
+                  value={formData.metadata?.language || ''}
                   onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                 />
@@ -485,7 +483,7 @@ export default function ProductForm() {
                   type="text"
                   id="publisher"
                   name="publisher"
-                  value={formData.publisher}
+                  value={formData.metadata?.publisher || ''}
                   onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                 />
@@ -498,7 +496,7 @@ export default function ProductForm() {
                   type="text"
                   id="pages"
                   name="pages"
-                  value={formData.pages}
+                  value={formData.metadata?.pages || ''}
                   onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                 />
@@ -511,7 +509,7 @@ export default function ProductForm() {
                   type="text"
                   id="weight"
                   name="weight"
-                  value={formData.weight}
+                  value={formData.metadata?.weight || ''}
                   onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                 />
@@ -524,7 +522,7 @@ export default function ProductForm() {
                   type="text"
                   id="dimensions"
                   name="dimensions"
-                  value={formData.dimensions}
+                  value={formData.metadata?.dimensions || ''}
                   onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                   placeholder="e.g., 8.5 x 11 x 1 inches"
@@ -538,7 +536,7 @@ export default function ProductForm() {
                   type="text"
                   id="edition"
                   name="edition"
-                  value={formData.edition}
+                  value={formData.metadata?.edition || ''}
                   onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                   placeholder="e.g., 1st Edition"

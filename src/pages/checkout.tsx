@@ -1,11 +1,11 @@
 import React, { useState, useEffect, type ChangeEvent, type FormEvent, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { env } from "../config/env";
 import { api } from "../api/route";
 
 interface Address {
-  id?: string;  // Optional since it might not be needed in all contexts
+  id: number;  // Optional since it might not be needed in all contexts
   name: string;
   addressLine1: string;
   addressLine2?: string;
@@ -70,8 +70,6 @@ interface CartData {
   createdAt: string;
   updatedAt: string;
   cartItems: CartItem[];
-  couponDiscount?: number;
-  shippingCharge?: number;
 }
 interface LocationState {
   orderData: OrderData;
@@ -80,6 +78,7 @@ interface LocationState {
 }
 
 const emptyAddress: Address = {
+  id: 0,
   name: "",
   addressLine1: "",
   addressLine2: "",
@@ -102,7 +101,7 @@ const Checkout: React.FC = () => {
   //   }
   // }, [state, navigate]);
 
-  const orderData = state?.orderData;
+  // const orderData = state?.orderData;
   const cartData = state?.cartData;
   const product = state?.product;
   console.log("product",product);
@@ -355,17 +354,46 @@ const Checkout: React.FC = () => {
       return;
     }
 
-    if (!orderData) {
-      toast.error("Order details missing.");
+    if (!cartData) {
+      toast.error("Cart data missing.");
       return;
     }
-
     try {
+      const data = {
+        orderDate: new Date().toISOString(),
+        products: cartData.cartItems.map((item: CartItem) => item),
+        totalAmount: cartData.totalAmount,
+        status: "Pending",
+        billingAddressId: selectedAddress?.id,
+        shippingAddressId: selectedAddress?.id,
+      };
+      console.log("orderData",data);
+      const response = await api.post<{ success: boolean; data: any }>(`/order`, data);
+  
+      if (!response.success) {
+        toast.error('Please login to continue');
+        return;
+      }
+      console.log("response",response);
+      const responseData = response.data;
+      const orderId = responseData.id;
+      console.log("orderId",orderId);
+      const orderData = {
+        orderId,
+        phonepe_transactionId: "",
+        status: "",
+        amount: cartData.totalAmount,
+        validity: 10,
+      };
+      
+      // Include shipping charge in the cartData passed to checkout
+      
       const finalOrder = {
         ...orderData,
         // Ensure discounted amount is sent for payment
         amount: total,
         deliveryAddress: {
+          id: selectedAddress?.id || 0,
           name: selectedAddress?.name || "",
           addressLine1: selectedAddress?.addressLine1 || "",
           addressLine2: selectedAddress?.addressLine2 || '',
@@ -396,8 +424,6 @@ const Checkout: React.FC = () => {
       toast.error(error instanceof Error ? error.message : "Order processing error");
     }
   };
-
-  if (!orderData) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -625,8 +651,8 @@ const Checkout: React.FC = () => {
                 
                 {couponDiscount > 0 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Coupon Discount</span>
-                    <span className="text-green-600 font-medium">-₹{couponDiscount.toFixed(2)}</span>
+                    <span className="text-red-600">Coupon Discount</span>
+                    <span className="text-red-600 font-medium">-₹{couponDiscount.toFixed(2)}</span>
                   </div>
                 )}
                 
