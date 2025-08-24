@@ -26,6 +26,7 @@ import ManageOrders from './components/admin-dashboard/manage-orders';
 import { AdminRoute } from './components/protected-route';
 import AddOfferMessage from './components/admin-dashboard/add-offer-message';
 import AddCoupon from './components/admin-dashboard/add-coupon';
+import { UserProvider } from './contexts/UserContext';
 import SearchPage from './pages/search-page';
 import ManageBanner from './components/admin-dashboard/manage-banner';
 
@@ -34,6 +35,7 @@ function App() {
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
+          <UserProvider>
           <Routes>
             {/* Admin Login Route */}
             <Route path="/admin/login" element={<AdminLogin />} />
@@ -77,6 +79,7 @@ function App() {
               </HomeLayout>
             } />
           </Routes>
+          </UserProvider>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
