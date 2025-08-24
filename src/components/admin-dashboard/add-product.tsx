@@ -167,10 +167,24 @@ export default function ProductForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Check if the field is a metadata field
+    if (['author', 'language', 'publisher', 'pages', 'weight', 'dimensions', 'edition'].includes(name)) {
+      setFormData(prev => ({
+        ...prev,
+        metadata: {
+          ...prev.metadata,
+          [name]: value
+        }
+      }));
+    } else {
+      // Handle regular fields
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    
     console.log('Form data updated:', { ...formData, [name]: value }); // Debug log
   };
 

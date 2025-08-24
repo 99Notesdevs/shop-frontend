@@ -1,5 +1,4 @@
 'use client';
-import ContactForm from '../components/common/contact-form';
 import { FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaClock } from 'react-icons/fa';
 
 const ContactUs = () => {
@@ -8,17 +7,6 @@ const ContactUs = () => {
       
         <title>Contact Us - 99Notes</title>
         <meta name="description" content="Get in touch with 99Notes for any queries or support" />
-      
-
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 py-12">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold text-white mb-4">Contact Us</h1>
-          <p className="text-lg text-white/90 max-w-2xl mx-auto">
-            Have questions or feedback? We'd love to hear from you. Reach out to us through any of the channels below.
-          </p>
-        </div>
-      </div>
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-16">
@@ -26,8 +14,7 @@ const ContactUs = () => {
           {/* Contact Information */}
           <div className="space-y-8">
             <div className="bg-white p-8 rounded-lg shadow-md">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Get in Touch</h2>
-              
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">Get in Touch</h2> 
               <div className="space-y-6">
                 <div className="flex items-start">
                   <div className="bg-yellow-100 p-3 rounded-full">
@@ -105,17 +92,6 @@ const ContactUs = () => {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Contact Form */}
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Send us a Message</h2>
-            <p className="text-gray-600 mb-8">
-              Have questions or need assistance? Fill out the form below and we'll get back to you as soon as possible.
-            </p>
-            <ContactForm />
-          </div>
-        </div>
       </div>
 
       {/* FAQ Section */}
@@ -153,6 +129,8 @@ const ContactUs = () => {
             ))}
           </div>
         </div>
+      </div>
+      </div>
       </div>
     </div>
   );

@@ -262,11 +262,11 @@ export function ManageProducts() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-gray-900">
-                          ${product.salePrice?.toFixed(2) || product.price.toFixed(2)}
+                          ₹{product.salePrice?.toFixed(2) || product.price.toFixed(2)}
                         </span>
                         {product.salePrice && (
                           <span className="text-xs text-gray-500 line-through">
-                            ${product.price.toFixed(2)}
+                            ₹{product.price.toFixed(2)}
                           </span>
                         )}
                       </div>

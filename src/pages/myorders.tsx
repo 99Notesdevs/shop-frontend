@@ -143,8 +143,8 @@ export default function MyOrders() {
             const { data: shippingResponse } = await api.post<ShippingResponse>('/shipping', { orderId: order.id });
             console.log('Shipping API response for order', order.id, ':', shippingResponse);
             
-            if (shippingResponse && shippingResponse.data?.length > 0) {
-              const latestShipping = shippingResponse.data[0]; // Get the latest shipping info
+            if (shippingResponse && shippingResponse.length > 0) {
+              const latestShipping = shippingResponse[0]; // Get the latest shipping info
               return {
                 ...order,
                 status: latestShipping.status as OrderStatus,

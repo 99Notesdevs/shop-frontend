@@ -334,27 +334,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     navigate("/login");
   };
 
-  const logout = async () => {
-    try {
-      // const token = Cookies.get("token");
-      if (token) {
-        await fetch(`${env.API_AUTH}/logout`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      handleLogout();
-    }
-  };
+  // const logout = async () => {
+  //   try {
+  //     // const token = Cookies.get("token");
+  //     if (token) {
+  //       await fetch(`${env.API_AUTH}/logout`, {
+  //         method: "POST",
+  //         headers: { Authorization: `Bearer ${token}` },
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error("Logout error:", error);
+  //   } finally {
+  //     handleLogout();
+  //   }
+  // };
 
-  const checkAdmin = async () => {
-    const token = Cookies.get("token");
-    if (!token) return false;
-    return checkAdminStatus();
-  };
+  // const checkAdmin = async () => {
+  //   const token = Cookies.get("token");
+  //   if (!token) return false;
+  //   return checkAdminStatus();
+  // };
 
   // Google OAuth implementation
   const GoogleOneTap = () => {

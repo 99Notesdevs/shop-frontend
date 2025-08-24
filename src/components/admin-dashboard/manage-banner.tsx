@@ -31,17 +31,50 @@ export default function ManageBanner() {
     const fetchBannerData = async () => {
       try {
         setIsLoading(true);
-        const response = await env.API_MAIN.get("/about99/banner");
-        if (response.data?.content) {
-          const content = typeof response.data.content === 'string' 
-            ? JSON.parse(response.data.content) 
-            : response.data.content;
+        const response = await fetch(`${env.API_MAIN}/about-99-notes/banner`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        const responseData = await response.json();
+        console.log("Banner data", responseData);
+        
+        if (response.status === 404 || !responseData.success) {
+          // Banner doesn't exist yet, initialize with default values
+          console.log("No banner found, initializing with default values");
           setBannerData({
-            isActive: content.isActive ?? false,
-            title: content.title || "",
-            description: content.description || "",
-            redirectLink: content.redirectLink || "",
+            isActive: false,
+            title: "",
+            description: "",
+            redirectLink: "",
           });
+          return;
+        }
+        
+        if (responseData.data) {
+          try {
+            // The banner data might be in the data object directly or in a content field
+            const bannerContent = responseData.data.content 
+              ? typeof responseData.data.content === 'string' 
+                ? JSON.parse(responseData.data.content)
+                : responseData.data.content
+              : responseData.data;
+            
+            if (bannerContent) {
+              setBannerData({
+                isActive: bannerContent.isActive ?? false,
+                title: bannerContent.title || "",
+                description: bannerContent.description || "",
+                redirectLink: bannerContent.redirectLink || "",
+              });
+            }
+          } catch (error) {
+            console.error("Error parsing banner content:", error);
+            toast.error("Invalid banner data format");
+          }
         }
       } catch (error) {
         console.error("Error fetching banner data:", error);
@@ -60,11 +93,56 @@ export default function ManageBanner() {
     
     try {
       setIsSaving(true);
-      const response = await env.API_MAIN.put("/about-99-notes/banner", bannerData);
+      // First try to update the banner
+      const response = await fetch(`${env.API_MAIN}/about-99-notes/3`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: 'banner',  // Must match the expected title in the backend
+          content: JSON.stringify(bannerData),
+          isActive: bannerData.isActive
+        }),
+      });
       
-      if (response.data) {
-        toast.success("Banner updated successfully!");
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (e) {
+        responseData = {};
       }
+      
+      // If update failed with 404, try to create a new banner
+      if (response.status === 404) {
+        const createResponse = await fetch(`${env.API_MAIN}/about-99-notes`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: 'banner',
+            content: JSON.stringify(bannerData),
+            isActive: bannerData.isActive
+          }),
+        });
+        
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json().catch(() => ({}));
+          throw new Error(errorData.message || "Failed to create banner");
+        }
+        
+        toast.success("Banner created successfully!");
+        return;
+      }
+      
+      if (!response.ok) {
+        throw new Error(responseData.message || "Failed to update banner");
+      }
+      
+      toast.success("Banner updated successfully!");
     } catch (error) {
       console.error("Error updating banner:", error);
       toast.error("Failed to update banner");

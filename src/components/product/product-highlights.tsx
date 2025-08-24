@@ -2,27 +2,38 @@ import { useState } from 'react';
 import type { FC } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
-interface HighlightItem {
-  label: string;
-  value: string;
-}
-
 interface ProductHighlightsProps {
   className?: string;
+  metaData?: Record<string, string>;
 }
 
-const ProductHighlights: FC<ProductHighlightsProps> = ({ className = '' }) => {
+const defaultHighlights = [
+  'Author',
+  'Language',
+  'Publisher',
+  'Pages',
+  'Weight',
+  'Dimensions',
+  'Edition'
+];
+
+const ProductHighlights: FC<ProductHighlightsProps> = ({ className = '', metaData = {} }) => {
   const [isOpen, setIsOpen] = useState<boolean>(true);
-  
-  const highlights: HighlightItem[] = [
-    { label: 'Author', value: 'Pulakit Bharti' },
-    { label: 'Language', value: 'English' },
-    { label: 'Publisher', value: 'Dilshad' },
-    { label: 'Pages', value: '335' },
-    { label: 'Weight', value: '0.5 kg' },
-    { label: 'Dimensions', value: '26*16*7' },
-    { label: 'Edition', value: '34th' },
-  ];
+
+  const highlights = defaultHighlights
+    .filter(key => {
+      const lowerKey = key.toLowerCase();
+      const metaValue = Object.entries(metaData).find(([k]) => k.toLowerCase() === lowerKey)?.[1];
+      return metaValue && String(metaValue).trim() !== '';
+    })
+    .map(key => {
+      const lowerKey = key.toLowerCase();
+      const metaEntry = Object.entries(metaData).find(([k]) => k.toLowerCase() === lowerKey);
+      return {
+        label: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim(),
+        value: String(metaEntry?.[1] || '')
+      };
+    });
 
   return (
     <div className={`border border-gray-200 rounded-lg overflow-hidden ${className}`}>
@@ -37,12 +48,16 @@ const ProductHighlights: FC<ProductHighlightsProps> = ({ className = '' }) => {
       {isOpen && (
         <>
           <div className="px-4 py-2">
-            {highlights.map((item, index) => (
-              <div key={index} className="flex justify-between py-1 text-gray-700">
-                <span className="font-light w-1/2">{item.label} :</span>
-                <span className="w-1/2">{item.value}</span>
-              </div>
-            ))}
+            {highlights.length > 0 ? (
+              highlights.map((item, index) => (
+                <div key={index} className="flex justify-between py-1 text-gray-700">
+                  <span className="font-light w-1/2">{item.label} :</span>
+                  <span className="w-1/2">{item.value}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 py-2 text-center">No highlights available</p>
+            )}
           </div>
         </>
       )}
