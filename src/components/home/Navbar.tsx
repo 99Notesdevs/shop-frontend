@@ -169,7 +169,7 @@ return (
           {!isAuthenticated ? (
             <button
               onClick={() => showLogin()}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--indigo-600)] rounded-md hover:bg-[var(--indigo-700)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--indigo-500)] transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--indigo-600)] rounded-md hover:bg-[var(--indigo-700)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--indigo-500)] transition-colors cursor-pointer"
             >
               <LogIn className="w-4 h-4" />
               <span className="hidden md:inline">Login</span>
