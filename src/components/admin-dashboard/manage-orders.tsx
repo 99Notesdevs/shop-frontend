@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '../../api/route';
+import { Menu, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
 
-type OrderStatus = 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Completed';
+type PaymentStatus = 'Pending' | 'Completed' | 'Cancelled';
+type ShippingStatus = 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
 
 interface OrderItem {
   id: number;
@@ -31,7 +34,8 @@ interface Order {
   id: number;
   orderDate: string;
   totalAmount: number;
-  status: OrderStatus;
+  status: PaymentStatus; // Payment status
+  shippingStatus: ShippingStatus; // Shipping status
   userId: number;
   createdAt: string;
   updatedAt: string;
@@ -80,40 +84,149 @@ interface Order {
   };
 }
 
-const orderStatusStyles = {
+const paymentStatusStyles = {
   'Pending': 'bg-yellow-50 text-yellow-800 border-yellow-200',
-  'Processing': 'bg-blue-50 text-blue-800 border-blue-200',
-  'Shipped': 'bg-indigo-50 text-indigo-800 border-indigo-200',
-  'Delivered': 'bg-green-50 text-green-800 border-green-200',
-  'Cancelled': 'bg-red-50 text-red-800 border-red-200',
   'Completed': 'bg-green-50 text-green-800 border-green-200',
+  'Cancelled': 'bg-red-50 text-red-800 border-red-200',
 };
 
-const statusIcons = {
+const shippingStatusStyles = {
+  'Processing': 'bg-blue-50 text-blue-800 border-blue-200',
+  'Shipped': 'bg-purple-50 text-purple-800 border-purple-200',
+  'Delivered': 'bg-green-50 text-green-800 border-green-200',
+  'Cancelled': 'bg-red-50 text-red-800 border-red-200',
+};
+
+const paymentStatusIcons = {
   'Pending': '⏳',
-  'Processing': '⚙️',
-  'Shipped': '🚚',
-  'Delivered': '✅',
-  'Cancelled': '❌',
   'Completed': '✅',
+  'Cancelled': '❌',
+};
+
+const shippingStatusIcons = {
+  'Processing': '🔄',
+  'Shipped': '🚚',
+  'Delivered': '📦',
+  'Cancelled': '❌',
+};
+
+// Combined status icons for both payment and shipping
+const statusIcons = { ...paymentStatusIcons, ...shippingStatusIcons };
+
+interface StatusDropdownProps {
+  currentStatus: ShippingStatus;
+  onStatusChange: (status: ShippingStatus, orderId: number) => void;
+  orderId: number;
+  shippingData?: any;
+  isUpdating?: boolean;
+}
+
+const StatusDropdown = ({ currentStatus, onStatusChange, orderId, shippingData, isUpdating = false }: StatusDropdownProps) => {
+  const statuses: ShippingStatus[] = ['Processing', 'Shipped', 'Delivered', 'Cancelled'];
+  
+  // Get the actual shipping status from backend data if available
+  const actualStatus: ShippingStatus = (shippingData?.status as ShippingStatus) || currentStatus;
+  
+  return (
+    <Menu as="div" className="relative inline-block text-left">
+      <div>
+        <Menu.Button 
+          disabled={isUpdating}
+          className={`inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+            isUpdating ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
+        >
+          {isUpdating ? (
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              <span>Updating...</span>
+            </div>
+          ) : (
+            <>
+              <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${shippingStatusStyles[actualStatus]}`}>
+                {shippingStatusIcons[actualStatus]} {actualStatus}
+              </span>
+              <svg className="w-5 h-5 ml-2 -mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </>
+          )}
+        </Menu.Button>
+      </div>
+
+      <Transition
+        as={Fragment}
+        enter="transition ease-out duration-100"
+        enterFrom="transform opacity-0 scale-95"
+        enterTo="transform opacity-100 scale-100"
+        leave="transition ease-in duration-75"
+        leaveFrom="transform opacity-100 scale-100"
+        leaveTo="transform opacity-0 scale-95"
+      >
+        <Menu.Items className="absolute right-0 z-10 w-40 mt-1 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+          <div className="py-1">
+            {statuses.map((status) => (
+              <Menu.Item key={status}>
+                {({ active }) => (
+                  <button
+                    onClick={() => onStatusChange(status, orderId)}
+                    className={`${
+                      active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
+                    } group flex items-center w-full px-4 py-2 text-sm ${
+                      actualStatus === status ? 'bg-blue-50 text-blue-600 font-medium' : ''
+                    }`}
+                  >
+                    <span className="mr-2">{shippingStatusIcons[status]}</span>
+                    {status}
+                  </button>
+                )}
+              </Menu.Item>
+            ))}
+          </div>
+        </Menu.Items>
+      </Transition>
+    </Menu>
+  );
 };
 
 export default function ManageOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
+  type StatusFilter = 'all' | PaymentStatus | ShippingStatus;
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [products, setProducts] = useState<Record<number, Product>>({});
+  const [shippingStatuses, setShippingStatuses] = useState<Record<number, any>>({});
+  const [updatingStatus, setUpdatingStatus] = useState<Record<number, boolean>>({});
   const itemsPerPage = 10;
+
+  const fetchShippingStatus = async (orderId: number) => {
+    try {
+      const response = await api.get(`/shipping/${orderId}`) as { success: boolean; data: any };
+      if (response.success && response.data) {
+        setShippingStatuses(prev => ({
+          ...prev,
+          [orderId]: response.data
+        }));
+      }
+    } catch (error) {
+      console.error(`Error fetching shipping status for order ${orderId}:`, error);
+    }
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         const { data: ordersData } = await api.get<{ data: Order[] }>('/order');
         setOrders(ordersData);
+        
+        // Fetch shipping statuses for all orders
+        for (const order of ordersData) {
+          await fetchShippingStatus(order.id);
+        }
       } catch (err) {
         console.error('Error fetching orders:', err);
         setError('Failed to load orders');
@@ -152,7 +265,10 @@ export default function ManageOrders() {
 
   const filteredOrders = orders.filter(order => {
     if (!order) return false;
-    return statusFilter === 'all' || order.status === statusFilter;
+    if (statusFilter === 'all') return true;
+    
+    // Check if the status matches shipping status
+    return order.shippingStatus === statusFilter;
   });
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -160,20 +276,37 @@ export default function ManageOrders() {
   const currentItems = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
 
-  const updateOrderStatus = async (orderId: number, newStatus: OrderStatus) => {
+  const updateOrderStatus = async (newStatus: ShippingStatus, orderId: number) => {
     try {
-      await api.put(`/order/status/${orderId}`, { status: newStatus });
+      setUpdatingStatus(prev => ({ ...prev, [orderId]: true }));
+      
+      // Update shipping status in backend
+      await api.put(`/shipping/${orderId}`, { 
+        status: newStatus,
+        orderId: orderId 
+      });
+      
+      // Update local state
       setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
+        order.id === orderId 
+          ? { 
+              ...order,
+              shippingStatus: newStatus
+            }
+          : order
       ));
+      
+      // Refresh shipping status from backend
+      await fetchShippingStatus(orderId);
     } catch (err) {
-      console.error('Error updating order status:', err);
-      setError('Failed to update order status');
+      console.error('Error updating shipping status:', err);
+      setError('Failed to update shipping status');
+    } finally {
+      setUpdatingStatus(prev => ({ ...prev, [orderId]: false }));
     }
   };
 
   const openOrderDetails = (order: Order) => {
-    console.log('Opening order details:', order);
     setSelectedOrder(order);
     setShowModal(true);
   };
@@ -216,7 +349,6 @@ export default function ManageOrders() {
           <div class="print-header">
             <h1>Order #${order.id}</h1>
             <p>Order Date: ${new Date(order.orderDate).toLocaleDateString()}</p>
-            <p>Status: ${order.status}</p>
           </div>
 
           <div class="print-section">
@@ -335,146 +467,150 @@ export default function ManageOrders() {
         </div>
         <div className="mt-4 sm:mt-0">
           <div className="relative">
-            <select
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm"
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value as OrderStatus | 'all');
-                setCurrentPage(1);
-              }}
-            >
-              <option value="all">All Statuses</option>
-              {Object.keys(orderStatusStyles).map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium text-gray-700">Filter by status:</span>
+                <select
+                  className="block w-48 pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm"
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value as StatusFilter);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="all">All Orders</option>
+                  {Object.entries(shippingStatusStyles).map(([status, _]) => (
+                    <option key={`shipping-${status}`} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {currentItems.length > 0 ? (
-              currentItems.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50 transition-colors duration-150">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">#{order.id}</div>
-                    <div className="text-xs text-gray-500">
-                      {new Date(order.orderDate).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 font-medium">
-                      {order.user && (
-                        <>
-                          {order.user.firstName} {order.user.lastName}
-                        </>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {order.user?.email || 'No email provided'}
-                    </div>
-                    {order.user?.phone && (
-                      <div className="text-sm text-gray-500">{order.user.phone}</div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {order.orderItems?.length || 0} items
-                    </div>
-                    <div className="text-xs text-gray-500 space-y-1">
-                      {order.orderItems?.map((item) => (
-                        <div key={item.id}>
-                          Product #{item.productId} - Qty: {item.quantity} - ₹{item.price}
-                        </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ₹{order.totalAmount.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${orderStatusStyles[order.status]}`}>
-                      {statusIcons[order.status]} {order.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap space-y-2">
-                    <button
-                      onClick={() => openOrderDetails(order)}
-                      className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mr-2"
+      <div className="bg-white shadow overflow-hidden sm:rounded-lg overflow-x-auto border border-gray-200">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Status</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shipping Status</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {currentItems.length > 0 ? (
+                currentItems.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50 transition-colors duration-150">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">#{order.id}</div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(order.orderDate).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 font-medium">
+                        {order.user && (
+                          <>
+                            {order.user.firstName} {order.user.lastName}
+                          </>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-500 truncate">
+                        {order.user?.email || 'No email provided'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {order.orderItems?.length || 0} items
+                      </div>
+                      <div className="text-xs text-gray-500 line-clamp-2">
+                        {order.orderItems?.map((item, idx) => (
+                          <span key={item.id}>
+                            {idx > 0 && ', '}
+                            {products[item.productId]?.name || `Product #${item.productId}`} (×{item.quantity})
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      ₹{order.totalAmount.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${paymentStatusStyles[order.status]}`}>
+                        {paymentStatusIcons[order.status]} {order.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StatusDropdown 
+                        currentStatus={order.shippingStatus}
+                        onStatusChange={updateOrderStatus}
+                        orderId={order.id}
+                        shippingData={shippingStatuses[order.id]}
+                        isUpdating={updatingStatus[order.id]}
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => openOrderDetails(order)}
+                        className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                      >
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      aria-hidden="true"
                     >
-                      View Details
-                    </button>
-                    <select
-                      className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                      value={order.status}
-                      onChange={(e) => updateOrderStatus(order.id, e.target.value as OrderStatus)}
-                    >
-                      {Object.keys(orderStatusStyles).map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1}
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                      />
+                    </svg>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No orders</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {statusFilter === 'all' 
+                        ? 'No orders have been placed yet.' 
+                        : `No orders with status "${statusFilter}" found.`}
+                    </p>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={6} className="px-6 py-12 text-center">
-                  <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1}
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                    />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No orders</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {statusFilter === 'all' 
-                      ? 'No orders have been placed yet.' 
-                      : `No orders with status "${statusFilter}" found.`}
-                  </p>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {totalPages > 1 && (
         <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-b-lg">
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div className="flex-1 flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-700">
                 Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
                 <span className="font-medium">
                   {Math.min(indexOfLastItem, filteredOrders.length)}
                 </span>{' '}
-                of <span className="font-medium">{filteredOrders.length}</span> results
+                of <span className="font-medium">{filteredOrders.length}</span> orders
               </p>
             </div>
-            <div>
+            <div className="flex-1 flex justify-end">
               <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -560,21 +696,56 @@ export default function ManageOrders() {
                     <div>{new Date(selectedOrder.orderDate).toLocaleDateString()}</div>
                   </div>
                   <div>
-                    <span className="text-blue-600 font-medium">Status:</span>
-                    <div className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${orderStatusStyles[selectedOrder.status]}`}>
+                    <span className="text-blue-600 font-medium">Payment Status:</span>
+                    <div className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${paymentStatusStyles[selectedOrder.status]}`}>
                       {statusIcons[selectedOrder.status]} {selectedOrder.status}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-medium">Shipping Status:</span>
+                    <div className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${shippingStatusStyles[selectedOrder.shippingStatus]}`}>
+                      {shippingStatusIcons[selectedOrder.shippingStatus]} {selectedOrder.shippingStatus}
                     </div>
                   </div>
                   <div>
                     <span className="text-blue-600 font-medium">Total Amount:</span>
                     <div className="text-green-600 font-bold">₹{selectedOrder.totalAmount.toFixed(2)}</div>
                   </div>
-                  <div>
-                    <span className="text-blue-600 font-medium">Items:</span>
-                    <div>{selectedOrder.orderItems.length} products</div>
-                  </div>
                 </div>
               </div>
+
+              {/* Shipping Information */}
+              {shippingStatuses[selectedOrder.id] && (
+                <div className="bg-green-50 p-4 rounded-lg mb-6">
+                  <h3 className="font-semibold text-green-900 mb-3">Shipping Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-green-600 font-medium">Status:</span>
+                      <div className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${shippingStatusStyles[shippingStatuses[selectedOrder.id].status as ShippingStatus]}`}>
+                        {shippingStatusIcons[shippingStatuses[selectedOrder.id].status as ShippingStatus]} {shippingStatuses[selectedOrder.id].status}
+                      </div>
+                    </div>
+                    {shippingStatuses[selectedOrder.id].trackingNumber && (
+                      <div>
+                        <span className="text-green-600 font-medium">Tracking Number:</span>
+                        <div className="font-mono">{shippingStatuses[selectedOrder.id].trackingNumber}</div>
+                      </div>
+                    )}
+                    {shippingStatuses[selectedOrder.id].carrier && (
+                      <div>
+                        <span className="text-green-600 font-medium">Carrier:</span>
+                        <div>{shippingStatuses[selectedOrder.id].carrier}</div>
+                      </div>
+                    )}
+                    {shippingStatuses[selectedOrder.id].shippingDate && (
+                      <div>
+                        <span className="text-green-600 font-medium">Shipping Date:</span>
+                        <div>{new Date(shippingStatuses[selectedOrder.id].shippingDate).toLocaleDateString()}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Customer Information */}
               <div className="bg-gray-50 p-4 rounded-lg mb-6">

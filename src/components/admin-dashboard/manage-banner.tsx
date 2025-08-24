@@ -26,29 +26,45 @@ export default function ManageBanner() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Fetch banner data on component mount
   useEffect(() => {
+    const fetchBannerData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await env.API_MAIN.get("/about99/banner");
+        if (response.data?.content) {
+          const content = typeof response.data.content === 'string' 
+            ? JSON.parse(response.data.content) 
+            : response.data.content;
+          setBannerData({
+            isActive: content.isActive ?? false,
+            title: content.title || "",
+            description: content.description || "",
+            redirectLink: content.redirectLink || "",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching banner data:", error);
+        toast.error("Failed to load banner data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchBannerData();
   }, []);
 
-  const fetchBannerData = async () => {
-    try {
-      setIsLoading(true);
-      const data = await env.API_MAIN.get("/about99/banner") as BannerData;
-      setBannerData(data);
-    } catch (error) {
-      console.error("Error fetching banner data:", error);
-      toast.error("Failed to load banner data");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
+    
     try {
       setIsSaving(true);
-      await env.API_MAIN.put("/about99/banner", bannerData) as BannerData;
-      toast.success("Banner updated successfully!");
+      const response = await env.API_MAIN.put("/about-99-notes/banner", bannerData);
+      
+      if (response.data) {
+        toast.success("Banner updated successfully!");
+      }
     } catch (error) {
       console.error("Error updating banner:", error);
       toast.error("Failed to update banner");
@@ -58,10 +74,10 @@ export default function ManageBanner() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target as HTMLInputElement;
     setBannerData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
   };
 
@@ -81,15 +97,21 @@ export default function ManageBanner() {
       <h1 className="text-2xl font-bold mb-6">Manage Hero Banner</h1>
       
       <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="banner-toggle"
-            checked={bannerData.isActive}
-            onChange={handleToggle}
-          />
-          <Label htmlFor="banner-toggle">
-            {bannerData.isActive ? "Banner is Active" : "Banner is Inactive"}
-          </Label>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="banner-toggle"
+              checked={bannerData.isActive}
+              onChange={handleToggle}
+              onColor="#2563eb"
+              offColor="#9ca3af"
+              height={24}
+              width={48}
+            />
+            <Label htmlFor="banner-toggle">
+              {bannerData.isActive ? "Banner is Active" : "Banner is Inactive"}
+            </Label>
+          </div>
         </div>
 
         <div className="space-y-2">

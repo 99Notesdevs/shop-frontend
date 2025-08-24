@@ -1,17 +1,68 @@
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { env } from "../../config/env";
+import axios from "axios";
 import { BookOpen, Award, Clock, CheckCircle } from "lucide-react";
+
+interface BannerData {
+  isActive: boolean;
+  title: string;
+  description: string;
+  redirectLink: string;
+}
 
 export default function Hero() {
   const navigate = useNavigate();
-  
+  const [bannerData, setBannerData] = useState<BannerData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBannerData = async () => {
+      try {
+        const response = await axios.get(`${env.API_MAIN}/about-99-notes/banner`);
+        console.log("Banner data", response.data);
+        if (response.data?.data?.content) {
+          const content = typeof response.data.data.content === 'string' 
+            ? JSON.parse(response.data.data.content) 
+            : response.data.data.content;
+          if (content.isActive) {
+            setBannerData({
+              isActive: content.isActive,
+              title: content.title,
+              description: content.description,
+              redirectLink: content.redirectLink
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching banner data:", error);
+        // Don't show banner if API fails
+        setBannerData(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBannerData();
+  }, []);
+
   const features = [
     { icon: <BookOpen className="w-5 h-5" />, text: "Comprehensive Collection" },
     { icon: <Award className="w-5 h-5" />, text: "Top Quality Materials" },
     { icon: <Clock className="w-5 h-5" />, text: "Latest Editions" },
     { icon: <CheckCircle className="w-5 h-5" />, text: "Best Prices" }
   ];
+
+  if (isLoading) {
+    return <div className="h-96 flex items-center justify-center">Loading...</div>;
+  }
+
+  // If banner is not active or no data, don't show the hero section
+  if (!bannerData?.isActive) {
+    return null;
+  }
 
   return (
     <section className="relative py-16 md:py-24 overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -29,10 +80,10 @@ export default function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6"
-          >
-            Your Ultimate <span className="text-[var(--text-heading)]">Civil Services</span><br/>
-            Preparation Partner
-          </motion.h1>
+            dangerouslySetInnerHTML={{ 
+              __html: bannerData.title.replace(/\n/g, '<br/>') 
+            }}
+          />
           
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
@@ -40,7 +91,7 @@ export default function Hero() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg md:text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed"
           >
-            Get access to the finest collection of UPSC and civil services preparation materials at unbeatable prices.
+            {bannerData.description}
           </motion.p>
           
           <motion.div 
@@ -51,7 +102,7 @@ export default function Hero() {
           >
             <Button 
               className="px-8 py-6 text-lg font-semibold bg-[var(--button)] hover:bg-[var(--button-hover)] transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
-              onClick={() => navigate('/products')}
+              onClick={() => navigate(bannerData.redirectLink)}
             >
               Explore Products
             </Button>
