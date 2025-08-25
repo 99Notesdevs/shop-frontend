@@ -2,8 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '../../api/route';
-import { Menu, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
+import { toast } from 'sonner';
+import { Pencil } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 
 type PaymentStatus = 'Pending' | 'Completed' | 'Cancelled';
 type ShippingStatus = 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
@@ -90,6 +101,15 @@ const paymentStatusStyles = {
   'Cancelled': 'bg-red-50 text-red-800 border-red-200',
 };
 
+const paymentStatusIcons = {
+  'Pending': '⏳',
+  'Completed': '✅',
+  'Cancelled': '❌',
+};
+
+// Combined status icons for both payment and shipping
+const statusIcons = { ...paymentStatusIcons };
+
 const shippingStatusStyles = {
   'Processing': 'bg-blue-50 text-blue-800 border-blue-200',
   'Shipped': 'bg-purple-50 text-purple-800 border-purple-200',
@@ -97,95 +117,130 @@ const shippingStatusStyles = {
   'Cancelled': 'bg-red-50 text-red-800 border-red-200',
 };
 
-const paymentStatusIcons = {
-  'Pending': '⏳',
-  'Completed': '✅',
-  'Cancelled': '❌',
-};
-
 const shippingStatusIcons = {
   'Processing': '🔄',
   'Shipped': '🚚',
-  'Delivered': '📦',
+  'Delivered': '✅',
   'Cancelled': '❌',
 };
 
-// Combined status icons for both payment and shipping
-const statusIcons = { ...paymentStatusIcons, ...shippingStatusIcons };
-
-interface StatusDropdownProps {
+interface ShippingStatusProps {
   currentStatus: ShippingStatus;
-  onStatusChange: (status: ShippingStatus, orderId: number) => void;
   orderId: number;
-  shippingData?: any;
-  isUpdating?: boolean;
+  onUpdate?: () => void;
 }
 
-const StatusDropdown = ({ currentStatus, onStatusChange, orderId, shippingData, isUpdating = false }: StatusDropdownProps) => {
-  const statuses: ShippingStatus[] = ['Processing', 'Shipped', 'Delivered', 'Cancelled'];
+const ShippingStatus = ({ currentStatus = 'Processing', orderId, onUpdate }: ShippingStatusProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [carrier, setCarrier] = useState('');
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [status, setStatus] = useState<ShippingStatus>(currentStatus || 'Processing');
   
-  // Get the actual shipping status from backend data if available
-  const actualStatus: ShippingStatus = (shippingData?.status as ShippingStatus) || currentStatus;
-  
-  return (
-    <Menu as="div" className="relative inline-block text-left">
-      <div>
-        <Menu.Button 
-          disabled={isUpdating}
-          className={`inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            isUpdating ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        >
-          {isUpdating ? (
-            <div className="flex items-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-              <span>Updating...</span>
-            </div>
-          ) : (
-            <>
-              <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${shippingStatusStyles[actualStatus]}`}>
-                {shippingStatusIcons[actualStatus]} {actualStatus}
-              </span>
-              <svg className="w-5 h-5 ml-2 -mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </>
-          )}
-        </Menu.Button>
-      </div>
+  // Ensure status is always set, default to 'Processing' if empty
+  useEffect(() => {
+    if (!status) {
+      setStatus('Processing');
+    }
+  }, [status]);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const handleUpdate = async () => {
+    try {
+      setIsUpdating(true);
+      await api.put(`/shipping/${orderId}`, {
+        status,
+        carrier: carrier || 'N/A',
+        trackingNumber: trackingNumber || 0,
+      });
+      
+      toast.success("Shipping details updated successfully");
+      
+      setIsEditing(false);
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error updating shipping details:', error);
+      toast.error("Failed to update shipping details");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
-      <Transition
-        as={Fragment}
-        enter="transition ease-out duration-100"
-        enterFrom="transform opacity-0 scale-95"
-        enterTo="transform opacity-100 scale-100"
-        leave="transition ease-in duration-75"
-        leaveFrom="transform opacity-100 scale-100"
-        leaveTo="transform opacity-0 scale-95"
+  return (
+    <div className="flex items-center space-x-2">
+      <div className={`px-2 py-1 text-xs font-semibold rounded-full ${shippingStatusStyles[status]}`}>
+        {shippingStatusIcons[status]} {status}
+      </div>
+      <button
+        type="button"
+        className="inline-flex items-center justify-center h-6 w-6 p-0 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+        onClick={() => setIsEditing(true)}
       >
-        <Menu.Items className="absolute right-0 z-10 w-40 mt-1 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-          <div className="py-1">
-            {statuses.map((status) => (
-              <Menu.Item key={status}>
-                {({ active }) => (
-                  <button
-                    onClick={() => onStatusChange(status, orderId)}
-                    className={`${
-                      active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                    } group flex items-center w-full px-4 py-2 text-sm ${
-                      actualStatus === status ? 'bg-blue-50 text-blue-600 font-medium' : ''
-                    }`}
-                  >
-                    <span className="mr-2">{shippingStatusIcons[status]}</span>
-                    {status}
-                  </button>
-                )}
-              </Menu.Item>
-            ))}
+        <Pencil className="h-3 w-3" />
+      </button>
+      
+      <Dialog open={isEditing} onOpenChange={setIsEditing}>
+        <DialogContent className="sm:max-w-[425px] bg-white">
+          <DialogHeader>
+            <DialogTitle>Update Shipping Details</DialogTitle>
+            <DialogDescription>
+              Update the shipping status and tracking information for this order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="carrier" className="text-right">
+                Carrier
+              </Label>
+              <Input
+                id="carrier"
+                value={carrier}
+                onChange={(e) => setCarrier(e.target.value)}
+                placeholder="e.g., FedEx, UPS"
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="tracking" className="text-right">
+                Tracking #
+              </Label>
+              <Input
+                id="tracking"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                placeholder="Tracking number"
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Status</Label>
+              <div className="col-span-3 space-y-2">
+                {(['Processing', 'Shipped', 'Delivered', 'Cancelled'] as ShippingStatus[]).map((s) => (
+                  <div key={s} className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id={`status-${s}`}
+                      checked={status === s}
+                      onChange={() => setStatus(s)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <Label htmlFor={`status-${s}`} className="cursor-pointer">
+                      {shippingStatusIcons[s]} {s}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </Menu.Items>
-      </Transition>
-    </Menu>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditing(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdate} disabled={isUpdating}>
+              {isUpdating ? 'Updating...' : 'Update Status'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
@@ -276,7 +331,7 @@ export default function ManageOrders() {
   const currentItems = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
 
-  const updateOrderStatus = async (newStatus: ShippingStatus, orderId: number) => {
+  const updateshippingStatus = async (newStatus: ShippingStatus, orderId: number) => {
     try {
       setUpdatingStatus(prev => ({ ...prev, [orderId]: true }));
       
@@ -465,30 +520,6 @@ export default function ManageOrders() {
           <h1 className="text-2xl font-bold text-gray-900">Order Management</h1>
           <p className="mt-1 text-sm text-gray-500">View and manage customer orders</p>
         </div>
-        <div className="mt-4 sm:mt-0">
-          <div className="relative">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-gray-700">Filter by status:</span>
-                <select
-                  className="block w-48 pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm"
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value as StatusFilter);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <option value="all">All Orders</option>
-                  {Object.entries(shippingStatusStyles).map(([status, _]) => (
-                    <option key={`shipping-${status}`} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="bg-white shadow overflow-hidden sm:rounded-lg overflow-x-auto border border-gray-200">
@@ -548,13 +579,14 @@ export default function ManageOrders() {
                         {paymentStatusIcons[order.status]} {order.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusDropdown 
-                        currentStatus={order.shippingStatus}
-                        onStatusChange={updateOrderStatus}
+                    <td className="px-6 py-4 whitespace-nowrap"> 
+                      <ShippingStatus 
+                        currentStatus={order.shippingStatus || 'Processing'}
                         orderId={order.id}
-                        shippingData={shippingStatuses[order.id]}
-                        isUpdating={updatingStatus[order.id]}
+                        onUpdate={() => {
+                          // Refresh the shipping status after update
+                          fetchShippingStatus(order.id);
+                        }}
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -703,8 +735,8 @@ export default function ManageOrders() {
                   </div>
                   <div>
                     <span className="text-blue-600 font-medium">Shipping Status:</span>
-                    <div className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${shippingStatusStyles[selectedOrder.shippingStatus]}`}>
-                      {shippingStatusIcons[selectedOrder.shippingStatus]} {selectedOrder.shippingStatus}
+                    <div className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${[selectedOrder.shippingStatus]}`}>
+                      {[selectedOrder.shippingStatus]} {selectedOrder.shippingStatus}
                     </div>
                   </div>
                   <div>
@@ -721,8 +753,8 @@ export default function ManageOrders() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-green-600 font-medium">Status:</span>
-                      <div className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${shippingStatusStyles[shippingStatuses[selectedOrder.id].status as ShippingStatus]}`}>
-                        {shippingStatusIcons[shippingStatuses[selectedOrder.id].status as ShippingStatus]} {shippingStatuses[selectedOrder.id].status}
+                      <div className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${[shippingStatuses[selectedOrder.id].status as ShippingStatus]}`}>
+                        {[shippingStatuses[selectedOrder.id].status as ShippingStatus]} {shippingStatuses[selectedOrder.id].status}
                       </div>
                     </div>
                     {shippingStatuses[selectedOrder.id].trackingNumber && (

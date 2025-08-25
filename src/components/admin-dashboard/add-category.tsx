@@ -193,7 +193,7 @@ const AddCategoryPage = () => {
                   <Button
                     type="submit"
                     disabled={loading || submitting}
-                    className="w-full sm:w-auto px-8 py-2.5 text-base font-medium bg-slate-800 hover:bg-slate-700 text-white transition-all duration-200 transform hover:scale-[1.02] active:scale-95"
+                    className="w-full sm:w-auto px-8 py-2.5 text-base font-medium bg-blue-700 hover:bg-blue-800 text-white transition-all duration-200 transform hover:scale-[1.02] active:scale-95"
                   >
                     {loading
                       ? 'Loading...'

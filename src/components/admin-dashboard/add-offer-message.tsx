@@ -31,7 +31,7 @@ export const AddOfferMessage = () => {
       setOffers(response.data);
       setIsLoading(false);
     } catch (err) {
-      setError('Failed to fetch offers');
+      setError("No offer found");
       setIsLoading(false);
     }
   };

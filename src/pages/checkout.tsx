@@ -404,7 +404,7 @@ const Checkout: React.FC = () => {
           phoneNumber: selectedAddress?.phoneNumber || ""
         },
         status: "Confirmed",
-        ...(appliedCoupon ? { couponCode: appliedCoupon, couponDiscount } : {})
+        couponcode: appliedCoupon ? appliedCoupon : null
       };
       console.log("finalOrder",finalOrder);
       const res = await fetch(`${env.API}/payment/create-order-product`, {

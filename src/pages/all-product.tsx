@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ProductCard } from '../components/product/product-card';
 import { Button } from '../components/ui/button';
 import { toast } from 'react-toastify';
-import Categories from '../components/product/categories';
 import Filter from '../components/product/filter';
 import { SlidersHorizontal } from 'lucide-react';
 import 'react-toastify/dist/ReactToastify.css';
@@ -236,29 +235,6 @@ const AllProduct: React.FC = () => {
     // The useEffect with filterAndSortProducts will handle the sorting
   };
 
-  const handleCategorySelect = (categoryId: number | string | null) => {
-    setSelectedCategory(categoryId);
-
-    // Find category to get its name for the URL
-    const category = categories.find(cat => cat.id === categoryId);
-
-    // Update URL based on category selection
-    if (category) {
-      const categorySlug = category.name.toLowerCase().replace(/\s+/g, '-');
-      navigate(`/products/category/${categorySlug}`, { replace: true });
-    } else {
-      navigate('/products', { replace: true });
-    }
-
-    // Filter products based on selected category
-    if (categoryId) {
-      const filtered = allProducts.filter(product => product.categoryId === categoryId);
-      setFilteredProducts(filtered);
-    } else {
-      setFilteredProducts(allProducts);
-    }
-  };
-
   return (
     <div className="container mx-auto px-4 sm:px-6 py-12">
       {/* Header */}
@@ -274,128 +250,130 @@ const AllProduct: React.FC = () => {
           </div>
 
           <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-4 justify-end" >
-            <Categories
-              onCategorySelect={handleCategorySelect}
-              selectedCategory={selectedCategory}
-            />
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setIsFilterOpen(true)}
-                className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
                 aria-label="Filter products"
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 <span className="text-sm font-medium">Filters</span>
               </button>
-              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-700">Sort by:</span>
-                <select
-                  value={sortBy}
-                  onChange={handleSortChange}
-                  className="border-0 focus:ring-2 focus:ring-blue-500 rounded-md cursor-pointer"
-                  aria-label="Sort products"
-                >
-                  <option value="default">Featured</option>
-                  <option value="price-low-high">Price: Low to High</option>
-                  <option value="price-high-low">Price: High to Low</option>
-                  <option value="newest">Newest Arrivals</option>
-                </select>
+              <div className="relative group">
+                <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-lg border border-gray-200 hover:border-blue-400 transition-colors duration-200 shadow-sm">
+                  <span className="text-sm text-gray-600">Sort by:</span>
+                  <select
+                    value={sortBy}
+                    onChange={handleSortChange}
+                    className="appearance-none bg-transparent border-0 focus:ring-0 focus:outline-none text-sm font-medium text-gray-800 cursor-pointer pr-6 pl-1 py-1"
+                    aria-label="Sort products"
+                  >
+                    <option value="default">Newest Arrivals</option>
+                    <option value="price-low-high">Price: Low to High</option>
+                    <option value="price-high-low">Price: High to Low</option>
+                  </select>
+                  <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-blue-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {selectedCategory && (
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-          >
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to all products
-          </button>
-        )}
-      </div>
-
-      {/* Products Grid */}
-      {isLoading ? (
-        <div className="flex justify-center items-center py-20">
-          <div className="animate-pulse flex flex-col items-center">
-            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-gray-600">Loading products...</p>
-          </div>
-        </div>
-      ) : error ? (
-        <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          </div>
-        </div>
-      ) : filteredProducts.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-          </svg>
-          <h3 className="mt-2 text-lg font-medium text-gray-900">No products found</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {selectedCategory
-              ? 'Try selecting a different category.'
-              : 'Check back later for new arrivals.'}
-          </p>
           {selectedCategory && (
-            <div className="mt-6">
-              <Button
-                onClick={() => setSelectedCategory(null)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                View all products
-              </Button>
-            </div>
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-2 cursor-pointer"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to all products
+            </button>
           )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              id={product.id}
-              name={product.name}
-              category={getCategoryName(product.categoryId)}
-              description={product.description}
-              price={product.price}
-              salePrice={product.salePrice || product.price}
-              imageUrl={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
-              onAddToCart={handleAddToCart}
-            />
-          ))}
-        </div>
-      )}
 
-      {/* Pagination */}
-      {filteredProducts.length > 0 && (
-        <div className="mt-12 text-center">
-          <p className="text-sm text-gray-500">
-            Showing {filteredProducts.length} {selectedCategory ? 'filtered ' : ''}products
-          </p>
-        </div>
-      )}
-      
-      {/* Filter Sidebar */}
-      <Filter 
-        isOpen={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        onFilterChange={handleFilterChange}
-      />
-    </div>
-  );
-};
+        {/* Products Grid */}
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-pulse flex flex-col items-center">
+              <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <p className="mt-4 text-gray-600">Loading products...</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
+            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <h3 className="mt-2 text-lg font-medium text-gray-900">No products found</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {selectedCategory
+                ? 'Try selecting a different category.'
+                : 'Check back later for new arrivals.'}
+            </p>
+            {selectedCategory && (
+              <div className="mt-6">
+                <Button
+                  onClick={() => setSelectedCategory(null)}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  View all products
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                id={product.id}
+                name={product.name}
+                category={getCategoryName(product.categoryId)}
+                description={product.description}
+                price={product.price}
+                salePrice={product.salePrice || product.price}
+                imageUrl={product.imageUrl || 'https://via.placeholder.com/300x400?text=No+Image'}
+                onAddToCart={handleAddToCart}
+              />
+            ))}
+          </div>
+        )}
 
-export default AllProduct;
+        {/* Pagination */}
+        {filteredProducts.length > 0 && (
+          <div className="mt-12 text-center">
+            <p className="text-sm text-gray-500">
+              Showing {filteredProducts.length} {selectedCategory ? 'filtered ' : ''}products
+            </p>
+          </div>
+        )}
+        
+        {/* Filter Sidebar */}
+        <Filter 
+          isOpen={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          onFilterChange={handleFilterChange}
+        />
+      </div>
+    );
+  };
+
+  export default AllProduct;

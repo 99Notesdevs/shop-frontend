@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import { env } from '../../config/env';
+import { useAuth } from '../../contexts/AuthContext'; 
 import logo from '../../assets/logo.png';
 import { LogIn, ChevronDown, ShoppingCart, Heart, Menu, X } from 'lucide-react';
 import { api } from '../../api/route';
 import { SearchBar } from './search-bar';
 import { OfferMessageDisplay } from './offer-message';
 import { CartSidebar } from '../ui/cart-sidebar';
-
+import { useAuthModal } from '../../hooks/useAuthModal';
 interface Category {
   _id: string;
   name: string;
@@ -26,39 +25,13 @@ const Navbar: React.FC = () => {
     openCart, 
     closeCart,
     wishlistCount,
-    updateWishlistCount
   } = useAuth();
   
   // Debug log to check cart data
   useEffect(() => {
   }, [cartItems, cart]);
-
-  // Fetch wishlist count
-  useEffect(() => {
-    const fetchWishlistCount = async () => {
-      if (!isAuthenticated) return;
-      
-      try {
-        const response = await fetch(`${env.API}/wishlist/${user?.id}`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const wishlistProducts = data.data?.products || [];
-          updateWishlistCount(wishlistProducts.length);
-        }
-      } catch (error) {
-        console.error('Error fetching wishlist count:', error);
-      }
-    };
-
-    fetchWishlistCount();
-  }, [isAuthenticated, user?.id, updateWishlistCount]);
+  const { showLogin } = useAuthModal();
+  // Wishlist count is now managed by AuthContext
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,8 +83,8 @@ return (
     <>
       
       <div className="w-full" />
-      <div className="w-full h-10">
-      <OfferMessageDisplay />
+      <div className="w-full">
+        <OfferMessageDisplay />
       </div>
       <nav className="sticky top-0 w-full bg-[var(--bg-light)] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.1)] z-40 h-20 flex items-center px-4 md:px-10 transition-colors duration-200">
         <CartSidebar isOpen={isCartOpen} onClose={closeCart} />
@@ -168,8 +141,8 @@ return (
         <div className="flex items-center gap-2 md:gap-4">
           {!isAuthenticated ? (
             <button
-              onClick={() => window.location.href = `${env.AUTH_PORTAL_API}/login`}
-              className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 text-sm font-medium text-white bg-[var(--indigo-600)] rounded-md hover:bg-[var(--indigo-700)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--indigo-500)] transition-colors"
+              onClick={() => showLogin()}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--indigo-600)] rounded-md hover:bg-[var(--indigo-700)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--indigo-500)] transition-colors cursor-pointer"
             >
               <LogIn className="w-4 h-4" />
               <span className="hidden md:inline">Login</span>
@@ -203,6 +176,13 @@ return (
                     className="block px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-light-secondary)]"
                   >
                     My Orders
+                  </Link>
+                  <div className="border-t border-[var(--border-light)] my-1"></div>
+                  <Link
+                    to="/contact"
+                    className="block px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-light-secondary)]"
+                  >
+                    Contact Us
                   </Link>
                   <div className="border-t border-[var(--border-light)] my-1"></div>
                   <button

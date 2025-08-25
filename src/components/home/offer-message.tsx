@@ -63,13 +63,6 @@ export const OfferMessageDisplay = () => {
             </div>
           </div>
         </div>
-        <button
-          onClick={() => setIsVisible(false)}
-          className="ml-4 text-[var(--text-light)] hover:text-[var(--text-light)] flex-shrink-0 self-start"
-          aria-label="Dismiss"
-        >
-          <FiX size={18} />
-        </button>
       </div>
     </div>
   );

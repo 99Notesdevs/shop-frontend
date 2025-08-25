@@ -21,10 +21,8 @@ interface Product {
   salePrice: number; 
   stock: number;
   imageUrl: string;
-  category: {
-    id: number;
-    name: string;
-  };
+  metadata?: string;
+  categoryId: number;
 }
 
 const ProductPage = () => {
@@ -47,17 +45,10 @@ const ProductPage = () => {
     }
     
     try {
-      const response = await fetch(`${env.API}/wishlist/${currentUser.id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include'
-      });
+      const response = await api.get(`/wishlist/${currentUser.id}`) as { success: boolean; data: any };
 
-      if (response.ok) {
-        const data = await response.json();
-        const wishlistProducts = data.data?.products || [];
+      if (response.success) {
+        const wishlistProducts = response.data?.products || [];
         const isProductInWishlist = wishlistProducts.some((item: any) => item.id === productId);
         setIsInWishlist(isProductInWishlist);
       }
@@ -169,17 +160,10 @@ const ProductPage = () => {
     console.log(product?.id);
     setWishlistLoading(true);
     try {
-      const response = await fetch(`${env.API}/wishlist/${productId}/1`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await api.post(`/wishlist/${productId}/${currentUser?.id}`, {}) as { success: boolean; data: any };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to add to wishlist');
+      if (!response.success) {
+        throw new Error(response.data.message || 'Failed to add to wishlist');
       }
 
       setIsInWishlist(true);
@@ -193,17 +177,10 @@ const ProductPage = () => {
   const removeFromWishlist = async (productId: number) => {
     setWishlistLoading(true);
     try {
-      const response = await fetch(`${env.API}/wishlist/${productId}/1`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await api.delete(`/wishlist/${productId}/${currentUser?.id}`) as { success: boolean; data: any };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to remove from wishlist');
+      if (!response.success) {
+        throw new Error(response.data.message || 'Failed to remove from wishlist');
       }
 
       setIsInWishlist(false);
@@ -487,7 +464,7 @@ const ProductPage = () => {
                 </div>
               </div>
               <div className="pt-4 border-t border-gray-200">
-              <ProductHighlights />
+              <ProductHighlights metaData={product.metadata ? JSON.parse(product.metadata) : {}} />
               <ServiceIcon />
               </div>
             </div>
@@ -516,7 +493,7 @@ const ProductPage = () => {
           <div className="mt-12">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Related Products</h2>
             <RelatedProducts 
-              categoryId={product.category?.id} 
+              categoryId={product.categoryId} 
               currentProductId={product.id} 
               onAddToCart={handleAddToCart} 
             />
