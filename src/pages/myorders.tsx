@@ -4,19 +4,17 @@ import { api } from '../api/route';
 import { 
   Package, 
   Calendar, 
-  MapPin, 
   Truck, 
-  CheckCircle2, 
-  Clock, 
   AlertCircle,
   Loader2,
-  Eye
+  Eye,
+  Check
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
 // Types
-type OrderStatus = 'Completed' | 'Pending' | 'Processing' | 'Shipped' | 'Cancelled';
+type ShippingStatus =  'Processing' | 'Shipped' | 'Cancelled' | 'Delivered';
 
 interface Product {
   id: number;
@@ -41,54 +39,76 @@ interface Shipping {
   carrier: string;
   shippingDate: string;
   estimatedDelivery: string;
-  status: OrderStatus;
+  status: string;  // Changed from Shippingstatus to status to match API
+  Shippingstatus?: string; // Keep for backward compatibility
+  createdAt: string;
+  updatedAt: string;
+  shippingAddress?: string;
 }
 
 interface Order {
   id: number;
   orderDate: string;
   totalAmount: number;
-  status: OrderStatus;
+  status: string;
+  shippingStatus: ShippingStatus; // Shipping status
   userId: number;
+  createdAt: string;
+  updatedAt: string;
   billingAddressId: number | null;
   shippingAddressId: number | null;
   billingAddress: {
     id: number;
+    userId: number;
     name: string;
-    phone: string;
     addressLine1: string;
     addressLine2: string;
     city: string;
     state: string;
     zipCode: string;
+    country: string;
+    phoneNumber: string;
+    createdAt: string;
+    updatedAt: string;
   };
   shippingAddress: {
     id: number;
+    userId: number;
     name: string;
-    phone: string;
     addressLine1: string;
     addressLine2: string;
     city: string;
     state: string;
     zipCode: string;
+    country: string;
+    phoneNumber: string;
+    createdAt: string;
+    updatedAt: string;
   };
-  createdAt: string;
-  updatedAt: string;
   orderItems: OrderItem[];
-  shipping: Shipping[];
-}
-
-interface OrderWithDetails extends Order {
-  trackingNumber?: string;
-  estimatedDelivery?: string;
+  user: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+    password: string;
+    oauthId: string | null;
+    oauthProvider: string;
+    createdAt: string;
+    updatedAt: string;
+  };
 }
 
 export default function MyOrders() {
   const { user} = useAuth();
   const navigate = useNavigate();
-  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
+  const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
     if (!user) {
@@ -106,13 +126,6 @@ export default function MyOrders() {
     data: Order[];
     message?: string;
   }
-
-  interface ShippingResponse {
-    success: boolean;
-    data: Shipping[];
-    message?: string;
-  }
-
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -137,30 +150,41 @@ export default function MyOrders() {
       
       // Fetch shipping status for each order
       const ordersWithShipping = await Promise.all(
-        ordersData.map(async (order: Order) => {
+        ordersData.map(async (order) => {
           try {
             console.log('Fetching shipping for order:', order.id);
-            const { data: shippingResponse } = await api.post<ShippingResponse>('/shipping', { orderId: order.id });
+            const { data: shippingResponse } = await api.get(`/shipping/${order.id}`) as { success: boolean; data: Shipping[] };
             console.log('Shipping API response for order', order.id, ':', shippingResponse);
             
             if (shippingResponse && shippingResponse.length > 0) {
               const latestShipping = shippingResponse[0]; // Get the latest shipping info
+              console.log('Latest shipping data for order', order.id, ':', latestShipping);
+              
+              // Get status from the correct property and ensure it's properly typed
+              const shippingStatus = (latestShipping.status || latestShipping.Shippingstatus || 'Processing') as ShippingStatus;
+              console.log('Derived shipping status:', shippingStatus);
+              
               return {
                 ...order,
-                status: latestShipping.status as OrderStatus,
+                shippingStatus,
                 trackingNumber: latestShipping.trackingNumber,
-                estimatedDelivery: latestShipping.estimatedDelivery
+                estimatedDelivery: latestShipping.estimatedDelivery || order.orderDate // Fallback to order date if no estimated delivery
               };
             }
-            return order;
+            return { ...order, shippingStatus: 'Processing' as ShippingStatus };
           } catch (error) {
             console.warn(`Could not fetch shipping for order ${order.id}:`, error);
-            return order;
+            return { ...order, shippingStatus: 'Processing' as ShippingStatus };
           }
         })
       );
-
+      
+      // Log all orders with their shipping status for debugging
+      console.log('All orders with shipping status:', ordersWithShipping);
+      
+      // Set all orders and check if there are more to load
       setOrders(ordersWithShipping);
+      setHasMore(ordersWithShipping.length > itemsPerPage);
     } catch (err) {
       console.error('Error fetching orders:', err);
       setError('Failed to load orders. Please try again later.');
@@ -168,32 +192,6 @@ export default function MyOrders() {
       setLoading(false);
     }
   };
-
-
-  const getStatusColor = (status: OrderStatus) => {
-    const statusColors: Record<OrderStatus, string> = {
-      'Pending': 'bg-yellow-100 text-yellow-800',
-      'Processing': 'bg-blue-100 text-blue-800',
-      'Shipped': 'bg-purple-100 text-purple-800',
-      'Completed': 'bg-green-100 text-green-800',
-      'Cancelled': 'bg-red-100 text-red-800'
-    };
-    return statusColors[status] || 'bg-gray-100 text-gray-800';
-  };
-
-
-  const getStatusIcon = (status: OrderStatus) => {
-    const statusIcons: Record<OrderStatus, React.ReactNode> = {
-      'Pending': <Clock className="h-4 w-4" />,
-      'Processing': <Package className="h-4 w-4" />,
-      'Shipped': <Truck className="h-4 w-4" />,
-      'Completed': <CheckCircle2 className="h-4 w-4" />,
-      'Cancelled': <AlertCircle className="h-4 w-4" />
-    };
-    return statusIcons[status] || <Package className="h-4 w-4" />;
-  };
-
-
   const formatDate = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleDateString('en-US', {
@@ -213,8 +211,154 @@ export default function MyOrders() {
     }).format(price);
   };
 
-  const viewOrderDetails = (orderId: number) => {
-    navigate(`/order/${orderId}`);
+  const getShippingStatusIndex = (status: ShippingStatus): number => {
+   
+    if (!status) {
+   return 0;
+    }
+    const statusStr = status.toString().trim().toLowerCase();
+    
+    let result: number;
+    switch(statusStr) {
+      case 'processing':result = 0;
+        break;
+      case 'shipped':result = 1;
+        break;
+      case 'delivered':result = 2;
+        break;
+      case 'cancelled':result = -1;
+        break;
+      default:result = 0;
+    }
+    return result;
+  };
+
+  const getStatusText = (status: ShippingStatus): string => {
+    if (!status) return 'Order Placed';
+    const statusStr = status.toString().toLowerCase().trim();
+    
+    switch(statusStr) {
+      case 'processing': return 'Processing your order';
+      case 'shipped': return 'Shipped';
+      case 'delivered': return 'Delivered';
+      case 'cancelled': return 'Order Cancelled';
+      default: return 'Order Placed';
+    }
+  };
+
+  const renderShippingStatus = (status: ShippingStatus | undefined) => {
+    if (!status) {
+      status = 'Processing'; // Default status
+    }
+    
+    const statuses = ['Processing', 'Shipped', 'Delivered'] as const;
+    const currentStatusIndex = getShippingStatusIndex(status);
+    const isCancelled = status.toString().toLowerCase() === 'cancelled';
+    
+
+    return (
+      <div className="relative px-4 py-5 bg-white/50 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm">
+        <div className="absolute inset-0 bg-gradient-to-br from-white/80 to-white/30 rounded-xl -z-10"></div>
+        <div className="flex items-center justify-between relative">
+          {statuses.map((stage, index) => {
+            const isActive = currentStatusIndex >= index;
+            const isLast = index === statuses.length - 1;
+            const isCompleted = currentStatusIndex > index;
+            const isCurrent = currentStatusIndex === index && !isCancelled;
+            
+            return (
+              <div key={stage} className="flex-1 flex flex-col items-center relative">
+                {/* Progress line */}
+                {!isLast && (
+                  <div className="absolute left-[calc(50%+16px)] right-0 h-1 top-4">
+                    <div className={`h-full rounded-full ${
+                      isCancelled 
+                        ? 'bg-red-100' 
+                        : isCompleted
+                          ? 'bg-gradient-to-r from-indigo-400 to-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.3)]'
+                          : 'bg-gray-100'
+                    }`}></div>
+                  </div>
+                )}
+                {/* Progress line before */}
+                {index > 0 && (
+                  <div className="absolute right-[calc(50%+16px)] left-0 h-1 top-4">
+                    <div className={`h-full rounded-full ${
+                      isCancelled 
+                        ? 'bg-red-100' 
+                        : isCompleted || isActive
+                          ? 'bg-gradient-to-r from-indigo-400 to-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.3)]'
+                          : 'bg-gray-100'
+                    }`}></div>
+                  </div>
+                )}
+                
+                {/* Status indicator */}
+                <div className="relative z-10 group">
+                  <div 
+                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 relative z-20 ${
+                      isCancelled 
+                        ? 'bg-red-50 border-2 border-red-200 text-red-500 shadow-sm' 
+                        : isCurrent
+                          ? 'animate-pulse bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-200 scale-110 border-2 border-white'
+                          : isActive
+                            ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-md shadow-indigo-100 border-2 border-white'
+                            : 'bg-gray-50 border-2 border-gray-100 text-gray-400'
+                    }`}
+                    style={{
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                    }}
+                  >
+                    {isCancelled ? (
+                      <AlertCircle className="h-4 w-4" strokeWidth={2.5} />
+                    ) : isActive ? (
+                      <Check className="h-4 w-4" strokeWidth={3} />
+                    ) : (
+                      <span className="text-xs font-semibold">{index + 1}</span>
+                    )}
+                  </div>
+                  
+                  {/* Status tooltip */}
+                  <div className={`absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all duration-200 opacity-0 group-hover:opacity-100 ${
+                    isCancelled 
+                      ? 'bg-red-50 text-red-600' 
+                      : isActive 
+                        ? 'bg-indigo-50 text-indigo-600' 
+                        : 'bg-gray-50 text-gray-500'
+                  }`}>
+                    {stage}
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 ${
+                      isCancelled 
+                        ? 'bg-red-50' 
+                        : isActive 
+                          ? 'bg-indigo-50' 
+                          : 'bg-gray-50'
+                    }"></div>
+                  </div>
+                </div>
+                
+                {/* Status label */}
+                <span className={`text-xs mt-3 font-medium tracking-wide ${
+                  isCancelled 
+                    ? 'text-red-500' 
+                    : isCurrent 
+                      ? 'text-indigo-600 font-semibold' 
+                      : isActive 
+                        ? 'text-indigo-500' 
+                        : 'text-gray-400'
+                }`}>
+                  {stage}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const viewOrderDetails = (order: Order) => {
+    navigate(`/order/${order.id}`, { state: { order } });
   };
 
   if (loading) {
@@ -246,11 +390,6 @@ export default function MyOrders() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
-          <p className="mt-2 text-gray-600">Track your orders and view order history</p>
-        </div>
 
         {orders.length === 0 ? (
           <div className="text-center py-12">
@@ -266,7 +405,7 @@ export default function MyOrders() {
           </div>
         ) : (
           <div className="space-y-6">
-            {orders.map((order) => (
+            {orders.slice(0, currentPage * itemsPerPage).map((order) => (
               <div key={order.id} className="bg-white shadow rounded-lg overflow-hidden">
                 {/* Order Header */}
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
@@ -286,12 +425,11 @@ export default function MyOrders() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                        {getStatusIcon(order.status)}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium`}>
                         <span className="ml-1 capitalize">{order.status}</span>
                       </span>
                       <Button
-                        onClick={() => viewOrderDetails(order.id)}
+                        onClick={() => viewOrderDetails(order)}
                         variant="outline"
                         size="sm"
                         className="flex items-center space-x-1"
@@ -342,31 +480,33 @@ export default function MyOrders() {
 
                 {/* Order Footer */}
                 <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                  <div className="mb-4">
+                    {renderShippingStatus(order.shippingStatus)}
+                  </div>
+                  
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-6">
                       <div className="flex items-center space-x-2">
-                        <Truck className="h-4 w-4 text-gray-400" />
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                          {getStatusIcon(order.status)}
-                          <span className="ml-1">{order.status}</span>
+                        {order.shippingStatus === 'Cancelled' ? (
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                        ) : order.shippingStatus === 'Shipped' || order.shippingStatus === 'Delivered' ? (
+                          <Truck className="h-4 w-4 text-indigo-600" />
+                        ) : (
+                          <Truck className="h-4 w-4 text-gray-400" />
+                        )}
+                        <span className={`text-sm ${order.shippingStatus === 'Cancelled' ? 'text-red-600' : 'text-gray-600'}`}>
+                          {getStatusText(order.shippingStatus)}
                         </span>
                       </div>
-                      {order.trackingNumber && (
+                      {/* {order.shippingStatus.trackingNumber && (
                         <div className="flex items-center space-x-2">
                           <MapPin className="h-4 w-4 text-gray-400" />
                           <span className="text-sm text-gray-600">
-                            Tracking: {order.trackingNumber}
+                            {order.shippingStatus.trackingNumber}
                           </span>
                         </div>
-                      )}
-                      {order.estimatedDelivery && (
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">
-                            Est. Delivery: {formatDate(order.estimatedDelivery)}
-                          </span>
-                        </div>
-                      )}
+                      )} */}
+                      
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-600">Total Amount</p>
@@ -378,6 +518,18 @@ export default function MyOrders() {
                 </div>
               </div>
             ))}
+            
+            {orders.length > currentPage * itemsPerPage && (
+              <div className="flex justify-center mt-6">
+                <Button 
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  variant="outline"
+                  className="border-indigo-500 text-indigo-600 hover:bg-indigo-50"
+                >
+                  Load More Orders
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

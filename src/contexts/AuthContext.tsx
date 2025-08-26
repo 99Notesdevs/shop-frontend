@@ -62,7 +62,9 @@ interface AuthContextType {
   isLoading: boolean;
   cart: Cart | null;
   cartItems: CartItem[];
+  wishlist: any[];
   wishlistCount: number;
+  updateWishlist: (productId: string | number, action: 'add' | 'remove') => Promise<void>;
   updateWishlistCount: (countOrUpdater: number | ((prevCount: number) => number)) => void;
   login: (email: string, password: string) => Promise<void>;
   adminLogin: (
@@ -104,19 +106,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [wishlistCount, setWishlistCount] = useState(0);
   const [cart, setCart] = useState<Cart | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [wishlist, setWishlist] = useState<any[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const navigate = useNavigate();
 
-  const fetchWishlistCount = async () => {
-    try {
-      // First get the current user to get their ID
-      const userData = await fetchUserData();
-      if (!userData?.id) {
-        setWishlistCount(0);
-        return;
-      }
+  const fetchWishlist = async () => {
+    if (!user?.id) return;
 
-      const response = await fetch(`${env.API}/wishlist/${userData.id}`, {
+    try {
+      const response = await fetch(`${env.API}/wishlist/${user.id}`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -125,25 +123,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        // Calculate count from the wishlist items array
-        const count = data.data?.products?.length || 0;
-        setWishlistCount(count);
+        const wishlistItems = data.data?.products || [];
+        setWishlist(wishlistItems);
+        setWishlistCount(wishlistItems.length);
       }
     } catch (error) {
       console.error('Failed to fetch wishlist:', error);
+      setWishlist([]);
       setWishlistCount(0);
+    }
+  };
+
+  const updateWishlist = async (productId: string | number, action: 'add' | 'remove') => {
+    if (!user?.id) return;
+
+    try {
+      if (action === 'add') {
+        await fetch(`${env.API}/wishlist/${productId}/${user.id}`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        setWishlist(prev => [...prev, { id: productId }]);
+        setWishlistCount(prev => prev + 1);
+      } else {
+        await fetch(`${env.API}/wishlist/${productId}/${user.id}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        setWishlist(prev => prev.filter(item => item.id !== productId));
+        setWishlistCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
     }
   };
 
   // Check authentication status on mount
   useEffect(() => {
     const checkAuth = async () => {
-      // const token = Cookies.get("token"); 
-      // if (!token) {
-      //   setIsLoading(false);
-      //   return;
-      // }
-
       try {
         // Check if admin first
         const isAdmin = await checkAdminStatus();
@@ -158,8 +175,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (userData) {
           setUser(userData);
           localStorage.setItem("userId", userData.id.toString());
-          // Fetch wishlist count when user data is loaded
-          await fetchWishlistCount();
+          // Fetch wishlist when user data is loaded
+          await fetchWishlist();
         }
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -267,14 +284,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setCartItems(updatedCart.items || updatedCart.cartItems || []);
   };
 
-  const updateWishlistCount = (countOrUpdater: number | ((prevCount: number) => number)) => {
-    if (typeof countOrUpdater === 'function') {
-      setWishlistCount(prev => (countOrUpdater as (prev: number) => number)(prev));
-    } else {
-      setWishlistCount(countOrUpdater);
-    }
-  };
-
   const clearCart = () => {
     setCart(null);
     setCartItems([]);
@@ -310,8 +319,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setUser(userData);
       localStorage.setItem("userId", userData.id.toString());
-      // Fetch wishlist count after successful login
-      await fetchWishlistCount();
+      await fetchWishlist();
       console.log("login successful!!!");
       navigate("/", { replace: true });
     } catch (error) {
@@ -434,23 +442,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     if (user?.id) {
       fetchCartData();
+      fetchWishlist();
     } else {
       setCart(null);
       setCartItems([]);
+      setWishlist([]);
+      setWishlistCount(0);
     }
   }, [user]);
+
+  // Login function implementation should be defined here if not already present
 
   return (
     <AuthContext.Provider
       value={{
         user,
         admin,
-        isAuthenticated: !!user || admin,
+        isAuthenticated: !!user,
         isLoading,
         cart,
         cartItems,
+        wishlist,
+        updateWishlist,
         wishlistCount,
-        updateWishlistCount,
+        updateWishlistCount: setWishlistCount,
         login,
         adminLogin,
         logout: handleLogout,

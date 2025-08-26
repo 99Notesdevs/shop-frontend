@@ -56,7 +56,7 @@ export const OfferMessageDisplay = () => {
               }`}
               style={{ top: '50%', transform: 'translateY(-50%)' }}
             >
-              <div className="flex items-center justify-center">
+              <div className="flex items-center justify-center pb-2">
                 <FiAlertTriangle className="text-[var(--text-light)] mr-2 flex-shrink-0" />
                 <p className="text-[var(--text-light)] font-medium text-sm">{offers[currentIndex]?.description}</p>
               </div>
