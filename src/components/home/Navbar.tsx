@@ -83,7 +83,7 @@ return (
     <>
       
       <div className="w-full" />
-      <div className="w-full">
+      <div className="w-full h-10">
         <OfferMessageDisplay />
       </div>
       <nav className="sticky top-0 w-full bg-[var(--bg-light)] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.1)] z-40 h-20 flex items-center px-4 md:px-10 transition-colors duration-200">

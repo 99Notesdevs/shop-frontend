@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { ShoppingCart, Heart, Check, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { api } from '../../api/route';
 
 interface ProductCardProps {
   id: number;
@@ -14,7 +13,6 @@ interface ProductCardProps {
   salePrice: number;
   imageUrl: string;
   onAddToCart: (id: string) => void;
-  isInWishlist?: boolean;
 }
 
 export function ProductCard({
@@ -26,18 +24,12 @@ export function ProductCard({
   salePrice,
   imageUrl,
   onAddToCart,
-  isInWishlist = false,
 }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const navigate = useNavigate();
-  const { cart, user, updateWishlistCount } = useAuth();
-  const [isWishlisted, setIsWishlisted] = useState(false);
-
-  // Update isWishlisted when the prop changes
-  useEffect(() => {
-    setIsWishlisted(!!isInWishlist);
-  }, [isInWishlist]);
+  const { cart, user, wishlist = [], updateWishlist } = useAuth();
+  const isWishlisted = wishlist.some(item => item.id === id);
 
   const isProductInCart = useCallback(() => {
     if (!cart || !cart.cartItems) return false;
@@ -55,14 +47,7 @@ export function ProductCard({
 
     setWishlistLoading(true);
     try {
-      if (isWishlisted) {
-        await api.delete(`/wishlist/${id}/${user.id}`);
-        updateWishlistCount((prev) => Math.max(0, prev - 1));
-      } else {
-        await api.post(`/wishlist/${id}/${user.id}`);
-        updateWishlistCount((prev) => prev + 1);
-      }
-      setIsWishlisted(!isWishlisted);
+      await updateWishlist(id, isWishlisted ? 'remove' : 'add');
     } catch (error) {
       console.error('Error updating wishlist:', error);
     } finally {
