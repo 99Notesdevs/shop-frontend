@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, SlidersHorizontal, Tag, IndianRupee } from 'lucide-react';
 import { api } from '../../api/route';
-import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { cn } from '../../lib/utils';
 
@@ -79,10 +78,6 @@ const Filter: React.FC<FilterProps> = ({ isOpen, onClose, onFilterChange }) => {
 
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategoryId(categoryId);
-  };
-  
-  const handleClearCategory = () => {
-    setSelectedCategoryId(null);
   };
   
   const applyFilters = () => {

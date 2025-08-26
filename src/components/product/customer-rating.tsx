@@ -36,7 +36,6 @@ const CustomerRating = () => {
   const { productId } = useParams<{ productId: string }>();
   const [globalRating, setGlobalRating] = useState<GlobalRating | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
   const [reviewText, setReviewText] = useState('');
@@ -88,8 +87,6 @@ const CustomerRating = () => {
       }
     } catch (error) {
       console.error('Error fetching reviews:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -354,43 +354,132 @@ const Checkout: React.FC = () => {
       return;
     }
 
+    // Handle direct product purchase (from product page)
+    if (location.state?.orderData && location.state?.product) {
+      try {
+        const { orderData: existingOrder, product } = location.state;
+        
+        const finalOrder = {
+          ...existingOrder,
+          amount: total,
+          deliveryAddress: {
+            id: selectedAddress?.id || 0,
+            name: selectedAddress?.name || "",
+            addressLine1: selectedAddress?.addressLine1 || "",
+            addressLine2: selectedAddress?.addressLine2 || '',
+            city: selectedAddress?.city || "",
+            state: selectedAddress?.state || "",
+            zipCode: selectedAddress?.zipCode || "",
+            country: selectedAddress?.country || "",
+            phoneNumber: selectedAddress?.phoneNumber || ""
+          },
+          status: "Confirmed"
+        };
+
+        console.log("Final order for direct purchase:", finalOrder);
+        
+        const res = await fetch(`${env.API}/payment/create-order-product`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(finalOrder),
+        });
+
+        if (!res.ok) throw new Error("Order completion failed");
+        
+        const respData = await res.json();
+        console.log("Payment response:", respData);
+        
+        // Create shipping details with default status 'Processing'
+        if (respData.orderId) {
+          try {
+            const shippingResponse = await fetch(`${env.API}/shipping/${respData.orderId}`, {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                shippingAddress: {
+                  name: selectedAddress?.name || '',
+                  addressLine1: selectedAddress?.addressLine1 || '',
+                  addressLine2: selectedAddress?.addressLine2 || '',
+                  city: selectedAddress?.city || '',
+                  state: selectedAddress?.state || '',
+                  zipCode: selectedAddress?.zipCode || '',
+                  country: selectedAddress?.country || '',
+                  phoneNumber: selectedAddress?.phoneNumber || ''
+                },
+                trackingNumber: 'N/A',
+                carrier: 'N/A',
+                status: 'Processing',
+                shippingDate: new Date().toISOString()
+              })
+            });
+
+            if (!shippingResponse.ok) {
+              throw new Error('Failed to create shipping details');
+            }
+            console.log('Shipping details created successfully');
+          } catch (error) {
+            console.error('Error creating shipping details:', error);
+            // Continue with the payment flow even if shipping details creation fails
+          }
+        }
+        
+        // Redirect to payment URL
+        if (respData.data) {
+          window.location.href = respData.data;
+        } else {
+          throw new Error('Payment URL not found in response');
+        }
+        
+      } catch (error) {
+        console.error('Error processing direct purchase:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to process payment');
+      }
+      return;
+    }
+
+    // Handle cart purchase flow
     if (!cartData) {
       toast.error("Cart data missing.");
       return;
     }
+
     try {
       const data = {
         orderDate: new Date().toISOString(),
-        products: cartData.cartItems.map((item: CartItem) => item),
-        totalAmount: cartData.totalAmount,
+        products: cartData.cartItems.map((item: CartItem) => ({
+          productId: item.productId,
+          quantity: item.quantity
+        })),
+        totalAmount: total,
         status: "Pending",
         billingAddressId: selectedAddress?.id,
         shippingAddressId: selectedAddress?.id,
       };
-      console.log("orderData",data);
+      
+      console.log("Order data:", data);
       const response = await api.post<{ success: boolean; data: any }>(`/order`, data);
   
       if (!response.success) {
-        toast.error('Please login to continue');
+        toast.error('Failed to create order');
         return;
       }
-      console.log("response",response);
+      
+      console.log("Order response:", response);
       const responseData = response.data;
       const orderId = responseData.id;
-      console.log("orderId",orderId);
+      
       const orderData = {
         orderId,
         phonepe_transactionId: "",
         status: "",
-        amount: cartData.totalAmount,
+        amount: total,
         validity: 10,
       };
       
-      // Include shipping charge in the cartData passed to checkout
-      
       const finalOrder = {
         ...orderData,
-        // Ensure discounted amount is sent for payment
         amount: total,
         deliveryAddress: {
           id: selectedAddress?.id || 0,
