@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { api } from '../../api/route';
+import {api} from '../../api/route';
+import { ExportOrders } from '../ui/export-orders';
 import { toast } from 'sonner';
 import { Pencil } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -128,37 +129,53 @@ interface ShippingStatusProps {
   currentStatus: ShippingStatus;
   orderId: number;
   onUpdate?: () => void;
+  shippingStatuses: Record<number, any>;
 }
 
-const ShippingStatus = ({ currentStatus = 'Processing', orderId, onUpdate }: ShippingStatusProps) => {
+const ShippingStatus = ({ currentStatus = 'Processing', orderId, onUpdate, shippingStatuses }: ShippingStatusProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [carrier, setCarrier] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
-  const [status, setStatus] = useState<ShippingStatus>(currentStatus || 'Processing');
+  // Get the shipping status from the API response if available, otherwise use the currentStatus prop
+  const shippingData = shippingStatuses[orderId]?.[0]; // Get the first shipping record for the order
+  const [status, setStatus] = useState<ShippingStatus>(shippingData?.status || currentStatus);
   
-  // Ensure status is always set, default to 'Processing' if empty
+  // Update status when shipping data changes
   useEffect(() => {
-    if (!status) {
+    if (shippingData?.status) {
+      setStatus(shippingData.status);
+    } else if (!status) {
       setStatus('Processing');
     }
-  }, [status]);
+    // Initialize carrier and tracking number from shipping data
+    if (shippingData) {
+      setCarrier(shippingData.carrier || '');
+      setTrackingNumber(shippingData.trackingNumber || '');
+    }
+  }, [shippingData]);
   const [isUpdating, setIsUpdating] = useState(false);
   const handleUpdate = async () => {
     try {
       setIsUpdating(true);
-      await api.put(`/shipping/${orderId}`, {
+      // Call the shipping status update endpoint with all required fields
+      await api.put(`/shipping/status/${orderId}`, {
         status,
-        carrier: carrier || 'N/A',
-        trackingNumber: trackingNumber || 0,
+        orderId: orderId.toString(),
+        carrier,
+        trackingNumber,
+        shippingAddress: shippingData?.shippingAddress || ''
       });
       
-      toast.success("Shipping details updated successfully");
+      toast.success("Shipping status updated successfully");
       
+      // Close the dialog and trigger parent update
       setIsEditing(false);
-      onUpdate?.();
+      if (onUpdate) {
+        onUpdate();
+      }
     } catch (error) {
-      console.error('Error updating shipping details:', error);
-      toast.error("Failed to update shipping details");
+      console.error('Error updating shipping status:', error);
+      toast.error("Failed to update shipping status");
     } finally {
       setIsUpdating(false);
     }
@@ -167,7 +184,7 @@ const ShippingStatus = ({ currentStatus = 'Processing', orderId, onUpdate }: Shi
   return (
     <div className="flex items-center space-x-2">
       <div className={`px-2 py-1 text-xs font-semibold rounded-full ${shippingStatusStyles[status]}`}>
-        {shippingStatusIcons[status]} {status}
+        {shippingStatusIcons[status]} {shippingData?.status || status}
       </div>
       <button
         type="button"
@@ -177,7 +194,15 @@ const ShippingStatus = ({ currentStatus = 'Processing', orderId, onUpdate }: Shi
         <Pencil className="h-3 w-3" />
       </button>
       
-      <Dialog open={isEditing} onOpenChange={setIsEditing}>
+      <Dialog open={isEditing} onOpenChange={(open) => {
+        setIsEditing(open);
+        // Reset form when dialog is closed
+        if (!open) {
+          setStatus(shippingData?.status || currentStatus);
+          setCarrier(shippingData?.carrier || '');
+          setTrackingNumber(shippingData?.trackingNumber || '');
+        }
+      }}>
         <DialogContent className="sm:max-w-[425px] bg-white">
           <DialogHeader>
             <DialogTitle>Update Shipping Details</DialogTitle>
@@ -192,7 +217,7 @@ const ShippingStatus = ({ currentStatus = 'Processing', orderId, onUpdate }: Shi
               </Label>
               <Input
                 id="carrier"
-                value={carrier}
+                value={carrier || ''}
                 onChange={(e) => setCarrier(e.target.value)}
                 placeholder="e.g., FedEx, UPS"
                 className="col-span-3"
@@ -204,7 +229,7 @@ const ShippingStatus = ({ currentStatus = 'Processing', orderId, onUpdate }: Shi
               </Label>
               <Input
                 id="tracking"
-                value={trackingNumber}
+                value={trackingNumber || ''}
                 onChange={(e) => setTrackingNumber(e.target.value)}
                 placeholder="Tracking number"
                 className="col-span-3"
@@ -250,13 +275,25 @@ export default function ManageOrders() {
   const [error, setError] = useState<string | null>(null);
   type StatusFilter = 'all' | PaymentStatus | ShippingStatus;
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedPage = localStorage.getItem('manageOrdersCurrentPage');
+      return savedPage ? parseInt(savedPage, 15) : 1;
+    }
+    return 1;
+  });
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [products, setProducts] = useState<Record<number, Product>>({});
   const [shippingStatuses, setShippingStatuses] = useState<Record<number, any>>({});
-  const [updatingStatus, setUpdatingStatus] = useState<Record<number, boolean>>({});
   const itemsPerPage = 10;
+
+  // Save current page to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('manageOrdersCurrentPage', currentPage.toString());
+    }
+  }, [currentPage]);
 
   const fetchShippingStatus = async (orderId: number) => {
     try {
@@ -330,36 +367,6 @@ export default function ManageOrders() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-
-  const updateshippingStatus = async (newStatus: ShippingStatus, orderId: number) => {
-    try {
-      setUpdatingStatus(prev => ({ ...prev, [orderId]: true }));
-      
-      // Update shipping status in backend
-      await api.put(`/shipping/${orderId}`, { 
-        status: newStatus,
-        orderId: orderId 
-      });
-      
-      // Update local state
-      setOrders(orders.map(order => 
-        order.id === orderId 
-          ? { 
-              ...order,
-              shippingStatus: newStatus
-            }
-          : order
-      ));
-      
-      // Refresh shipping status from backend
-      await fetchShippingStatus(orderId);
-    } catch (err) {
-      console.error('Error updating shipping status:', err);
-      setError('Failed to update shipping status');
-    } finally {
-      setUpdatingStatus(prev => ({ ...prev, [orderId]: false }));
-    }
-  };
 
   const openOrderDetails = (order: Order) => {
     setSelectedOrder(order);
@@ -520,6 +527,27 @@ export default function ManageOrders() {
           <h1 className="text-2xl font-bold text-gray-900">Order Management</h1>
           <p className="mt-1 text-sm text-gray-500">View and manage customer orders</p>
         </div>
+        <ExportOrders 
+          orders={currentItems.map(order => ({
+            ...order,
+            status: order.status as string,
+            shippingAddress: order.shippingAddress ? {
+              addressLine1: order.shippingAddress.addressLine1,
+              addressLine2: order.shippingAddress.addressLine2,
+              city: order.shippingAddress.city,
+              state: order.shippingAddress.state,
+              zipCode: order.shippingAddress.zipCode,
+              country: order.shippingAddress.country,
+              phoneNumber: order.shippingAddress.phoneNumber
+            } : 'No shipping address',
+            user: {
+              ...order.user,
+              firstName: order.user?.firstName || '',
+              lastName: order.user?.lastName || ''
+            }
+          }))} 
+          className="mt-4 sm:mt-0" 
+        />
       </div>
 
       <div className="bg-white shadow overflow-hidden sm:rounded-lg overflow-x-auto border border-gray-200">
@@ -557,6 +585,9 @@ export default function ManageOrders() {
                       <div className="text-sm text-gray-500 truncate">
                         {order.user?.email || 'No email provided'}
                       </div>
+                      <div className="text-sm text-gray-500 truncate">
+                        {order.billingAddress?.phoneNumber || 'No phone number provided'}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900">
@@ -587,6 +618,7 @@ export default function ManageOrders() {
                           // Refresh the shipping status after update
                           fetchShippingStatus(order.id);
                         }}
+                        shippingStatuses={shippingStatuses}
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -791,12 +823,10 @@ export default function ManageOrders() {
                     <span className="text-gray-600 font-medium">Email:</span>
                     <div>{selectedOrder.user.email}</div>
                   </div>
-                  {selectedOrder.user.phone && (
                     <div>
                       <span className="text-gray-600 font-medium">Phone:</span>
-                      <div>{selectedOrder.user.phone}</div>
+                      <div>{selectedOrder.billingAddress.phoneNumber}</div>
                     </div>
-                  )}
                   <div>
                     <span className="text-gray-600 font-medium">User ID:</span>
                     <div>#{selectedOrder.user.id}</div>

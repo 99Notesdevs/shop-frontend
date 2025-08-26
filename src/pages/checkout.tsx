@@ -417,7 +417,44 @@ const Checkout: React.FC = () => {
       if (!res.ok) throw new Error("Order completion failed");
       console.log("res",res);
       const respData = await res.json();
-      console.log("respData",respData);
+      console.log("respData", respData);
+      
+      // Create shipping details with default status 'Processing'
+      if (respData.orderId) {
+        try {
+          const shippingResponse = await fetch(`${env.API}/shipping/${respData.orderId}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              shippingAddress: {
+                name: selectedAddress?.name || '',
+                addressLine1: selectedAddress?.addressLine1 || '',
+                addressLine2: selectedAddress?.addressLine2 || '',
+                city: selectedAddress?.city || '',
+                state: selectedAddress?.state || '',
+                zipCode: selectedAddress?.zipCode || '',
+                country: selectedAddress?.country || '',
+                phoneNumber: selectedAddress?.phoneNumber || ''
+              },
+              trackingNumber: 'N/A', // Will be updated when shipped
+              carrier: 'N/A', // Will be updated when shipped
+              status: 'Processing',
+              shippingDate: new Date().toISOString()
+            })
+          });
+
+          if (!shippingResponse.ok) {
+            throw new Error('Failed to create shipping details');
+          }
+          console.log('Shipping details created successfully');
+        } catch (error) {
+          console.error('Error creating shipping details:', error);
+          // Continue with the payment flow even if shipping details creation fails
+          // The admin can add these details later
+        }
+      }
+      
       window.location.href = respData.data;
       
     } catch (error) {

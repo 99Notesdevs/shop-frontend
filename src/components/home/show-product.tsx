@@ -1,6 +1,7 @@
 import { ProductCard } from '../product/product-card';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../../api/route';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Category {
   _id: string;
@@ -30,12 +31,44 @@ interface CategoryWithProducts extends Category {
 
 interface ShowProductProps {
   onAddToCart: (id: string) => void;
+  wishlistItems?: any[];
 }
 
-export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart }) => {
+export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart, wishlistItems: initialWishlistItems = [] }) => {
   const [categories, setCategories] = useState<CategoryWithProducts[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [wishlistItems, setWishlistItems] = useState<any[]>(initialWishlistItems);
+  const { user } = useAuth();
+
+  interface WishlistResponse {
+    data?: {
+      products?: Array<{ productId: string | number; product?: { id: string | number } }>;
+      [key: string]: any;
+    };
+    [key: string]: any;
+  }
+
+  const fetchWishlist = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const response = await api.get<WishlistResponse>(`/wishlist/${user.id}`);
+      if (response.data?.products) {
+        setWishlistItems(response.data.products);
+      }
+    } catch (error) {
+      console.error('Error fetching wishlist:', error);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchWishlist();
+    } else {
+      setWishlistItems([]);
+    }
+  }, [user?.id, fetchWishlist]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -59,22 +92,6 @@ export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart }) => {
         const allProducts = Array.isArray(productsResponse)
           ? productsResponse
           : (productsResponse?.data || []);
-          
-        console.log('Extracted categories:', categoriesData);
-        console.log('Extracted products:', allProducts);
-        
-        console.log('All products before filtering:', JSON.stringify(allProducts, null, 2));
-        
-        // Log the structure of the first product (if exists) for debugging
-        if (allProducts.length > 0) {
-          console.log('First product structure:', Object.keys(allProducts[0]));
-          console.log('First product category info:', {
-            categoryId: allProducts[0].categoryId,
-            category: allProducts[0].category,
-            hasCategory: 'category' in allProducts[0],
-            hasCategoryId: 'categoryId' in allProducts[0]
-          });
-        }
         
         // Group products by category
         const categoriesWithProducts = categoriesData.map(category => {
@@ -87,8 +104,6 @@ export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart }) => {
             const productCategoryId = product.categoryId || product.category;
             return productCategoryId?.toString() === categoryId.toString();
           });
-          
-          console.log(`Category ${categoryId} (${category.name}) has ${categoryProducts.length} products`);
           
           return {
             ...category,
@@ -110,9 +125,7 @@ export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart }) => {
   }, []);
 
   const renderCategorySection = (category: CategoryWithProducts) => {
-    console.log(`Rendering category: ${category.name} with ${category.products?.length || 0} products`);
     if (!category.products || category.products.length === 0) {
-      console.log(`Skipping empty category: ${category.name}`);
       return null;
     }
     
@@ -131,15 +144,19 @@ export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart }) => {
             <div className="flex space-x-8">
               {category.products.map((product) => (
                 <div key={product.id} className="flex-shrink-0 w-80">
-                  <ProductCard 
+                  <ProductCard
+                    key={product.id}
                     id={product.id}
                     name={product.name}
                     category={category.name}
                     description={product.description}
                     price={product.price}
-                    salePrice={product.salePrice || product.price}
-                    imageUrl={product.imageUrl || 'https://via.placeholder.com/300'}
+                    salePrice={product.salePrice}
+                    imageUrl={product.imageUrl}
                     onAddToCart={onAddToCart}
+                    isInWishlist={wishlistItems.some(item => 
+                      item?.productId === product.id || item?.product?.id === product.id
+                    )}
                   />
                 </div>
               ))}

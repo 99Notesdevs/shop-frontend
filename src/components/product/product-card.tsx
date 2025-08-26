@@ -1,10 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { ShoppingCart, Heart, Check, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/route';
-import StarRating from '../ui/StarRating';
 
 interface ProductCardProps {
   id: number;
@@ -15,6 +14,7 @@ interface ProductCardProps {
   salePrice: number;
   imageUrl: string;
   onAddToCart: (id: string) => void;
+  isInWishlist?: boolean;
 }
 
 export function ProductCard({
@@ -26,150 +26,50 @@ export function ProductCard({
   salePrice,
   imageUrl,
   onAddToCart,
+  isInWishlist = false,
 }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const navigate = useNavigate();
-  const { cart, user, wishlistCount, updateWishlistCount } = useAuth();
+  const { cart, user, updateWishlistCount } = useAuth();
+  const [isWishlisted, setIsWishlisted] = useState(false);
+
+  // Update isWishlisted when the prop changes
+  useEffect(() => {
+    setIsWishlisted(!!isInWishlist);
+  }, [isInWishlist]);
 
   const isProductInCart = useCallback(() => {
     if (!cart || !cart.cartItems) return false;
     return cart.cartItems.some((item: any) => item.productId === id);
   }, [cart, id]);
 
-
-
-  interface WishlistResponse {
-    data?: {
-      products?: any[];
-      [key: string]: any;
-    };
-    [key: string]: any;
-  }
-
-  // Check if product is in wishlist
-  const checkWishlistStatus = useCallback(async () => {
-    if (!user?.id) {
-      console.log('No user ID, setting isInWishlist to false');
-      setIsInWishlist(false);
-      return;
-    }
-    
-    try {
-      const response = await api.get<WishlistResponse>(`/wishlist/${user.id}`);
-      
-      // Extract products from the response
-      let products: any[] = [];
-      const responseData = response as any; // Type assertion to handle dynamic response
-      
-      // Handle different response formats
-      if (responseData?.data?.products && Array.isArray(responseData.data.products)) {
-        // Standard format: { data: { products: [...] } }
-        products = responseData.data.products;
-      } else if (Array.isArray(responseData?.data)) {
-        // Direct array format: { data: [...] }
-        products = responseData.data;
-      } else if (Array.isArray(responseData)) {
-        // Raw array format: [...]
-        products = responseData;
-      }
-      
-      console.log('Products in wishlist:', products);
-      
-      // Check if the current product is in the wishlist
-      const isWishlisted = products.some((product: any) => {
-        if (!product) return false;
-        
-        // Try different possible ID fields
-        const productId = product.id || (product.product && product.product.id);
-        if (productId === undefined) return false;
-        
-        const matches = String(productId) === String(id);
-        
-        if (matches) {
-          console.log('Found matching product in wishlist:', {
-            productId,
-            targetId: id,
-            product
-          });
-        }
-        
-        return matches;
-      });
-      setIsInWishlist(isWishlisted);
-    } catch (error) {
-      console.error('Error checking wishlist status:', error);
-      setIsInWishlist(false);
-    }
-  }, [user, id]);
-
-  // Check wishlist status on component mount, when user changes, or when auth state changes
-  useEffect(() => {
-    // Only check if we have a user ID
-    if (user?.id) {
-      console.log('Checking wishlist status for user:', user.id);
-      checkWishlistStatus();
-    } else {
-      console.log('No user, setting isInWishlist to false');
-      setIsInWishlist(false);
-    }
-    
-    // Set up an interval to periodically check wishlist status
-    // This helps if the wishlist was updated in another tab/window
-    const intervalId = setInterval(() => {
-      if (user?.id) {
-        checkWishlistStatus();
-      }
-    }, 10000); // Check every 10 seconds
-    
-    return () => clearInterval(intervalId);
-  }, [checkWishlistStatus, user?.id]);
-  
-  // Also check wishlist status when the component becomes visible again
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        checkWishlistStatus();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [checkWishlistStatus]);
-
-  const toggleWishlist = async (e: React.MouseEvent) => {
+  // Handle wishlist toggle
+  const handleWishlistToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
-    if (!user) {
-      alert('Please login to manage your wishlist');
+    if (!user?.id) {
       navigate('/login');
       return;
     }
 
     setWishlistLoading(true);
     try {
-      if (isInWishlist) {
+      if (isWishlisted) {
         await api.delete(`/wishlist/${id}/${user.id}`);
-        setIsInWishlist(false);
-        // Decrement wishlist count
-        const currentCount = typeof wishlistCount === 'number' ? wishlistCount : 0;
-        updateWishlistCount(Math.max(0, currentCount - 1));
+        updateWishlistCount((prev) => Math.max(0, prev - 1));
       } else {
         await api.post(`/wishlist/${id}/${user.id}`);
-        setIsInWishlist(true);
-        // Increment wishlist count
-        const currentCount = typeof wishlistCount === 'number' ? wishlistCount : 0;
-        updateWishlistCount(currentCount + 1);
+        updateWishlistCount((prev) => prev + 1);
       }
+      setIsWishlisted(!isWishlisted);
     } catch (error) {
       console.error('Error updating wishlist:', error);
     } finally {
       setWishlistLoading(false);
     }
   };
+
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -207,17 +107,17 @@ export function ProductCard({
       {/* Wishlist Button */}
       <button 
         className={`absolute top-3 right-3 z-10 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm transition-all duration-200 hover:scale-110 cursor-pointer ${
-          isInWishlist ? 'text-rose-500' : 'text-gray-400 hover:text-rose-500'
+          isWishlisted ? 'text-rose-500' : 'text-gray-400 hover:text-rose-500'
         }`}
-        onClick={toggleWishlist}
+        onClick={handleWishlistToggle}
         disabled={wishlistLoading}
-        aria-label={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+        aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
       >
         {wishlistLoading ? (
           <Loader2 className="w-4 h-4 animate-spin" />
         ) : (
           <Heart 
-            className={`w-4 h-4 ${isInWishlist ? 'fill-current' : ''}`} 
+            className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} 
           />
         )}
       </button>
@@ -283,7 +183,6 @@ export function ProductCard({
         {/* Rating */}
         <div className="flex items-center mb-4">
           <div className="flex">
-          {/* <StarRating productId={ProductC.id} size={16} readOnly showUserRating /> */}
           </div>
         </div>
         
