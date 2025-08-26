@@ -13,7 +13,6 @@ import {
   PhoneOutlined, 
   EnvironmentOutlined,
   EditOutlined,
-  PlusOutlined,
   CalendarOutlined,
 } from '@ant-design/icons';
 

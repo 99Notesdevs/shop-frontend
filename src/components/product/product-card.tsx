@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { ShoppingCart, Heart, Check, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import StarRating from '../ui/StarRating';
 
 interface ProductCardProps {
   id: number;
@@ -165,11 +166,7 @@ export function ProductCard({
         
         <p className="text-sm text-gray-500 mb-4 line-clamp-2">{description}</p>
         
-        {/* Rating */}
-        <div className="flex items-center mb-4">
-          <div className="flex">
-          </div>
-        </div>
+        
         
         {/* Category and Cart Status */}
         <div className="mt-auto pt-3 border-t border-gray-100 flex justify-between items-center">
@@ -181,6 +178,11 @@ export function ProductCard({
               <Check className="w-3 h-3 mr-1" /> In Cart
             </span>
           )}
+        </div>
+
+        {/* Rating */}
+        <div className="flex items-center justify-end mt-2">
+          <StarRating productId={id} readonly={true} />
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { DollarSign, Package, CheckCircle, XCircle, TrendingUp } from 'lucide-react';
+import { DollarSign, Package, CheckCircle, XCircle } from 'lucide-react';
 import { api } from '../../api/route';
 
 // Format currency utility
@@ -25,6 +25,10 @@ export default function RevenueDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Add new state for pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showAllOrders, setShowAllOrders] = useState(false);
+  const ordersPerPage = 5;
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -51,9 +55,31 @@ export default function RevenueDashboard() {
   const totalRevenue = completedOrders.reduce((sum, order) => sum + order.totalAmount, 0);
   
   // For the recent orders table, we'll only show completed orders
-  const recentCompletedOrders = [...completedOrders]
-    .sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime())
-    .slice(0, 5);
+  const sortedCompletedOrders = [...completedOrders].sort(
+    (a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
+  );
+
+  const totalPages = Math.ceil(sortedCompletedOrders.length / ordersPerPage);
+  
+  const paginatedOrders = showAllOrders 
+    ? sortedCompletedOrders 
+    : sortedCompletedOrders.slice(
+        (currentPage - 1) * ordersPerPage,
+        currentPage * ordersPerPage
+      );
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
+
+  const handleViewAllOrders = () => {
+    setShowAllOrders((prev) => !prev);
+    setCurrentPage(1);
+  };
 
   if (loading) {
     return (
@@ -145,25 +171,6 @@ export default function RevenueDashboard() {
               <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</p>
               <p className="text-xs text-gray-500 mt-1">From {completedOrders.length} orders</p>
             </div>
-            {orders.length > 0 && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                +{Math.round((completedOrders.length / orders.length) * 100)}%
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Total Orders Card */}
-        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-500">Total Orders</h3>
-            <div className="p-2 bg-purple-50 rounded-lg">
-              <Package className="h-5 w-5 text-purple-600" />
-            </div>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
-            <p className="text-xs text-gray-500 mt-1">All time orders</p>
           </div>
         </div>
 
@@ -182,33 +189,6 @@ export default function RevenueDashboard() {
                 {orders.length > 0 ? Math.round((completedOrders.length / orders.length) * 100) : 0}% success rate
               </p>
             </div>
-            {orders.length > 0 && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                {Math.round((completedOrders.length / orders.length) * 100)}%
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Average Order Value Card */}
-        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-500">Avg. Order Value</h3>
-            <div className="p-2 bg-amber-50 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-amber-600" />
-            </div>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-gray-900">
-              {completedOrders.length > 0 
-                ? formatCurrency(totalRevenue / completedOrders.length) 
-                : formatCurrency(0)}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {completedOrders.length > 0 
-                ? `Based on ${completedOrders.length} orders` 
-                : 'No completed orders'}
-            </p>
           </div>
         </div>
       </div>
@@ -220,8 +200,12 @@ export default function RevenueDashboard() {
             <h2 className="text-xl font-semibold text-gray-900">Recent Orders</h2>
             <p className="text-sm text-gray-500 mt-1">Latest completed transactions</p>
           </div>
-          <button className="text-sm font-medium text-blue-600 hover:text-blue-800">
-            View all orders →
+          {/* Replace the View all orders button with this */}
+          <button 
+            onClick={handleViewAllOrders}
+            className="text-sm font-medium text-blue-600 hover:text-blue-800"
+          >
+            {showAllOrders ? "Show less ↑" : "View all orders →"}
           </button>
         </div>
         
@@ -242,7 +226,7 @@ export default function RevenueDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {recentCompletedOrders.map((order) => (
+                {paginatedOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -295,19 +279,38 @@ export default function RevenueDashboard() {
             </table>
           </div>
           
+          {/* Replace the pagination section with this */}
           {completedOrders.length > 0 && (
             <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
               <p className="text-xs text-gray-500">
-                Showing <span className="font-medium">1-{Math.min(5, completedOrders.length)}</span> of <span className="font-medium">{completedOrders.length}</span> orders
+                Showing <span className="font-medium">
+                  {showAllOrders 
+                    ? `all ${completedOrders.length}` 
+                    : `${((currentPage - 1) * ordersPerPage) + 1}-${Math.min(currentPage * ordersPerPage, completedOrders.length)}`
+                }</span> of <span className="font-medium">{completedOrders.length}</span> orders
               </p>
-              <div className="flex space-x-2">
-                <button className="px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50">
-                  Previous
-                </button>
-                <button className="px-3 py-1 text-xs font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
-                  Next
-                </button>
-              </div>
+              {!showAllOrders && (
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-md ${
+                      currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    Previous
+                  </button>
+                  <button 
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-1 text-xs font-medium text-white bg-blue-600 border border-transparent rounded-md ${
+                      currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+                    }`}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

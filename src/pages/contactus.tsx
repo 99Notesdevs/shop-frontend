@@ -114,10 +114,6 @@ const ContactUs = () => {
                 answer: "We accept various payment methods including credit/debit cards, net banking, UPI, and popular digital wallets for your convenience."
               },
               {
-                question: "Do you offer refunds?",
-                answer: "Yes, we offer refunds for products that are returned in their original condition within our specified return period. Please refer to our Returns & Refunds policy for more details."
-              },
-              {
                 question: "How can I contact customer support?",
                 answer: "You can reach our customer support team through the contact form on this page, via email at support@99notes.in, or by calling us at +91 93680 44455 during our working hours."
               }
