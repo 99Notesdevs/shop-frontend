@@ -37,10 +37,26 @@ export function CartSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     try {
       const cartData = await fetchCartData();
       if (cartData?.cartItems?.length) {
-        // Only fetch products if we have items and they don't have product data
+        // Create a map to combine duplicate products
+        const itemMap = new Map();
+        
+        // Process all items and combine quantities for duplicate products
+        for (const item of cartData.cartItems) {
+          const existingItem = itemMap.get(item.productId);
+          if (existingItem) {
+            // If product already exists, combine quantities
+            existingItem.quantity += item.quantity;
+          } else {
+            // If it's a new product, add it to the map
+            itemMap.set(item.productId, { ...item });
+          }
+        }
+
+        // Convert map values back to array and fetch product details
+        const combinedItems = Array.from(itemMap.values());
+        
         const itemsWithProducts = await Promise.all(
-          cartData.cartItems.map(async (item: any) => {
-            // Skip if we already have the product data
+          combinedItems.map(async (item: any) => {
             if (item.product) return item;
             
             try {

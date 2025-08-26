@@ -55,6 +55,16 @@ export default function Hero() {
     { icon: <CheckCircle className="w-5 h-5" />, text: "Best Prices" }
   ];
 
+  const handleNavigation = (redirectLink: string) => {
+    // Check if it's an external URL
+    if (redirectLink.startsWith('http://') || redirectLink.startsWith('https://')) {
+      window.location.href = redirectLink;
+    } else {
+      // For internal routes
+      navigate(redirectLink);
+    }
+  };
+
   if (isLoading) {
     return <div className="h-96 flex items-center justify-center">Loading...</div>;
   }
@@ -102,7 +112,7 @@ export default function Hero() {
           >
             <Button 
               className="px-8 py-6 text-lg font-semibold bg-[var(--button)] hover:bg-[var(--button-hover)] transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
-              onClick={() => navigate(bannerData.redirectLink)}
+              onClick={() => handleNavigation(bannerData.redirectLink)}
             >
               Explore Products
             </Button>

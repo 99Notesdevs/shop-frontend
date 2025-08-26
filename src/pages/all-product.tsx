@@ -265,7 +265,7 @@ const AllProduct: React.FC = () => {
                   <select
                     value={sortBy}
                     onChange={handleSortChange}
-                    className="appearance-none bg-transparent border-0 focus:ring-0 focus:outline-none text-sm font-medium text-gray-800 cursor-pointer pr-6 pl-1 py-1"
+                    className="appearance-none bg-transparent border-0 focus:ring-0 focus:outline-none text-sm font-medium text-gray-800 cursor-pointer pr-6 pl-1 py-1 hover:bg-gray-50 rounded-md [&>option]:bg-white [&>option]:py-2 [&>option]:px-4"
                     aria-label="Sort products"
                   >
                     <option value="default">Newest Arrivals</option>

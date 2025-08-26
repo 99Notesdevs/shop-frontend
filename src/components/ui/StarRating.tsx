@@ -1,103 +1,52 @@
-import { useState, useEffect } from 'react';
-import { FaStar } from 'react-icons/fa';
+import { useEffect, useState } from 'react';
 import { api } from '../../api/route';
+import { FaStar } from 'react-icons/fa';
 
 interface StarRatingProps {
   productId: number;
-  userId?: string;
-  interactive?: boolean;
-  onRatingChange?: (rating: number) => void;
-  initialRating?: number;
-  size?: number;
+  readonly?: boolean;
 }
 
-export const StarRating = ({
-  productId,
-  userId,
-  interactive = false,
-  onRatingChange,
-  initialRating = 0,
-  size = 24,
-}: StarRatingProps) => {
-  const [rating, setRating] = useState(initialRating);
-  const [hover, setHover] = useState<number | null>(null);
-  const [globalRating, setGlobalRating] = useState<number | null>(null);
+const StarRating = ({ productId}: StarRatingProps) => {
+  const [rating, setRating] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchRatings = async () => {
+    const fetchGlobalRating = async () => {
       try {
-        // Fetch global rating
-        const globalRes = await api.get(`/productRating/global/${productId}`) as {success:boolean,data:number};
-        if (globalRes.success && globalRes.data) {
-          setGlobalRating(parseFloat(globalRes.data.toFixed(1)));
-        }
-
-        // Fetch user rating if userId is provided
-        if (userId) {
-          const userRes = await api.get(`/productRating/user/${productId}/${userId}`) as {success:boolean,data:number};
-          if (userRes.success && userRes.data) {
-            setRating(userRes.data);
-          }
+        const { data } = await api.get(`/productRating/global/${productId}`) as { success: boolean; data: { averageRating: number } };
+        if (data.averageRating) {
+          setRating(data.averageRating || 0);
         }
       } catch (error) {
-        console.error('Error fetching ratings:', error);
+        console.error('Error fetching rating:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRatings();
-  }, [productId, userId]);
-
-  const handleRating = async (selectedRating: number) => {
-    if (!interactive || !userId) return;
-
-    try {
-      // Try to update existing rating
-      await api.post(`/productRating/${productId}`, { rating: selectedRating }) as {success:boolean,data:number};
-      setRating(selectedRating);
-      if (onRatingChange) {
-        onRatingChange(selectedRating);
-      }
-    } catch (error) {
-      console.error('Error updating rating:', error);
-    }
-  };
+    fetchGlobalRating();
+  }, [productId]);
 
   if (loading) {
-    return <div className="flex">Loading ratings...</div>;
+    return <div className="animate-pulse">Loading rating...</div>;
   }
 
   return (
-    <div className="flex items-center">
-      <div className="flex">
-        {[...Array(5)].map((_, index) => {
-          const ratingValue = index + 1;
-          return (
-            <label key={index}>
-              <input
-                type="radio"
-                name="rating"
-                value={ratingValue}
-                onClick={() => handleRating(ratingValue)}
-                className="hidden"
-                disabled={!interactive}
-              />
-              <FaStar
-                className="cursor-pointer"
-                color={ratingValue <= (hover || rating) ? '#ffc107' : '#e4e5e9'}
-                size={size}
-                onMouseEnter={() => interactive && setHover(ratingValue)}
-                onMouseLeave={() => interactive && setHover(null)}
-              />
-            </label>
-          );
-        })}
-      </div>
-      {globalRating !== null && (
-        <span className="ml-2 text-gray-600">
-          {globalRating} ({interactive ? 'Your rating' : 'Rating'})
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <FaStar
+          key={star}
+          className={`w-5 h-5 ${
+            star <= rating
+              ? 'text-yellow-400'
+              : 'text-gray-300'
+          }`}
+        />
+      ))}
+      {rating > 0 && (
+        <span className="ml-2 text-sm text-gray-600">
+          {rating.toFixed(1)}
         </span>
       )}
     </div>
