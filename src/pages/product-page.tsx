@@ -33,37 +33,12 @@ const ProductPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [images, setImages] = useState<string[]>(['/placeholder-product.jpg']);
-  const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, wishlist, updateWishlist } = useAuth();
+  const isInWishlist = wishlist?.some(item => item.id === parseInt(id || '0')) || false;
   const navigate = useNavigate();
 
-  const checkWishlistStatus = useCallback(async (productId: number) => {
-    if (!currentUser) {
-      setIsInWishlist(false);
-      return;
-    }
-    
-    try {
-      const response = await api.get(`/wishlist/${currentUser.id}`) as { success: boolean; data: any };
-
-      if (response.success) {
-        const wishlistProducts = response.data?.products || [];
-        const isProductInWishlist = wishlistProducts.some((item: any) => item.id === productId);
-        setIsInWishlist(isProductInWishlist);
-      }
-    } catch (error) {
-      console.error('Error checking wishlist status:', error);
-      setIsInWishlist(false);
-    }
-  }, [currentUser]);
-
-  // Check wishlist status when product or user changes
-  useEffect(() => {
-    if (id && product) {
-      checkWishlistStatus(parseInt(id));
-    }
-  }, [id, product, currentUser, checkWishlistStatus]);
+  // No need for separate wishlist status check as we're using the context
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -151,55 +126,21 @@ const ProductPage = () => {
   
     
 
-  const addToWishlist = async (productId: number) => {
-    if (!currentUser) {
-      toast.error('Please sign in to add items to your wishlist');
+  const toggleWishlist = async () => {
+    if (!id || !currentUser) {
       navigate('/login');
       return;
     }
-    console.log(product?.id);
-    setWishlistLoading(true);
-    try {
-      const response = await api.post(`/wishlist/${productId}/${currentUser?.id}`, {}) as { success: boolean; data: any };
-
-      if (!response.success) {
-        throw new Error(response.data.message || 'Failed to add to wishlist');
-      }
-
-      setIsInWishlist(true);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to add to wishlist');
-    } finally {
-      setWishlistLoading(false);
-    }
-  };
-
-  const removeFromWishlist = async (productId: number) => {
-    setWishlistLoading(true);
-    try {
-      const response = await api.delete(`/wishlist/${productId}/${currentUser?.id}`) as { success: boolean; data: any };
-
-      if (!response.success) {
-        throw new Error(response.data.message || 'Failed to remove from wishlist');
-      }
-
-      setIsInWishlist(false);
-      toast.success('Removed from wishlist');
-    } catch (error) {
-      console.error('Error removing from wishlist:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to remove from wishlist');
-    } finally {
-      setWishlistLoading(false);
-    }
-  };
-
-  const toggleWishlist = async () => {
-    if (!id) return;
     
-    if (isInWishlist) {
-      await removeFromWishlist(parseInt(id));
-    } else {
-      await addToWishlist(parseInt(id));
+    try {
+      setWishlistLoading(true);
+      const productId = parseInt(id);
+      await updateWishlist(productId, isInWishlist ? 'remove' : 'add');
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      toast.error('Failed to update wishlist');
+    } finally {
+      setWishlistLoading(false);
     }
   };
 
@@ -307,8 +248,6 @@ const ProductPage = () => {
       <div className="min-h-screen bg-gray-50">
 
       <main className="max-w-7xl mx-auto">
-        {/* Top Navigation */}
-        
 
         <div className="container mx-auto px-4 py-6">
           {/* Breadcrumb */}
@@ -376,11 +315,9 @@ const ProductPage = () => {
                 
                 <div className="flex items-center mb-4">
                   <div className="flex items-center">
-                   <StarRating 
-                     productId={product.id} 
-                     userId={currentUser?.id?.toString() } 
-                     interactive={!!currentUser}
-                   />
+                    <StarRating 
+                      productId={product.id}
+                    />
                   </div>
                 </div>
 
@@ -486,7 +423,7 @@ const ProductPage = () => {
 
           {/* Customer Rating */}
           <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-            <CustomerRating />
+            <CustomerRating productId={product.id} />
           </div>
 
           {/* Related Products */}
