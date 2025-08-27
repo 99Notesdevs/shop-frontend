@@ -1,8 +1,7 @@
 import Navbar from './Navbar';
 import { useEffect } from 'react';
-// import { useAuth } from '../../contexts/AuthContext';
 import Footer from './footer';
-import Navigation from './navigation';
+import UserModal from '../UserModal';
 
 // interface User {
 //   id: string;
@@ -23,6 +22,7 @@ export const HomeLayout: React.FC<HomeLayoutProps> = ({
 
   useEffect(() => {
     const handleResize = () => {
+      // Handle resize logic if needed
     };
 
     handleResize();
@@ -32,14 +32,16 @@ export const HomeLayout: React.FC<HomeLayoutProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col relative">
-        <Navbar />
-        <Navigation />
-        <div className="flex flex-1 relative h-[calc(100vh-4rem)]">
-            <div className="w-full">
-              {children}
-            </div>
+      <Navbar />
+      
+      <div className="flex flex-1 relative h-[calc(100vh-4rem)]">
+        <div className="w-full">
+          {children}
         </div>
-        <Footer />
+      </div>
+      
+      <Footer />
+      <UserModal />
     </div>
   );
 };

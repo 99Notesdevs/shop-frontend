@@ -7,8 +7,10 @@
   --background: #ffffff;
   
   /* Primary Colors */
-  --primary: #fbbc34;
+  --primary:  #FBAB3B;/*#fbbc34*/
   --primary-hover: #fbb41b;
+  --button:#FBAB3B;
+  --button-hover:#DC7E00;
   --indigo-600: #4f46e5;
   --indigo-700: #4338ca;
   --indigo-500: #6366f1;
@@ -17,13 +19,15 @@
   /* Text Colors */
   --text-primary: #4a5568;
   --text-secondary: #6b7280;
+  --text-heading:#3D3D3D;
   --text-light: #000000;
   --text-dark: #ffffff;
   
   /* Background Colors */
   --bg-light: #ffffff;
   --bg-light-secondary: #f9fafb;
-  --bg-dark: #1e293b;/*slate-800*/
+  --bg-pink:#FAF3F3;
+  --bg-dark: #000000;/*slate-800*/
   --bg-dark-secondary: #0f172a;/*slate-900*/
   
   /* Border Colors */

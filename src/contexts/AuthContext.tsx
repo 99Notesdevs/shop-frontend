@@ -13,10 +13,27 @@ import Cookies from "js-cookie";
 import { env } from "../config/env";
 import { useNavigate } from "react-router-dom";
 
+interface CartItem {
+  id: string | number;
+  productId: string | number;
+  quantity: number;
+  // Add other cart item properties as needed
+}
+
+interface Cart {
+  id: string | number;
+  userId: string | number;
+  items: CartItem[];
+  cartItems: CartItem[]; // This is the actual property name from the API
+  // Add other cart properties as needed
+}
+
 interface User {
   id: string | number;
   email: string;
   name?: string;
+  cartId?: string | number;
+  cart?: Cart;
   // Add other user properties as needed
 }
 
@@ -43,6 +60,12 @@ interface AuthContextType {
   admin: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
+  cart: Cart | null;
+  cartItems: CartItem[];
+  wishlist: any[];
+  wishlistCount: number;
+  updateWishlist: (productId: string | number, action: 'add' | 'remove') => Promise<void>;
+  updateWishlistCount: (countOrUpdater: number | ((prevCount: number) => number)) => void;
   login: (email: string, password: string) => Promise<void>;
   adminLogin: (
     email: string,
@@ -52,8 +75,14 @@ interface AuthContextType {
   logout: () => void;
   GoogleOneTap: () => JSX.Element | null;
   checkAdmin: () => Promise<boolean>;
-  fetchUserData: (token: string) => Promise<User | null>;
-  fetchUserDetails: (token: string) => Promise<User | null>;
+  fetchUserData: () => Promise<User | null>;
+  fetchUserDetails: () => Promise<User | null>;
+  fetchCartData: () => Promise<Cart | null>;
+  updateCart: (cart: Cart) => void;
+  clearCart: () => void;
+  openCart: () => void;
+  closeCart: () => void;
+  isCartOpen: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,20 +103,67 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [admin, setAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [wishlistCount, setWishlistCount] = useState(0);
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [wishlist, setWishlist] = useState<any[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const navigate = useNavigate();
+
+  const fetchWishlist = async () => {
+    if (!user?.id) return;
+
+    try {
+      const response = await fetch(`${env.API}/wishlist/${user.id}`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const wishlistItems = data.data?.products || [];
+        setWishlist(wishlistItems);
+        setWishlistCount(wishlistItems.length);
+      }
+    } catch (error) {
+      console.error('Failed to fetch wishlist:', error);
+      setWishlist([]);
+      setWishlistCount(0);
+    }
+  };
+
+  const updateWishlist = async (productId: string | number, action: 'add' | 'remove') => {
+    if (!user?.id) return;
+
+    try {
+      if (action === 'add') {
+        await fetch(`${env.API}/wishlist/${productId}/${user.id}`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        setWishlist(prev => [...prev, { id: productId }]);
+        setWishlistCount(prev => prev + 1);
+      } else {
+        await fetch(`${env.API}/wishlist/${productId}/${user.id}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        setWishlist(prev => prev.filter(item => item.id !== productId));
+        setWishlistCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+    }
+  };
 
   // Check authentication status on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const token = Cookies.get("token");
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-
       try {
         // Check if admin first
-        const isAdmin = await checkAdminStatus(token);
+        const isAdmin = await checkAdminStatus();
         if (isAdmin) {
           setAdmin(true);
           setIsLoading(false);
@@ -99,6 +175,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (userData) {
           setUser(userData);
           localStorage.setItem("userId", userData.id.toString());
+          // Fetch wishlist when user data is loaded
+          await fetchWishlist();
         }
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -111,21 +189,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const checkAdminStatus = async (token: string) => {
+  const checkAdminStatus = async () => {
     try {
+      console.log("Checking admin status...");
       const response = await fetch(`${env.API_MAIN}/admin/check`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
-      return response.ok;
+      console.log("Admin check response:", response);
+      const data = await response.json();
+      return data.success;
     } catch (error) {
       console.error("Admin check failed:", error);
+      setAdmin(false);
       return false;
     }
   };
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch(`${env.API_MAIN}/user`, {
+      const response = await fetch(`${env.API_AUTH}/user`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +226,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
   const fetchUserDetails = async () => {
     try {
-      const response = await fetch(`${env.API_MAIN}/user/validate`, {
+      const response = await fetch(`${env.API_AUTH}/user/validate`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -161,10 +243,64 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return null;
     }
   };
+  
+  const fetchCartData = async (): Promise<Cart | null> => {
+    try {
+      // First, get the current user to get their user ID
+      const userData = await fetchUserData();
+      if (!userData?.id) {
+        return null;
+      }
+
+      // Use the correct endpoint to get cart by user ID
+      const response = await fetch(`${env.API}/cart/user/${userData.id}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const cartData = data.data || null;
+        if (cartData) {
+          setCart(cartData);
+          // Use cartData.cartItems if available, otherwise fall back to empty array
+          const items = cartData.cartItems || cartData.items || [];
+          setCartItems(items);
+        }
+        return cartData;
+      }
+      return null;
+    } catch (error) {
+      console.error("Failed to fetch cart data:", error);
+      return null;
+    }
+  };
+
+  const updateCart = (updatedCart: Cart) => {
+    setCart(updatedCart);
+    setCartItems(updatedCart.items || updatedCart.cartItems || []);
+  };
+
+  const clearCart = () => {
+    setCart(null);
+    setCartItems([]);
+  };
+
+  const openCart = () => {
+    setIsCartOpen(true);
+  };
+
+  const closeCart = () => {
+    setIsCartOpen(false);
+  };
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${env.API_MAIN}/user`, {
+      const response = await fetch(`${env.API_AUTH}/user`, {
         method: "POST",
         credentials: 'include',
         headers: { "Content-Type": "application/json" },
@@ -175,12 +311,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error("Login failed");
       }
 
-      // const data = await response.json();
-      // const token = data.data.split(" ")[1];
-      // if (Cookies.get("token")) {
-      //   Cookies.remove("token");
-      // }
-      // Cookies.set("token", token, { expires: 7 });
       const userData = await fetchUserData();
 
       if (!userData) {
@@ -189,7 +319,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setUser(userData);
       localStorage.setItem("userId", userData.id.toString());
-      console.log("login successfull!!!");
+      await fetchWishlist();
+      console.log("login successful!!!");
       navigate("/", { replace: true });
     } catch (error) {
       console.error("Login error:", error);
@@ -208,6 +339,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await fetch(`${env.API_MAIN}/admin`, {
         method: "POST",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, secretKey }),
       });
@@ -215,12 +347,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!response.ok) {
         throw new Error("Admin login failed");
       }
-
-      const data = await response.json();
-      const token = data.data.token;
-
-      Cookies.set("token", token, { expires: 7 });
-      const isAdmin = await checkAdminStatus(token);
+      
+      const isAdmin = await checkAdminStatus();
 
       if (!isAdmin) {
         throw new Error("Not authorized as admin");
@@ -244,27 +372,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     navigate("/login");
   };
 
-  const logout = async () => {
-    try {
-      const token = Cookies.get("token");
-      if (token) {
-        await fetch(`${env.API_MAIN}/logout`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      handleLogout();
-    }
-  };
+  // const logout = async () => {
+  //   try {
+  //     // const token = Cookies.get("token");
+  //     if (token) {
+  //       await fetch(`${env.API_AUTH}/logout`, {
+  //         method: "POST",
+  //         headers: { Authorization: `Bearer ${token}` },
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error("Logout error:", error);
+  //   } finally {
+  //     handleLogout();
+  //   }
+  // };
 
-  const checkAdmin = async () => {
-    const token = Cookies.get("token");
-    if (!token) return false;
-    return checkAdminStatus(token);
-  };
+  // const checkAdmin = async () => {
+  //   const token = Cookies.get("token");
+  //   if (!token) return false;
+  //   return checkAdminStatus();
+  // };
 
   // Google OAuth implementation
   const GoogleOneTap = () => {
@@ -275,7 +403,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         client_id: env.REACT_APP_GOOGLE_CLIENT_ID,
         callback: async (response: { credential: string }) => {
           try {
-            const res = await fetch(`${env.API_MAIN}/user/google`, {
+            const res = await fetch(`${env.API_AUTH}/user/google`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ credential: response.credential }),
@@ -311,20 +439,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return null;
   };
 
+  useEffect(() => {
+    if (user?.id) {
+      fetchCartData();
+      fetchWishlist();
+    } else {
+      setCart(null);
+      setCartItems([]);
+      setWishlist([]);
+      setWishlistCount(0);
+    }
+  }, [user]);
+
+  // Login function implementation should be defined here if not already present
+
   return (
     <AuthContext.Provider
       value={{
         user,
         admin,
-        isAuthenticated: !!user || admin,
+        isAuthenticated: !!user,
         isLoading,
+        cart,
+        cartItems,
+        wishlist,
+        updateWishlist,
+        wishlistCount,
+        updateWishlistCount: setWishlistCount,
         login,
         adminLogin,
-        logout,
+        logout: handleLogout,
         GoogleOneTap,
-        checkAdmin,
+        checkAdmin: checkAdminStatus,
         fetchUserData,
         fetchUserDetails,
+        fetchCartData,
+        updateCart,
+        clearCart,
+        openCart,
+        closeCart,
+        isCartOpen,
       }}
     >
       {children}
