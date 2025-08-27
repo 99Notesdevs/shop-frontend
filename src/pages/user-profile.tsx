@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/route';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button'; 
-import { Card, Spin, Alert, Tabs, Tag, Avatar, Space, Typography } from 'antd';
+import { Card, Spin, Alert, Tabs, Tag, Avatar, Space, Typography, Modal, Form, Input, Checkbox } from 'antd';
 import { 
   LoadingOutlined, 
   UserOutlined, 
@@ -13,9 +13,9 @@ import {
   PhoneOutlined, 
   EnvironmentOutlined,
   EditOutlined,
-  PlusOutlined,
   CalendarOutlined,
 } from '@ant-design/icons';
+import { message } from 'antd';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -153,52 +153,189 @@ export default function UserProfile() {
       };
     });
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh' }}>
-        <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
-      </div>
-    );
-  }
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const [form] = Form.useForm();
 
-  if (error) {
-    return (
-      <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1rem' }}>
-        <Alert
-          message="Error"
-          description={error}
-          type="error"
-          showIcon
-          style={{ marginBottom: '1rem' }}
-        />
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <Button onClick={() => window.location.reload()}>
-            Try Again
+  const showModal = (address: Address | null = null) => {
+    setEditingAddress(address);
+    if (address) {
+      form.setFieldsValue({
+        name: address.name,
+        addressLine1: address.addressLine1,
+        addressLine2: address.addressLine2 || '',
+        city: address.city,
+        state: address.state,
+        postalCode: address.postalCode,
+        country: address.country,
+        phoneNumber: address.phoneNumber,
+        isDefault: address.isDefault
+      });
+    } else {
+      form.resetFields();
+    }
+    setIsModalVisible(true);
+  };
+
+  const handleCancel = () => {
+    setIsModalVisible(false);
+    form.resetFields();
+    setEditingAddress(null);
+  };
+
+  const handleSubmit = async (values: any) => {
+    try {
+      if (editingAddress) {
+        // Update existing address
+        await api.put(`/address/${editingAddress.id}`, values);
+        message.success('Address updated successfully');
+      } else {
+        // Create new address
+        await api.post('/address', values);
+        message.success('Address added successfully');
+      }
+      
+      // Refresh addresses
+      if (user?.id) {
+        await fetchAddresses(String(user.id));
+      }
+      
+      handleCancel();
+    } catch (error) {
+      console.error('Error saving address:', error);
+      message.error('Failed to save address');
+    }
+  };
+
+  const handleDelete = async (addressId: string) => {
+    try {
+      await api.delete(`/address/${addressId}`);
+      message.success('Address deleted successfully');
+      
+      // Refresh addresses
+      if (user?.id) {
+        await fetchAddresses(String(user.id));
+      }
+    } catch (error) {
+      console.error('Error deleting address:', error);
+      message.error('Failed to delete address');
+    }
+  };
+
+  const handleSetDefault = async (addressId: string) => {
+    try {
+      await api.put(`/address/${addressId}/set-default`);
+      message.success('Default address updated');
+      
+      // Refresh addresses
+      if (user?.id) {
+        await fetchAddresses(String(user.id));
+      }
+    } catch (error) {
+      console.error('Error setting default address:', error);
+      message.error('Failed to set default address');
+    }
+  };
+
+  const renderAddressForm = () => (
+    <Modal
+      title={editingAddress ? 'Edit Address' : 'Add New Address'}
+      open={isModalVisible}
+      onCancel={handleCancel}
+      footer={null}
+      width={600}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        initialValues={{
+          isDefault: false
+        }}
+      >
+        <Form.Item
+          name="name"
+          label="Full Name"
+          rules={[{ required: true, message: 'Please enter your full name' }]}
+        >
+          <Input placeholder="John Doe" />
+        </Form.Item>
+        
+        <Form.Item
+          name="addressLine1"
+          label="Address Line 1"
+          rules={[{ required: true, message: 'Please enter your address' }]}
+        >
+          <Input placeholder="123 Main St" />
+        </Form.Item>
+        
+        <Form.Item
+          name="addressLine2"
+          label="Address Line 2 (Optional)"
+        >
+          <Input placeholder="Apt, suite, etc." />
+        </Form.Item>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Form.Item
+            name="city"
+            label="City"
+            rules={[{ required: true, message: 'Please enter your city' }]}
+          >
+            <Input />
+          </Form.Item>
+          
+          <Form.Item
+            name="state"
+            label="State/Province/Region"
+            rules={[{ required: true, message: 'Please enter your state' }]}
+          >
+            <Input />
+          </Form.Item>
+          
+          <Form.Item
+            name="postalCode"
+            label="Postal Code"
+            rules={[{ required: true, message: 'Please enter your postal code' }]}
+          >
+            <Input />
+          </Form.Item>
+          
+          <Form.Item
+            name="country"
+            label="Country"
+            rules={[{ required: true, message: 'Please select your country' }]}
+          >
+            <Input />
+          </Form.Item>
+          
+          <Form.Item
+            name="phoneNumber"
+            label="Phone Number"
+            rules={[{ required: true, message: 'Please enter your phone number' }]}
+          >
+            <Input addonBefore="+1" style={{ width: '100%' }} />
+          </Form.Item>
+        </div>
+        
+        <Form.Item
+          name="isDefault"
+          valuePropName="checked"
+        >
+          <Checkbox>Set as default address</Checkbox>
+        </Form.Item>
+        
+        <div className="flex justify-end space-x-4 mt-6">
+          <Button onClick={handleCancel}>
+            Cancel
           </Button>
-          <Button onClick={() => navigate('/')}>
-            Go to Home
+          <Button onClick={handleSubmit}>
+            {editingAddress ? 'Update Address' : 'Add Address'}
           </Button>
         </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1rem' }}>
-        <Alert
-          message="No User Data"
-          description="No user data available. Please log in to view your profile."
-          type="warning"
-          showIcon
-          style={{ marginBottom: '1rem' }}
-        />
-        <Button onClick={() => navigate('/login')}>
-          Go to Login
-        </Button>
-      </div>
-    );
-  }
+      </Form>
+    </Modal>
+  );
 
   const renderProfileTab = () => (
     <div className="space-y-6">
@@ -318,7 +455,7 @@ export default function UserProfile() {
           <Button 
             variant="outline"
             className="mt-4 flex items-center gap-2"
-            onClick={() => navigate('/profile/add-address')}
+            onClick={() => showModal()}
           >
             Add New Address
           </Button>
@@ -333,7 +470,7 @@ export default function UserProfile() {
         <Button 
           variant="outline"
           className="mt-4 flex items-center gap-2"
-          onClick={() => navigate('/profile/add-address')}
+          onClick={() => showModal()}
         >
           Add New Address
         </Button>
@@ -364,7 +501,7 @@ export default function UserProfile() {
                   size="sm" 
                   variant={address.isDefault ? 'secondary' : 'outline'}
                   disabled={address.isDefault}
-                  onClick={() => console.log('Set as default', address._id)}
+                  onClick={() => handleSetDefault(address.id)}
                 >
                   {address.isDefault ? 'Default Address' : 'Set as Default'}
                 </Button>
@@ -372,9 +509,26 @@ export default function UserProfile() {
                   size="sm" 
                   variant="destructive"
                   className="text-destructive-foreground hover:text-destructive-foreground"
-                  onClick={() => console.log('Delete', address._id)}
+                  onClick={() => {
+                    Modal.confirm({
+                      title: 'Delete Address',
+                      content: 'Are you sure you want to delete this address?',
+                      okText: 'Yes, delete it',
+                      okType: 'danger',
+                      cancelText: 'No, keep it',
+                      onOk: () => handleDelete(address.id)
+                    });
+                  }}
                 >
                   Delete
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="p-1"
+                  onClick={() => showModal(address)}
+                >
+                  <EditOutlined />
                 </Button>
               </div>
             </div>
@@ -385,8 +539,56 @@ export default function UserProfile() {
   );
   };
 
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh' }}>
+        <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1rem' }}>
+        <Alert
+          message="Error"
+          description={error}
+          type="error"
+          showIcon
+          style={{ marginBottom: '1rem' }}
+        />
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <Button onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+          <Button onClick={() => navigate('/')}>
+            Go to Home
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1rem' }}>
+        <Alert
+          message="No User Data"
+          description="No user data available. Please log in to view your profile."
+          type="warning"
+          showIcon
+          style={{ marginBottom: '1rem' }}
+        />
+        <Button onClick={() => navigate('/login')}>
+          Go to Login
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
+      {renderAddressForm()}
       <Title level={2} className="mb-6">My Account</Title>
       
       <Tabs 

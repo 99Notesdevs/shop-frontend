@@ -9,14 +9,20 @@ interface StarRatingProps {
 
 const StarRating = ({ productId}: StarRatingProps) => {
   const [rating, setRating] = useState<number>(0);
+  const [ratingCount, setRatingCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchGlobalRating = async () => {
       try {
-        const { data } = await api.get(`/productRating/global/${productId}`) as { success: boolean; data: { averageRating: number } };
-        if (data.averageRating) {
-          setRating(data.averageRating || 0);
+        const response = await api.get(`/productRating/global/${productId}`) as { 
+          success: boolean; 
+          data: number;
+          count?: number;
+        };
+        if (response.success) {
+          setRating(response.data || 0);
+          setRatingCount(response.count || 0);
         }
       } catch (error) {
         console.error('Error fetching rating:', error);
@@ -46,7 +52,7 @@ const StarRating = ({ productId}: StarRatingProps) => {
       ))}
       {rating > 0 && (
         <span className="ml-2 text-sm text-gray-600">
-          {rating.toFixed(1)}
+          {rating.toFixed(1)} {ratingCount > 0 && `(${ratingCount})`}
         </span>
       )}
     </div>

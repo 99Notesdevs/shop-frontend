@@ -8,6 +8,7 @@ import { Pencil } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { Alert, AlertDescription } from '../ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -286,6 +287,7 @@ export default function ManageOrders() {
   const [showModal, setShowModal] = useState(false);
   const [products, setProducts] = useState<Record<number, Product>>({});
   const [shippingStatuses, setShippingStatuses] = useState<Record<number, any>>({});
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const itemsPerPage = 10;
 
   // Save current page to localStorage when it changes
@@ -494,6 +496,23 @@ export default function ManageOrders() {
     };
   };
 
+  const handleDeleteOrder = async (orderId: number) => {
+    try {
+      const response = await api.delete(`/order/${orderId}`) as { success: boolean; message: string };
+      if (response.success) {
+        toast.success('Order deleted successfully');
+        setOrders(orders.filter(order => order.id !== orderId));
+        setOrderToDelete(null);
+      } else {
+        throw new Error('Failed to delete order');
+      }
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete order';
+      toast.error(errorMessage);
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="animate-pulse flex flex-col items-center space-y-4">
@@ -621,12 +640,18 @@ export default function ManageOrders() {
                         shippingStatuses={shippingStatuses}
                       />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                       <button
                         onClick={() => openOrderDetails(order)}
-                        className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                        className="text-blue-600 hover:text-blue-900"
                       >
                         View Details
+                      </button>
+                      <button
+                        onClick={() => setOrderToDelete(order)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -685,9 +710,13 @@ export default function ManageOrders() {
                 >
                   <span className="sr-only">Previous</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </button>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1}
+                      d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
                 
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum;
@@ -725,7 +754,11 @@ export default function ManageOrders() {
                 >
                   <span className="sr-only">Next</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1}
+                      d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
                 </button>
               </nav>
@@ -943,6 +976,35 @@ export default function ManageOrders() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {orderToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <Alert variant="destructive" className="max-w-md w-full">
+            <div className="space-y-4">
+              <h3 className="font-medium">Are you sure?</h3>
+              <AlertDescription>
+                This action cannot be undone. This will permanently delete order #{orderToDelete.id} and remove all associated data.
+              </AlertDescription>
+              <div className="flex justify-end space-x-2 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setOrderToDelete(null)}
+                  className="border-gray-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDeleteOrder(orderToDelete.id)}
+                >
+                  Delete Order
+                </Button>
+              </div>
+            </div>
+          </Alert>
         </div>
       )}
     </div>
