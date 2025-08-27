@@ -162,7 +162,7 @@ const AllProduct: React.FC = () => {
     );
 
     setFilteredProducts(result);
-  }, [allProducts, selectedCategory]);
+  }, [allProducts, selectedCategory, priceRange]);
 
   useEffect(() => {
     filterAndSortProducts();
