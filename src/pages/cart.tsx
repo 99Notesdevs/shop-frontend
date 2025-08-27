@@ -201,7 +201,7 @@ export default function CartPage() {
     : 0;
   
   // Apply free shipping if subtotal is 500 or more, otherwise use max shipping charge
-  const shipping = subtotal >= 499 ? 0 : (maxShippingCharge > 0 ? maxShippingCharge : 50); // Default to 50 if no shipping charge specified
+  const shipping = subtotal >= 500 ? 0 : (maxShippingCharge > 0 ? maxShippingCharge : 50); // Default to 50 if no shipping charge specified
   
   // Calculate amount needed for free shipping
   const amountNeededForFreeShipping = Math.max(0, 500 - subtotal);
@@ -224,16 +224,19 @@ export default function CartPage() {
     }
 
     try {
-      const response = await api.post(`/coupon/use/${code}`, { totalAmount: currentSubtotal }) as { success: boolean; data: any };
+      // Include shipping in the total amount for coupon validation
+      const totalWithShipping = currentSubtotal + shipping;
+      const response = await api.post(`/coupon/use/${code}`, { totalAmount: totalWithShipping }) as { success: boolean; data: any };
       
       if (response.success) {
         const { discount, type: discountType } = response.data;
         let discountAmount = 0;
         
+        // Apply discount to the total (subtotal + shipping)
         if (discountType === 'percentage') {
-          discountAmount = (currentSubtotal * discount) / 100;
+          discountAmount = (totalWithShipping * discount) / 100;
         } else {
-          discountAmount = discount;
+          discountAmount = Math.min(discount, totalWithShipping); // Ensure discount doesn't exceed total
         }
         
         setCouponDiscount(discountAmount);
@@ -281,7 +284,8 @@ export default function CartPage() {
     }
   };
 
-  const total = Math.max(0, subtotal + shipping - couponDiscount);
+  // Calculate total after applying coupon to both subtotal and shipping
+  const total = Math.max(0, (subtotal + shipping) - couponDiscount);
 
   // Handle remove item from cart
   const handleRemoveItem = async (cartItemId: number) => {
