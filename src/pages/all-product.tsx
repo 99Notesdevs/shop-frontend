@@ -53,6 +53,8 @@ const AllProduct: React.FC = () => {
   const { cart, updateCart } = useAuth();
   const navigate = useNavigate();
   const { categoryName } = useParams();
+  const [skip, setSkip] = useState(0);
+  const take = 20;
 
   // Fetch categories
   useEffect(() => {
@@ -93,7 +95,7 @@ const AllProduct: React.FC = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await api.get('/product?skip=0&take=20') as { success: boolean; data: Product[] };
+        const response = await api.get(`/product?skip=${skip}&take=${take}`) as { success: boolean; data: Product[] };
         if (response.success) {
           setAllProducts(response.data);
 
@@ -125,7 +127,10 @@ const AllProduct: React.FC = () => {
     };
 
     fetchProducts();
-  }, [categoryName, categories]);
+  }, [categoryName, categories, skip, take]);
+
+  const handleNextPage = () => setSkip(skip + take);
+  const handlePrevPage = () => setSkip(Math.max(0, skip - take));
 
   // Function to get category name by ID
   const getCategoryName = (categoryId: string | number) => {
@@ -321,6 +326,12 @@ const AllProduct: React.FC = () => {
             <p className="text-sm text-gray-500">
               Showing {filteredProducts.length} {selectedCategory ? 'filtered ' : ''}products
             </p>
+            <Button onClick={handlePrevPage} disabled={skip === 0}>
+            Previous
+          </Button>
+          <Button onClick={handleNextPage} disabled={filteredProducts.length < take}>
+            Next
+          </Button>
           </div>
         )}
         
