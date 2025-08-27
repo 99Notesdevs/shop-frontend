@@ -46,7 +46,6 @@ const AllProduct: React.FC = () => {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState('default');
   const [selectedCategory, setSelectedCategory] = useState<number | string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
@@ -157,24 +156,8 @@ const AllProduct: React.FC = () => {
       product => product.price >= priceRange[0] && product.price <= priceRange[1]
     );
 
-    // Sort products
-    switch (sortBy) {
-      case 'price-low-high':
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high-low':
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case 'newest':
-        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        break;
-      default:
-        // Default sorting by creation date (newest first)
-        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-
     setFilteredProducts(result);
-  }, [allProducts, selectedCategory, sortBy]);
+  }, [allProducts, selectedCategory]);
 
   useEffect(() => {
     filterAndSortProducts();
@@ -230,11 +213,6 @@ const AllProduct: React.FC = () => {
     }
   };
 
-  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSortBy(e.target.value);
-    // The useEffect with filterAndSortProducts will handle the sorting
-  };
-
   return (
     <div className="container mx-auto px-4 sm:px-6 py-12">
       {/* Header */}
@@ -259,26 +237,6 @@ const AllProduct: React.FC = () => {
                 <SlidersHorizontal className="w-4 h-4" />
                 <span className="text-sm font-medium">Filters</span>
               </button>
-              <div className="relative group">
-                <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-lg border border-gray-200 hover:border-blue-400 transition-colors duration-200 shadow-sm">
-                  <span className="text-sm text-gray-600">Sort by:</span>
-                  <select
-                    value={sortBy}
-                    onChange={handleSortChange}
-                    className="appearance-none bg-transparent border-0 focus:ring-0 focus:outline-none text-sm font-medium text-gray-800 cursor-pointer pr-6 pl-1 py-1 hover:bg-gray-50 rounded-md [&>option]:bg-white [&>option]:py-2 [&>option]:px-4"
-                    aria-label="Sort products"
-                  >
-                    <option value="default">Newest Arrivals</option>
-                    <option value="price-low-high">Price: Low to High</option>
-                    <option value="price-high-low">Price: High to Low</option>
-                  </select>
-                  <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-blue-500 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
-                </div>
               </div>
             </div>
           </div>

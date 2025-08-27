@@ -208,7 +208,6 @@ export default function CartPage() {
   
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
-  const [couponError, setCouponError] = useState('');
 
   useEffect(() => {
     const savedCoupon = localStorage.getItem('appliedCoupon');
@@ -219,50 +218,59 @@ export default function CartPage() {
     }
   }, []);
 
-  const applyCoupon = async () => {
-    if (!couponCode.trim()) {
-      setCouponError('Please enter a coupon code');
-      return;
+  const applyCoupon = async (code = couponCode, currentSubtotal = subtotal) => {
+    if (!code.trim()) {
+      return false;
     }
 
     try {
-      const response = await api.post(`/coupon/use/${couponCode}`,{totalAmount:cartData?.totalAmount}) as {success: boolean; data: any};
-      console.log("Coupon response", response);
+      const response = await api.post(`/coupon/use/${code}`, { totalAmount: currentSubtotal }) as { success: boolean; data: any };
       
       if (response.success) {
         const { discount, type: discountType } = response.data;
-        console.log("discounttype:", discountType, "discount:", discount);
         let discountAmount = 0;
         
         if (discountType === 'percentage') {
-          discountAmount = (subtotal * discount) / 100;
+          discountAmount = (currentSubtotal * discount) / 100;
         } else {
           discountAmount = discount;
         }
         
         setCouponDiscount(discountAmount);
-        setCouponError('');
+        setCouponCode(code);
         localStorage.setItem('appliedCoupon', JSON.stringify({
-          code: couponCode,
+          code,
           discount: discountAmount
         }));
         toast.success('Coupon applied successfully!');
+        return true;
       } else {
-        setCouponError('Invalid coupon code');
         setCouponDiscount(0);
         toast.error('Failed to apply coupon');
+        return false;
       }
     } catch (error) {
       console.error('Error applying coupon:', error);
-      setCouponError('Failed to apply coupon. Please try again.');
       setCouponDiscount(0);
       toast.error('Failed to apply coupon. Please try again.');
+      return false;
     }
   };
 
+  // Re-apply coupon when cart items change
+  useEffect(() => {
+    const savedCoupon = localStorage.getItem('appliedCoupon');
+    if (savedCoupon && cartItems.length > 0) {
+      const { code } = JSON.parse(savedCoupon);
+      applyCoupon(code, subtotal);
+    }
+  }, [subtotal, cartItems.length]);
+
   const removeCoupon = async () => {
     try {
-      await api.post(`/coupon/remove/${couponCode}`, {credentials: 'include'});
+      if (couponCode) {
+        await api.post(`/coupon/remove/${couponCode}`, { credentials: 'include' });
+      }
       setCouponCode('');
       setCouponDiscount(0);
       localStorage.removeItem('appliedCoupon');
@@ -543,7 +551,7 @@ export default function CartPage() {
                   </button>
                 ) : (
                   <button 
-                    onClick={applyCoupon}
+                  onClick={() => applyCoupon()}
                     className="px-6 py-3 bg-[var(--button)] text-white font-medium rounded-lg hover:bg-[var(--button-hover)] transition-colors flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

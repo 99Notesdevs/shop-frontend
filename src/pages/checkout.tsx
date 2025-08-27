@@ -120,19 +120,35 @@ const Checkout: React.FC = () => {
   // Validation error state
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+  // Clear coupon when product changes
+  useEffect(() => {
+    // Clear any existing coupon when product changes
+    if (product) {
+      setAppliedCoupon('');
+      setCouponDiscount(0);
+      setCouponCode('');
+      localStorage.removeItem('appliedCoupon');
+    }
+  }, [product?.id]); // Trigger when product ID changes
+
   // Restore applied coupon from localStorage if it was applied on cart page
   useEffect(() => {
-    try {
-      const savedCouponRaw = localStorage.getItem('appliedCoupon');
-      if (savedCouponRaw) {
-        const saved = JSON.parse(savedCouponRaw) as { code?: string; discount?: number };
-        if (saved?.code) setAppliedCoupon(saved.code);
-        if (typeof saved?.discount === 'number') setCouponDiscount(saved.discount);
+    // Only restore coupon if we're in cart checkout mode (not direct product purchase)
+    if (!product) {
+      try {
+        const savedCouponRaw = localStorage.getItem('appliedCoupon');
+        if (savedCouponRaw) {
+          const saved = JSON.parse(savedCouponRaw) as { code?: string; discount?: number };
+          if (saved?.code) {
+            setAppliedCoupon(saved.code);
+            setCouponDiscount(saved.discount || 0);
+          }
+        }
+      } catch {
+        // ignore JSON parse errors
       }
-    } catch {
-      // ignore JSON parse errors
     }
-  }, []);
+  }, [product]);
 
   // Fetch user addresses
   const fetchUserAddresses = useCallback(async () => {
@@ -357,7 +373,7 @@ const Checkout: React.FC = () => {
     // Handle direct product purchase (from product page)
     if (location.state?.orderData && location.state?.product) {
       try {
-        const { orderData: existingOrder, product } = location.state;
+        const { orderData: existingOrder } = location.state;
         
         const finalOrder = {
           ...existingOrder,
@@ -802,9 +818,14 @@ const Checkout: React.FC = () => {
               <button
                 type="submit"
                 onClick={handleSubmit}
-                className="w-full mt-6 py-3 px-4 rounded-lg font-medium text-white transition-colors bg-[var(--button)] hover:bg-[var(--button-hover)] cursor-pointer"
+                disabled={!selectedAddress}
+                className={`w-full mt-6 py-3 px-4 rounded-lg font-medium text-white transition-all ${
+                  selectedAddress 
+                    ? 'bg-[var(--button)] hover:bg-[var(--button-hover)] cursor-pointer' 
+                    : 'bg-gray-400 cursor-not-allowed opacity-70'
+                }`}
               >
-                Proceed to Payment
+                {selectedAddress ? 'Proceed to Payment' : 'Select an address to continue'}
               </button>
             </div>
           </div>
