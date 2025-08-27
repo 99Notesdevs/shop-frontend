@@ -214,31 +214,29 @@ const AllProduct: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-12">
+    <div className="container mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <Breadcrumb />
         <div className="gap-4 mb-6">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               {selectedCategory
                 ? `${categories.find((c: Category) => c.id === selectedCategory)?.name || 'Category'} Products`
                 : ""}
             </h1>
           </div>
 
-          <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-4 justify-end" >
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setIsFilterOpen(true)}
-                className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
-                aria-label="Filter products"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                <span className="text-sm font-medium">Filters</span>
-              </button>
-              </div>
-            </div>
+          <div className="w-full flex justify-end">
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className="flex items-center justify-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer w-auto"
+              aria-label="Filter products"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              <span className="text-sm font-medium hidden sm:inline">Filters</span>
+            </button>
+          </div>
           </div>
 
           {selectedCategory && (
@@ -258,8 +256,8 @@ const AllProduct: React.FC = () => {
         {isLoading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-pulse flex flex-col items-center">
-              <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className="mt-4 text-gray-600">Loading products...</p>
+              <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <p className="mt-3 sm:mt-4 text-sm sm:text-base text-gray-600">Loading products...</p>
             </div>
           </div>
         ) : error ? (
@@ -298,7 +296,7 @@ const AllProduct: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {filteredProducts.map((product) => (
               <ProductCard
                 key={product.id}
@@ -317,7 +315,7 @@ const AllProduct: React.FC = () => {
 
         {/* Pagination */}
         {filteredProducts.length > 0 && (
-          <div className="mt-12 text-center">
+          <div className="mt-8 sm:mt-12 text-center">
             <p className="text-sm text-gray-500">
               Showing {filteredProducts.length} {selectedCategory ? 'filtered ' : ''}products
             </p>

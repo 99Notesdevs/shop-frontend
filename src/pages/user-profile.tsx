@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/route';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../components/ui/button'; 
-import { Card, Spin, Alert, Tabs, Tag, Avatar, Space, Typography, Modal, Form, Input, Checkbox } from 'antd';
+import {Button, Card, Spin, Tag, Avatar, Typography, Modal, Form, Input, Checkbox } from 'antd';
 import { 
   LoadingOutlined, 
   UserOutlined, 
@@ -14,11 +13,15 @@ import {
   EnvironmentOutlined,
   EditOutlined,
   CalendarOutlined,
+  PlusOutlined,
+  CheckCircleOutlined,
+  CheckOutlined,
+  DeleteOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import { message } from 'antd';
 
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
 
 interface Address {
   id: string;
@@ -314,7 +317,7 @@ export default function UserProfile() {
             label="Phone Number"
             rules={[{ required: true, message: 'Please enter your phone number' }]}
           >
-            <Input addonBefore="+1" style={{ width: '100%' }} />
+            <Input addonBefore="+91" style={{ width: '100%' }} />
           </Form.Item>
         </div>
         
@@ -338,107 +341,99 @@ export default function UserProfile() {
   );
 
   const renderProfileTab = () => (
-    <div className="space-y-6">
-      {/* User Info Card */}
-      <Card className="shadow-md mb-8">
-        <div className="flex flex-col md:flex-row items-center md:items-start md:space-x-6 space-y-4 md:space-y-0">
-          <Avatar 
-            size={100} 
-            icon={<UserOutlined />} 
-            className="bg-blue-100 text-blue-600 text-4xl flex-shrink-0"
-          />
-          <div className="text-center md:text-left">
-            <Title level={3} className="m-0 mb-2">{user.firstName} {user.lastName}</Title>
-            <div className="space-y-2">
-              <div className="flex items-center justify-center md:justify-start space-x-2">
-                <InfoCircleOutlined className="text-gray-400" />
-                <Text type="secondary" className="text-base">{user.email}</Text>
-              </div>
-              {user.phone && (
-                <div className="flex items-center justify-center md:justify-start space-x-2">
-                  <PhoneOutlined className="text-gray-400" />
-                  <Text type="secondary" className="text-base">{user.phone}</Text>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-8">
-        <Card 
-          hoverable 
-          className="text-center"
-          onClick={() => navigate('/orders')}
-        >
-          <ShoppingOutlined className="text-3xl text-blue-500 mb-2" />
-          <Title level={5} className="m-0">My Orders</Title>
-          <Text type="secondary">Track, return, or buy things again</Text>
-        </Card>
-        
-        <Card 
-          hoverable 
-          className="text-center"
-          onClick={() => setActiveTab('addresses')}
-        >
-          <HomeOutlined className="text-3xl text-green-500 mb-2" />
-          <Title level={5} className="m-0">My Addresses</Title>
-          <Text type="secondary">Edit addresses for orders</Text>
-        </Card>
-        
-        <Card 
-          hoverable 
-          className="text-center"
-          onClick={() => navigate('/contact')}
-        >
-          <InfoCircleOutlined className="text-3xl text-orange-500 mb-2" />
-          <Title level={5} className="m-0">Help & Support</Title>
-          <Text type="secondary">Contact our customer service</Text>
-        </Card>
-      </div>
-
-      {/* Profile Details */}
-      <Card title="Profile Information" className="shadow-sm mt-8" headStyle={{ borderBottom: '1px solid #f0f0f0' }}>
-        <div className="space-y-4">
-          {profileData.map((item) => (
-            <div key={item.key} className="flex flex-col sm:flex-row gap-2 py-2 border-b border-gray-100 last:border-0 last:pb-0">
-              <Text strong className="w-full sm:w-1/4 text-gray-600">
-                {item.label}:
-              </Text>
-              <div className="w-full sm:w-3/4">
-                {item.key === 'paidUser' ? (
-                  <Tag color={item.value === 'Premium User' ? 'gold' : 'default'} className="capitalize">
-                    {item.value}
-                  </Tag>
-                ) : item.key === 'validTill' ? (
-                  <div className="flex items-center gap-2">
-                    <CalendarOutlined className="text-gray-400" />
-                    <span>{item.value}</span>
-                  </div>
-                ) : (
-                  <Text className="break-words">{item.value}</Text>
-                )}
-              </div>
-            </div>
-          ))}
+    <div className="p-6 md:p-8">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <Title level={3} className="m-0">Profile Information</Title>
+          <Text type="secondary">Manage your personal information and preferences</Text>
         </div>
         <Button 
-          variant="outline"
-          className="mt-4 flex items-center gap-2"
+          type="primary"
+          icon={<EditOutlined />}
           onClick={() => navigate('/profile/edit')}
         >
-          <EditOutlined />
-          <span>Edit Profile</span>
+          Edit Profile
         </Button>
-      </Card>
+      </div>
+
+      <div className="space-y-8">
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Card 
+            hoverable 
+            className="text-center h-full transition-all hover:shadow-md border hover:border-blue-100"
+            onClick={() => navigate('/myorders')}
+          >
+            <div className="bg-blue-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShoppingOutlined className="text-xl text-blue-500" />
+            </div>
+            <Title level={5} className="m-0 mb-1">My Orders</Title>
+            <Text type="secondary" className="text-sm">Track, return, or buy things again</Text>
+          </Card>
+          
+          <Card 
+            hoverable 
+            className="text-center h-full transition-all hover:shadow-md border hover:border-green-100"
+            onClick={() => setActiveTab('addresses')}
+          >
+            <div className="bg-green-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+              <HomeOutlined className="text-xl text-green-500" />
+            </div>
+            <Title level={5} className="m-0 mb-1">My Addresses</Title>
+            <Text type="secondary" className="text-sm">Edit addresses for orders</Text>
+          </Card>
+          
+          <Card 
+            hoverable 
+            className="text-center h-full transition-all hover:shadow-md border hover:border-orange-100"
+            onClick={() => navigate('/contact')}
+          >
+            <div className="bg-orange-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+              <InfoCircleOutlined className="text-xl text-orange-500" />
+            </div>
+            <Title level={5} className="m-0 mb-1">Help & Support</Title>
+            <Text type="secondary" className="text-sm">Contact our customer service</Text>
+          </Card>
+        </div>
+
+        {/* Profile Details */}
+        <Card className="border-0 shadow-sm">
+          <Title level={4} className="mb-6">Personal Information</Title>
+          <div className="space-y-6">
+            {profileData.map((item) => (
+              <div key={item.key} className="flex flex-col sm:flex-row gap-4 py-3 border-b border-gray-100 last:border-0 last:pb-0">
+                <Text className="w-full sm:w-1/4 text-gray-600 font-medium">
+                  {item.label}:
+                </Text>
+                <div className="w-full sm:w-3/4">
+                  {item.key === 'paidUser' ? (
+                    <Tag 
+                      color={item.value === 'Premium User' ? 'gold' : 'default'} 
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium"
+                    >
+                      {item.value}
+                    </Tag>
+                  ) : item.key === 'validTill' ? (
+                    <div className="flex items-center gap-2 text-gray-800">
+                      <CalendarOutlined className="text-gray-400" />
+                      <span>{item.value}</span>
+                    </div>
+                  ) : (
+                    <Text className="text-gray-800">{item.value}</Text>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 
   const renderAddressesTab = () => {
     if (loadingAddresses) {
       return (
-        <div className="flex justify-center items-center py-12">
+        <div className="flex justify-center items-center py-20">
           <Spin indicator={<LoadingOutlined style={{ fontSize: 32 }} spin />} />
         </div>
       );
@@ -446,17 +441,21 @@ export default function UserProfile() {
 
     if (addresses.length === 0) {
       return (
-        <div className="text-center py-12">
-          <EnvironmentOutlined className="text-5xl text-gray-300 mb-4" />
-          <Title level={4}>No Addresses Found</Title>
-          <Text type="secondary" className="block mb-4">
-            You haven't added any addresses yet.
+        <div className="text-center py-16 px-4">
+          <div className="bg-gray-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <EnvironmentOutlined className="text-3xl text-gray-400" />
+          </div>
+          <Title level={4} className="mb-2">No Addresses Found</Title>
+          <Text type="secondary" className="block mb-6 max-w-md mx-auto">
+            You haven't added any addresses yet. Add your first address to get started.
           </Text>
           <Button 
-            variant="outline"
-            className="mt-4 flex items-center gap-2"
+            type="primary"
+            size="large"
+            className="flex items-center gap-2 mx-auto"
             onClick={() => showModal()}
           >
+            <PlusOutlined />
             Add New Address
           </Button>
         </div>
@@ -464,190 +463,173 @@ export default function UserProfile() {
     }
 
     return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <Title level={4} className="m-0">My Addresses</Title>
-        <Button 
-          variant="outline"
-          className="mt-4 flex items-center gap-2"
-          onClick={() => showModal()}
-        >
-          Add New Address
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {addresses.map((address) => (
-          <Card 
-            key={address._id}
-            className="h-full"
-            hoverable
+      <div className="p-6 md:p-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <div>
+            <Title level={3} className="m-0">My Addresses</Title>
+            <Text type="secondary">Manage your saved addresses</Text>
+          </div>
+          <Button 
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => showModal()}
+            className="w-full sm:w-auto"
           >
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <Text strong className="text-lg">
-                  {address.isDefault && <Tag color="blue" className="mr-2">Default</Tag>}
-                  {address.addressLine1}
-                </Text>
-                <Button variant="outline" size="sm" className="p-1">
-                  <EditOutlined />
-                </Button>
+            Add New Address
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {addresses.map((address) => (
+            <Card 
+              key={address._id}
+              className="h-full border hover:shadow-md transition-shadow"
+              bodyStyle={{ padding: '24px' }}
+            >
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-2">
+                    {address.isDefault && (
+                      <Tag color="blue" className="m-0">
+                        Default
+                      </Tag>
+                    )}
+                    <Text strong className="text-lg m-0">
+                      {address.name || 'Home'}
+                    </Text>
+                  </div>
+                  <Button 
+                    type="text" 
+                    icon={<EditOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      showModal(address);
+                    }}
+                    className="text-gray-500 hover:bg-gray-50"
+                  />
+                </div>
+                
+                <div className="space-y-2 text-gray-700">
+                  <div className="flex items-start gap-2">
+                    <EnvironmentOutlined className="mt-1 text-gray-400" />
+                    <div>
+                      <p className="m-0">{address.addressLine1}</p>
+                      {address.addressLine2 && <p className="m-0">{address.addressLine2}</p>}
+                      <p className="m-0">
+                        {address.city}, {address.state} {address.postalCode}
+                      </p>
+                      <p className="m-0">{address.country}</p>
+                      {address.phoneNumber && (
+                        <p className="mt-1">
+                          <PhoneOutlined className="mr-2 text-gray-400" />
+                          {address.phoneNumber}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button 
+                    size="small"
+                    type={address.isDefault ? 'default' : 'text'}
+                    disabled={address.isDefault}
+                    onClick={() => handleSetDefault(address.id)}
+                    className={`flex items-center gap-1 ${!address.isDefault ? 'text-blue-600 hover:text-blue-700' : ''}`}
+                  >
+                    {address.isDefault ? (
+                      <CheckCircleOutlined className="text-green-500" />
+                    ) : (
+                      <CheckOutlined />
+                    )}
+                    {address.isDefault ? 'Default Address' : 'Set as Default'}
+                  </Button>
+                  
+                  <Button 
+                    type="text" 
+                    danger 
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    onClick={() => {
+                      Modal.confirm({
+                        title: 'Delete Address',
+                        content: 'Are you sure you want to delete this address?',
+                        okText: 'Delete',
+                        okType: 'danger',
+                        cancelText: 'Cancel',
+                        onOk: () => handleDelete(address.id),
+                        icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />,
+                        centered: true,
+                      });
+                    }}
+                    className="hover:bg-red-50"
+                  >
+                    Delete
+                  </Button>
+                </div>
               </div>
-              {address.addressLine2 && <div>{address.addressLine2}</div>}
-              <div>{address.city}, {address.state} {address.postalCode}</div>
-              <div>{address.country}</div>
-              <div className="pt-2 flex space-x-2">
-                <Button 
-                  size="sm" 
-                  variant={address.isDefault ? 'secondary' : 'outline'}
-                  disabled={address.isDefault}
-                  onClick={() => handleSetDefault(address.id)}
-                >
-                  {address.isDefault ? 'Default Address' : 'Set as Default'}
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="destructive"
-                  className="text-destructive-foreground hover:text-destructive-foreground"
-                  onClick={() => {
-                    Modal.confirm({
-                      title: 'Delete Address',
-                      content: 'Are you sure you want to delete this address?',
-                      okText: 'Yes, delete it',
-                      okType: 'danger',
-                      cancelText: 'No, keep it',
-                      onOk: () => handleDelete(address.id)
-                    });
-                  }}
-                >
-                  Delete
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="p-1"
-                  onClick={() => showModal(address)}
-                >
-                  <EditOutlined />
-                </Button>
-              </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
   };
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh' }}>
-        <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1rem' }}>
-        <Alert
-          message="Error"
-          description={error}
-          type="error"
-          showIcon
-          style={{ marginBottom: '1rem' }}
-        />
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <Button onClick={() => window.location.reload()}>
-            Try Again
-          </Button>
-          <Button onClick={() => navigate('/')}>
-            Go to Home
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1rem' }}>
-        <Alert
-          message="No User Data"
-          description="No user data available. Please log in to view your profile."
-          type="warning"
-          showIcon
-          style={{ marginBottom: '1rem' }}
-        />
-        <Button onClick={() => navigate('/login')}>
-          Go to Login
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      {renderAddressForm()}
-      <Title level={2} className="mb-6">My Account</Title>
-      
-      <Tabs 
-        activeKey={activeTab} 
-        onChange={setActiveTab}
-        className="profile-tabs"
-      >
-        <TabPane tab={
-          <span><UserOutlined /> Profile</span>
-        } key="profile">
-          {renderProfileTab()}
-        </TabPane>
-        
-        <TabPane tab={
-          <span><HomeOutlined /> Addresses <Tag color="blue">{addresses.length}</Tag></span>
-        } key="addresses">
-          {renderAddressesTab()}
-        </TabPane>
-      </Tabs>
-
-      {loading && (
-        <div className="flex justify-center items-center min-h-[70vh]">
-          <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
+    <div className="min-h-screen bg-gray-50">
+      {loading ? (
+        <div className="flex items-center justify-center h-screen">
+          <Spin size="large" />
         </div>
-      )}
-      
-      {error && (
-        <div className="max-w-3xl mx-auto my-8 px-4">
-          <Alert
-            message="Error"
-            description={error}
-            type="error"
-            showIcon
-            className="mb-4"
-          />
-          <Space>
-            <Button onClick={() => window.location.reload()}>
-              Try Again
-            </Button>
-            <Button onClick={() => navigate('/')}>
-              Go to Home
-            </Button>
-          </Space>
-        </div>
-      )}
-      
-      {!user && !loading && !error && (
-        <div className="max-w-3xl mx-auto my-8 px-4">
-          <Alert
-            message="No User Data"
-            description="No user data available. Please log in to view your profile."
-            type="warning"
-            showIcon
-            className="mb-4"
-          />
-          <Button onClick={() => navigate('/login')}>
-            Go to Login
-          </Button>
-        </div>
+      ) : (
+        <>
+          {renderAddressForm()}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex flex-col md:flex-row gap-8">
+              {/* Sidebar */}
+              <div className="w-full md:w-64 flex-shrink-0">
+                <div className="bg-white rounded-xl shadow-sm p-6 sticky top-8">
+                  <div className="text-center mb-6">
+                    <Avatar 
+                      size={120} 
+                      icon={<UserOutlined />} 
+                      className="bg-blue-50 text-blue-500 text-5xl mx-auto mb-4"
+                    />
+                    <Title level={4} className="m-0">{user?.firstName} {user?.lastName}</Title>
+                    <Text type="secondary" className="text-sm">{user?.email}</Text>
+                    <Text type="secondary" className="text-sm">{user?.phone}</Text>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => setActiveTab('profile')}
+                      className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeTab === 'profile' ? 'bg-blue-50 text-blue-600 font-medium' : 'hover:bg-gray-50'}`}
+                    >
+                      <UserOutlined className="mr-3" />
+                      Profile Information
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('addresses')}
+                      className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between ${activeTab === 'addresses' ? 'bg-blue-50 text-blue-600 font-medium' : 'hover:bg-gray-50'}`}
+                    >
+                      <span><HomeOutlined className="mr-3" /> My Addresses</span>
+                      <span className="bg-blue-100 text-blue-600 text-xs font-medium px-2 py-1 rounded-full">
+                        {addresses.length}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Main Content */}
+              <div className="flex-1">
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                  {activeTab === 'profile' ? renderProfileTab() : renderAddressesTab()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

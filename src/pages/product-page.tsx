@@ -38,6 +38,11 @@ const ProductPage = () => {
   const isInWishlist = wishlist?.some(item => item.id === parseInt(id || '0')) || false;
   const navigate = useNavigate();
 
+  // Scroll to top when component mounts or product ID changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
   // No need for separate wishlist status check as we're using the context
 
   useEffect(() => {
