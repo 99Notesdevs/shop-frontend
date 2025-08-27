@@ -275,7 +275,7 @@ export default function ManageOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   type StatusFilter = 'all' | PaymentStatus | ShippingStatus;
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, ] = useState<StatusFilter>('all');
   const [currentPage, setCurrentPage] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedPage = localStorage.getItem('manageOrdersCurrentPage');

@@ -1,5 +1,5 @@
 import React, {  useState } from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { ArrowLeft, Package, Truck, CreditCard,MapPin, Phone, Calendar, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -38,8 +38,7 @@ interface Order {
 const OrderDetail: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { orderId } = useParams<{ orderId: string }>();
-  const [order, setOrder] = useState<Order | null>(location.state?.order || null);
+  const [order, ] = useState<Order | null>(location.state?.order || null);
 
   if (!order) {
     return (

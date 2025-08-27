@@ -268,7 +268,7 @@ const Checkout: React.FC = () => {
   const applyCoupon = async () => {
     if (!couponCode.trim()) return;
     
-    const response = await api.post(`/coupon/use/${couponCode}`, {credentials: 'include'}) as { 
+    const response = await api.post(`/coupon/use/${couponCode}`) as { 
       success: boolean; 
       data: any
     };
@@ -306,7 +306,7 @@ const Checkout: React.FC = () => {
   // Remove coupon function
   const removeCoupon = async () => {
     if (appliedCoupon) {
-      await api.post(`/coupon/remove/${appliedCoupon}`, {credentials: 'include'});
+      await api.post(`/coupon/remove/${appliedCoupon}`);
     }
     setAppliedCoupon('');
     setCouponDiscount(0);

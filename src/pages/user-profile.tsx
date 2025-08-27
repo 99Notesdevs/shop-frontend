@@ -348,16 +348,16 @@ export default function UserProfile() {
             className="bg-blue-100 text-blue-600 text-4xl flex-shrink-0"
           />
           <div className="text-center md:text-left">
-            <Title level={3} className="m-0 mb-2">{user.firstName} {user.lastName}</Title>
+            <Title level={3} className="m-0 mb-2">{user?.firstName} {user?.lastName}</Title>
             <div className="space-y-2">
               <div className="flex items-center justify-center md:justify-start space-x-2">
                 <InfoCircleOutlined className="text-gray-400" />
-                <Text type="secondary" className="text-base">{user.email}</Text>
+                <Text type="secondary" className="text-base">{user?.email}</Text>
               </div>
-              {user.phone && (
+              {user?.phone && (
                 <div className="flex items-center justify-center md:justify-start space-x-2">
                   <PhoneOutlined className="text-gray-400" />
-                  <Text type="secondary" className="text-base">{user.phone}</Text>
+                  <Text type="secondary" className="text-base">{user?.phone}</Text>
                 </div>
               )}
             </div>

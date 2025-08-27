@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import Hero from '../components/home/hero';
 import ShowProduct from '../components/home/show-product';
