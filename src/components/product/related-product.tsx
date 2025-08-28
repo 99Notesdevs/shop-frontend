@@ -31,15 +31,15 @@ export function RelatedProducts({ currentProductId, categoryId, onAddToCart }: R
       try {
         setError(null);
         
-        // Fetch all products from the same category
-        const response = await api.get(`/product?skip=0&take=20`) as { success: boolean; data: Product[] };
-        console.log("related products",response.data);
+        // Fetch products by category ID with skip=0 and take=6
+        const response = await api.get(`/product/category/${categoryId}?skip=0&take=6`) as { success: boolean; data: Product[] };
+        console.log("Related products by category:", response.data);
         
         if (response.success) {
-          // Filter out the current product and limit to 4 related products
+          // Filter out the current product and limit to 6 related products
           const filteredProducts = response.data
             .filter((product: Product) => product.id.toString() !== currentProductId.toString())
-            .slice(0, 4);
+            .slice(0, 6);
             
           setRelatedProducts(filteredProducts);
         } else {
@@ -63,7 +63,11 @@ export function RelatedProducts({ currentProductId, categoryId, onAddToCart }: R
   }
 
   if (relatedProducts.length === 0) {
-    return null; // Don't show anything if no related products
+    return (
+      <div className="mt-12 text-center py-8">
+        <p className="text-gray-500">No related products found</p>
+      </div>
+    );
   }
 
   const scrollLeft = () => {

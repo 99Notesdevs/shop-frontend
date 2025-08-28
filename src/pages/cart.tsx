@@ -5,6 +5,7 @@ import { api } from '../api/route';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import RecentlyWatched from '../components/product/recntly-watched';
 interface CartItem {
   id: number;
   cartId: number;
@@ -646,6 +647,7 @@ export default function CartPage() {
             </div>
           </div>
         </div>
+        <RecentlyWatched />
       </div>
     </div>
   );
