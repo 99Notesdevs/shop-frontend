@@ -1,5 +1,5 @@
 import { Heart } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { ProductCard } from '../components/product/product-card';
@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Breadcrumb } from '../components/ui/breadcrumb';
 import { api } from '../api/route';
 import { env } from '../config/env';
+import { useUser } from '../contexts/UserContext';
 
 interface Product {
   id: number;
@@ -27,7 +28,7 @@ export default function WishlistPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { user: currentUser, cart, updateCart, openCart } = useAuth();
-  const navigate = useNavigate();
+  const { openUserModal } = useUser();
   useEffect(() => {
     const fetchWishlist = async () => {
       if (!currentUser?.id) {
@@ -60,7 +61,6 @@ export default function WishlistPage() {
 
     if (!cart?.id) {
       toast.error('Please login to add items to cart');
-      navigate('/login');
       return;
     }
 
@@ -75,7 +75,6 @@ export default function WishlistPage() {
 
       if (response.status === 401) {
         toast.error('Your session has expired. Please login again');
-        navigate('/login');
         return;
       }
 
@@ -113,7 +112,7 @@ export default function WishlistPage() {
           <h2 className="text-2xl font-bold text-gray-800 mb-3">Your Wishlist Awaits</h2>
           <p className="text-gray-600 mb-6">Sign in to view and manage your saved items</p>
           <Link
-            to="/login"
+           to ="/" onClick={() => openUserModal('login')}
             className="inline-flex items-center justify-center px-6 py-3 rounded-lg text-white bg-[var(--button)] hover:bg-[var(--button-hover)] font-medium shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 w-full sm:w-auto"
           >
             Sign In to Continue

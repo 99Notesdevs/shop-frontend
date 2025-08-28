@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { ShoppingCart, Heart, Check, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import StarRating from '../ui/StarRating';
+import { toast } from '../ui/toast';
 
 interface ProductCardProps {
   id: number;
@@ -42,7 +43,7 @@ export function ProductCard({
     e.stopPropagation();
     
     if (!user?.id) {
-      navigate('/login');
+      toast.error('Please login to add to wishlist');
       return;
     }
 
@@ -50,7 +51,7 @@ export function ProductCard({
     try {
       await updateWishlist(id, isWishlisted ? 'remove' : 'add');
     } catch (error) {
-      console.error('Error updating wishlist:', error);
+      toast.error('Error updating wishlist');
     } finally {
       setWishlistLoading(false);
     }
@@ -72,7 +73,7 @@ export function ProductCard({
       // The parent component should listen for this event and show the cart
       window.dispatchEvent(new CustomEvent('showCartSidebar'));
     } catch (error) {
-      console.error('Error adding to cart:', error);
+      toast.error('Error adding to cart');
     }
   };
 

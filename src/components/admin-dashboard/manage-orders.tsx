@@ -497,19 +497,19 @@ export default function ManageOrders() {
   };
 
   const handleDeleteOrder = async (orderId: number) => {
+    const toastId = toast.loading('Deleting order...');
     try {
-      const response = await api.delete(`/order/${orderId}`) as { success: boolean; message: string };
-      if (response.success) {
-        toast.success('Order deleted successfully');
-        setOrders(orders.filter(order => order.id !== orderId));
-        setOrderToDelete(null);
-      } else {
-        throw new Error('Failed to delete order');
-      }
+      // The API returns 204 No Content on success, so we don't expect a response body
+      await api.delete(`/order/${orderId}`);
+      
+      // If we get here, the delete was successful
+      toast.success('Order deleted successfully', { id: toastId });
+      setOrders(orders.filter(order => order.id !== orderId));
+      setOrderToDelete(null);
     } catch (error) {
       console.error('Error deleting order:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to delete order';
-      toast.error(errorMessage);
+      toast.error(errorMessage, { id: toastId });
     }
   };
 

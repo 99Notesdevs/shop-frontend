@@ -2,14 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ProductCard } from '../components/product/product-card';
 import { Button } from '../components/ui/button';
-import { toast } from 'react-toastify';
+import { toast } from  '../components/ui/toast';
 import Filter from '../components/product/filter';
 import { SlidersHorizontal } from 'lucide-react';
-import 'react-toastify/dist/ReactToastify.css';
 import { api } from '../api/route';
 import { Breadcrumb } from '../components/ui/breadcrumb';
 import { useAuth } from '../contexts/AuthContext';
 import { env } from '../config/env';
+
 
 // Define the Category interface to match the one in categories.tsx
 interface Category {
@@ -170,7 +170,6 @@ const AllProduct: React.FC = () => {
 
     if (!cart?.id) {
       toast.error('Please login to add items to cart');
-      navigate('/users/login');
       return;
     }
 
@@ -185,7 +184,6 @@ const AllProduct: React.FC = () => {
 
       if (response.status === 401) {
         toast.error('Your session has expired. Please login again');
-        navigate('/users/login');
         return;
       }
 
