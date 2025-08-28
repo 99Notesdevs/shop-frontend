@@ -1,10 +1,10 @@
 import { ProductCard } from '../product/product-card';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api } from '../../api/route';
-import { useAuth } from '../../contexts/AuthContext';
+
 
 interface Category {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
   imageUrl?: string;
@@ -34,82 +34,48 @@ interface ShowProductProps {
   wishlistItems?: any[];
 }
 
-export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart, wishlistItems: initialWishlistItems = [] }) => {
+export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart }) => {
   const [categories, setCategories] = useState<CategoryWithProducts[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [wishlistItems, setWishlistItems] = useState<any[]>(initialWishlistItems);
-  const { user } = useAuth();
-
-  interface WishlistResponse {
-    data?: {
-      products?: Array<{ productId: string | number; product?: { id: string | number } }>;
-      [key: string]: any;
-    };
-    [key: string]: any;
-  }
-
-  const fetchWishlist = useCallback(async () => {
-    if (!user?.id) return;
-    
-    try {
-      const response = await api.get<WishlistResponse>(`/wishlist/${user.id}`);
-      if (response.data?.products) {
-        setWishlistItems(response.data.products);
-      }
-    } catch (error) {
-      console.error('Error fetching wishlist:', error);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (user?.id) {
-      fetchWishlist();
-    } else {
-      setWishlistItems([]);
-    }
-  }, [user?.id, fetchWishlist]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         
-        // Fetch all categories and products in parallel
-        const [categoriesResponse, productsResponse] = await Promise.all([
-          api.get<{ success: boolean; data: Category[] }>('/category'),
-          api.get<{ success: boolean; data: Product[] }>('/product?skip=0&take=16')
-        ]);
-        
-        console.log('Categories response:', categoriesResponse);
-        console.log('Products response:', productsResponse);
-        
-        // Extract data from responses
+        // Fetch all categories
+        const categoriesResponse = await api.get<{ success: boolean; data: Category[] }>('/category');
         const categoriesData = Array.isArray(categoriesResponse) 
           ? categoriesResponse 
           : (categoriesResponse?.data || []);
-          
-        const allProducts = Array.isArray(productsResponse)
-          ? productsResponse
-          : (productsResponse?.data || []);
         
-        // Group products by category
-        const categoriesWithProducts = categoriesData.map(category => {
-          // Get the category ID (using either _id or id based on what's available)
-          const categoryId = category._id || category.id;
-          
-          // Find products that belong to this category
-          const categoryProducts = allProducts.filter(product => {
-            // Check both categoryId and category (as string or number)
-            const productCategoryId = product.categoryId || product.category;
-            return productCategoryId?.toString() === categoryId.toString();
-          });
-          
-          return {
-            ...category,
-            products: categoryProducts
-          };
-        });
+        // For each category, fetch its products with pagination
+        const categoriesWithProducts = await Promise.all(
+          categoriesData.map(async (category) => {
+            try {
+              const categoryId = category.id;
+              const productsResponse = await api.get<{ success: boolean; data: Product[] }>(
+                `/product/category/${categoryId}?skip=0&take=6`
+              );
+              
+              const categoryProducts = Array.isArray(productsResponse)
+                ? productsResponse
+                : (productsResponse?.data || []);
+                
+              return {
+                ...category,
+                products: categoryProducts
+              };
+            } catch (error) {
+              console.error(`Error fetching products for category ${category._id}:`, error);
+              return {
+                ...category,
+                products: []
+              };
+            }
+          })
+        );
         
         setCategories(categoriesWithProducts);
         setError(null);
@@ -130,7 +96,7 @@ export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart, wishlistI
     }
     
     return (
-      <div key={category._id} className="mb-2">
+      <div key={category.id} className="mb-2">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">{category.name}</h2>
           {category.description && (
@@ -140,7 +106,7 @@ export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart, wishlistI
         </div>
         
         <div className="relative">
-          <div className="flex overflow-x-auto pb-6 mx-4 px-4">
+          <div className="flex overflow-x-auto pb-6 mx-4 px-4 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <div className="flex space-x-8">
               {category.products.map((product) => (
                 <div key={product.id} className="flex-shrink-0 w-80">
@@ -154,9 +120,6 @@ export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart, wishlistI
                     salePrice={product.salePrice}
                     imageUrl={product.imageUrl}
                     onAddToCart={onAddToCart}
-                    isInWishlist={wishlistItems.some(item => 
-                      item?.productId === product.id || item?.product?.id === product.id
-                    )}
                   />
                 </div>
               ))}

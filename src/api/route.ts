@@ -25,7 +25,14 @@ async function request<T>(
     throw new Error(error || res.statusText);
   }
   
-  return res.json();
+  // For 204 No Content responses (common with DELETE), return empty object as T
+  if (res.status === 204) {
+    return {} as T;
+  }
+  
+  // Only try to parse as JSON if there's content
+  const text = await res.text();
+  return text ? (JSON.parse(text) as T) : ({} as T);
 }
 
 export const api = {

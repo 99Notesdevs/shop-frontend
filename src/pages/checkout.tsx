@@ -160,7 +160,7 @@ const Checkout: React.FC = () => {
         return;
       }
       
-      const response = await api.get<{ data: Address[] }>(`/address/${userId}`);
+      const response = await api.get<{ data: Address[] }>(`/address`);
       setUserAddresses(response.data);
       
       // Select default address if available
@@ -268,27 +268,33 @@ const Checkout: React.FC = () => {
   const applyCoupon = async () => {
     if (!couponCode.trim()) return;
     
-    const response = await api.post(`/coupon/use/${couponCode}`, {credentials: 'include'}) as { 
-      success: boolean; 
-      data: any
-    };
-    console.log("data", response.data);
+    // Calculate subtotal first
+    const currentSubtotal = cartData 
+      ? cartData.cartItems.reduce((sum, item) => {
+          const price = item.product?.salePrice ?? item.product?.price ?? 0;
+          return sum + (price * item.quantity);
+        }, 0)
+      : product
+      ? (product.salePrice || product.price) * (product.quantity || 1)
+      : 0;
+
+    // Calculate shipping
+    const currentShipping = calculateShipping();
+    const totalWithShipping = currentSubtotal + currentShipping;
+    
+    const response = await api.post(`/coupon/use/${couponCode}`, {
+      totalAmount: totalWithShipping,
+    }) as { success: boolean; data: any };
+    
     if (response.success) {
-      const { discount , type:discountType } = response.data;
+      const { discount, type: discountType } = response.data;
       let discountAmount = 0;
       
+      // Apply discount to the total (subtotal + shipping)
       if (discountType === 'percentage') {
-        const subtotal = cartData 
-          ? cartData.cartItems.reduce((sum, item) => {
-              const price = item.product?.salePrice ?? item.product?.price ?? 0;
-              return sum + (price * item.quantity);
-            }, 0)
-          : product
-          ? (product.salePrice || product.price) * (product.quantity || 1)
-          : 0;
-        discountAmount = (subtotal * discount) / 100;
+        discountAmount = (totalWithShipping * discount) / 100;
       } else {
-        discountAmount = discount;
+        discountAmount = Math.min(discount, totalWithShipping); // Ensure discount doesn't exceed total
       }
       
       setCouponDiscount(discountAmount);
@@ -300,13 +306,17 @@ const Checkout: React.FC = () => {
         code: response.data.code,
         discount: discountAmount,
       }));
+      
+      toast.success('Coupon applied successfully!');
+    } else {
+      toast.error('Failed to apply coupon');
     }
   };
 
   // Remove coupon function
   const removeCoupon = async () => {
     if (appliedCoupon) {
-      await api.post(`/coupon/remove/${appliedCoupon}`, {credentials: 'include'});
+      await api.post(`/coupon/remove/${appliedCoupon}`);
     }
     setAppliedCoupon('');
     setCouponDiscount(0);
@@ -346,11 +356,11 @@ const Checkout: React.FC = () => {
   };
 
   const shipping = calculateShipping();
-  const total = Math.max(0, subtotal + shipping - (couponDiscount || 0));
+  // Apply coupon discount to (subtotal + shipping)
+  const displayTotal = Math.max(0, (subtotal + shipping) - (couponDiscount || 0));
   // Submit handler
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
     // If showing address form, save the new address first
     if (showAddressForm) {
       const isAddressValid = validateAddress(deliveryAddress);
@@ -377,7 +387,7 @@ const Checkout: React.FC = () => {
         
         const finalOrder = {
           ...existingOrder,
-          amount: total,
+          amount: subtotal + shipping,
           deliveryAddress: {
             id: selectedAddress?.id || 0,
             name: selectedAddress?.name || "",
@@ -389,7 +399,8 @@ const Checkout: React.FC = () => {
             country: selectedAddress?.country || "",
             phoneNumber: selectedAddress?.phoneNumber || ""
           },
-          status: "Confirmed"
+          status: "Confirmed",
+          couponcode: appliedCoupon ? appliedCoupon : null
         };
 
         console.log("Final order for direct purchase:", finalOrder);
@@ -407,9 +418,9 @@ const Checkout: React.FC = () => {
         console.log("Payment response:", respData);
         
         // Create shipping details with default status 'Processing'
-        if (respData.orderId) {
+        if (location.state?.orderData.orderId) {
           try {
-            const shippingResponse = await fetch(`${env.API}/shipping/${respData.orderId}`, {
+            const shippingResponse = await fetch(`${env.API}/shipping/${location.state.orderData.orderId}`, {
               method: 'POST',
               credentials: 'include',
               headers: { 'Content-Type': 'application/json' },
@@ -442,6 +453,7 @@ const Checkout: React.FC = () => {
         }
         
         // Redirect to payment URL
+
         if (respData.data) {
           window.location.href = respData.data;
         } else {
@@ -466,9 +478,12 @@ const Checkout: React.FC = () => {
         orderDate: new Date().toISOString(),
         products: cartData.cartItems.map((item: CartItem) => ({
           productId: item.productId,
-          quantity: item.quantity
+          product: item.product,
+          quantity: item.quantity,
+          price: item.product?.price,
+
         })),
-        totalAmount: total,
+        totalAmount: Math.max(0, (subtotal + shipping) - (couponDiscount || 0)),
         status: "Pending",
         billingAddressId: selectedAddress?.id,
         shippingAddressId: selectedAddress?.id,
@@ -476,7 +491,7 @@ const Checkout: React.FC = () => {
       
       console.log("Order data:", data);
       const response = await api.post<{ success: boolean; data: any }>(`/order`, data);
-  
+      const orderforshipping=response.data.id;
       if (!response.success) {
         toast.error('Failed to create order');
         return;
@@ -490,13 +505,11 @@ const Checkout: React.FC = () => {
         orderId,
         phonepe_transactionId: "",
         status: "",
-        amount: total,
         validity: 10,
       };
       
       const finalOrder = {
         ...orderData,
-        amount: total,
         deliveryAddress: {
           id: selectedAddress?.id || 0,
           name: selectedAddress?.name || "",
@@ -525,24 +538,25 @@ const Checkout: React.FC = () => {
       console.log("respData", respData);
       
       // Create shipping details with default status 'Processing'
-      if (respData.orderId) {
+      if (orderforshipping) {
         try {
-          const shippingResponse = await fetch(`${env.API}/shipping/${respData.orderId}`, {
+          const shippingAdress = JSON.stringify({
+            name: selectedAddress?.name || '',
+            addressLine1: selectedAddress?.addressLine1 || '',
+            addressLine2: selectedAddress?.addressLine2 || '',
+            city: selectedAddress?.city || '',
+            state: selectedAddress?.state || '',
+            zipCode: selectedAddress?.zipCode || '',
+            country: selectedAddress?.country || '',
+            phoneNumber: selectedAddress?.phoneNumber || ''
+          })
+          const shippingResponse = await fetch(`${env.API}/shipping/${orderforshipping}`, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              shippingAddress: {
-                name: selectedAddress?.name || '',
-                addressLine1: selectedAddress?.addressLine1 || '',
-                addressLine2: selectedAddress?.addressLine2 || '',
-                city: selectedAddress?.city || '',
-                state: selectedAddress?.state || '',
-                zipCode: selectedAddress?.zipCode || '',
-                country: selectedAddress?.country || '',
-                phoneNumber: selectedAddress?.phoneNumber || ''
-              },
-              trackingNumber: 'N/A', // Will be updated when shipped
+              shippingAddress: shippingAdress,
+              trackingNumber: '00000', // Will be updated when shipped
               carrier: 'N/A', // Will be updated when shipped
               status: 'Processing',
               shippingDate: new Date().toISOString()
@@ -789,8 +803,14 @@ const Checkout: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                </div>               
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Shipping</span>
+                  <span className="font-medium">
+                    {shipping > 0 ? `₹${shipping.toFixed(2)}` : 'Free'}
+                  </span>
                 </div>
-                
+
                 {couponDiscount > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-red-600">Coupon Discount</span>
@@ -798,18 +818,11 @@ const Checkout: React.FC = () => {
                   </div>
                 )}
                 
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium">
-                    {shipping > 0 ? `₹${shipping.toFixed(2)}` : 'Free'}
-                  </span>
-                </div>
-                
                 <div className="border-t border-gray-200 pt-4 mt-4">
                   <div className="flex items-center justify-between">
                     <span className="text-lg font-semibold">Total</span>
                     <span className="text-xl font-bold text-gray-900">
-                      ₹{(subtotal + shipping - (couponDiscount || 0)).toFixed(2)}
+                      ₹{displayTotal.toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -818,7 +831,6 @@ const Checkout: React.FC = () => {
               <button
                 type="submit"
                 onClick={handleSubmit}
-                disabled={!selectedAddress}
                 className={`w-full mt-6 py-3 px-4 rounded-lg font-medium text-white transition-all ${
                   selectedAddress 
                     ? 'bg-[var(--button)] hover:bg-[var(--button-hover)] cursor-pointer' 

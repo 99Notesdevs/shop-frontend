@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ProductCard } from '../components/product/product-card';
 import { Button } from '../components/ui/button';
-import { toast } from 'react-toastify';
+import { toast } from  '../components/ui/toast';
 import Filter from '../components/product/filter';
 import { SlidersHorizontal } from 'lucide-react';
-import 'react-toastify/dist/ReactToastify.css';
 import { api } from '../api/route';
 import { Breadcrumb } from '../components/ui/breadcrumb';
 import { useAuth } from '../contexts/AuthContext';
 import { env } from '../config/env';
+
 
 // Define the Category interface to match the one in categories.tsx
 interface Category {
@@ -51,8 +51,9 @@ const AllProduct: React.FC = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [categories, setCategories] = useState<Category[]>([]);
   const { cart, updateCart } = useAuth();
-  const navigate = useNavigate();
   const { categoryName } = useParams();
+  const [skip, setSkip] = useState(0);
+  const take = 20;
 
   // Fetch categories
   useEffect(() => {
@@ -93,7 +94,7 @@ const AllProduct: React.FC = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await api.get('/product?skip=0&take=20') as { success: boolean; data: Product[] };
+        const response = await api.get(`/product?skip=${skip}&take=${take}`) as { success: boolean; data: Product[] };
         if (response.success) {
           setAllProducts(response.data);
 
@@ -125,7 +126,10 @@ const AllProduct: React.FC = () => {
     };
 
     fetchProducts();
-  }, [categoryName, categories]);
+  }, [categoryName, categories, skip, take]);
+
+  const handleNextPage = () => setSkip(skip + take);
+  const handlePrevPage = () => setSkip(Math.max(0, skip - take));
 
   // Function to get category name by ID
   const getCategoryName = (categoryId: string | number) => {
@@ -157,7 +161,7 @@ const AllProduct: React.FC = () => {
     );
 
     setFilteredProducts(result);
-  }, [allProducts, selectedCategory]);
+  }, [allProducts, selectedCategory, priceRange]);
 
   useEffect(() => {
     filterAndSortProducts();
@@ -170,7 +174,6 @@ const AllProduct: React.FC = () => {
 
     if (!cart?.id) {
       toast.error('Please login to add items to cart');
-      navigate('/users/login');
       return;
     }
 
@@ -185,7 +188,6 @@ const AllProduct: React.FC = () => {
 
       if (response.status === 401) {
         toast.error('Your session has expired. Please login again');
-        navigate('/users/login');
         return;
       }
 
@@ -214,31 +216,29 @@ const AllProduct: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-12">
+    <div className="container mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <Breadcrumb />
         <div className="gap-4 mb-6">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               {selectedCategory
                 ? `${categories.find((c: Category) => c.id === selectedCategory)?.name || 'Category'} Products`
                 : ""}
             </h1>
           </div>
 
-          <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-4 justify-end" >
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setIsFilterOpen(true)}
-                className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
-                aria-label="Filter products"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                <span className="text-sm font-medium">Filters</span>
-              </button>
-              </div>
-            </div>
+          <div className="w-full flex justify-end">
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className="flex items-center justify-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer w-auto"
+              aria-label="Filter products"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              <span className="text-sm font-medium hidden sm:inline">Filters</span>
+            </button>
+          </div>
           </div>
 
           {selectedCategory && (
@@ -258,8 +258,8 @@ const AllProduct: React.FC = () => {
         {isLoading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-pulse flex flex-col items-center">
-              <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className="mt-4 text-gray-600">Loading products...</p>
+              <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <p className="mt-3 sm:mt-4 text-sm sm:text-base text-gray-600">Loading products...</p>
             </div>
           </div>
         ) : error ? (
@@ -298,7 +298,7 @@ const AllProduct: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {filteredProducts.map((product) => (
               <ProductCard
                 key={product.id}
@@ -317,10 +317,16 @@ const AllProduct: React.FC = () => {
 
         {/* Pagination */}
         {filteredProducts.length > 0 && (
-          <div className="mt-12 text-center">
+          <div className="mt-8 sm:mt-12 text-center">
             <p className="text-sm text-gray-500">
               Showing {filteredProducts.length} {selectedCategory ? 'filtered ' : ''}products
             </p>
+            <Button onClick={handlePrevPage} disabled={skip === 0}>
+            Previous
+          </Button>
+          <Button onClick={handleNextPage} disabled={filteredProducts.length < take}>
+            Next
+          </Button>
           </div>
         )}
         

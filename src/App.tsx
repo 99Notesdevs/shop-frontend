@@ -3,6 +3,7 @@ import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
 import { HomeLayout } from './components/home/layout';
 import { ThemeProvider } from './components/ui/themeprovider';
+import { Toaster } from './components/ui/toast';
 import Home from './pages/home';
 import ProductPage from './pages/product-page';
 import ContactUs from './pages/contactus';
@@ -33,6 +34,7 @@ import ManageBanner from './components/admin-dashboard/manage-banner';
 function App() {
   return (
     <ThemeProvider>
+      <Toaster position="top-right" />
       <BrowserRouter>
         <AuthProvider>
           <UserProvider>

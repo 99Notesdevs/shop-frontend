@@ -12,6 +12,8 @@ import ProductHighlights from '../components/product/product-highlights';
 import CustomerRating from '../components/product/customer-rating';
 import ServiceIcon from '../components/common/service-icon';
 import StarRating from '../components/ui/StarRating';
+import { useUser } from '../contexts/UserContext';
+import RecentlyWatched, { addToRecentlyViewed } from '../components/product/recntly-watched';
 
 interface Product {
   id: number;
@@ -36,7 +38,13 @@ const ProductPage = () => {
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const { user: currentUser, wishlist, updateWishlist } = useAuth();
   const isInWishlist = wishlist?.some(item => item.id === parseInt(id || '0')) || false;
+  const { openUserModal } = useUser();
   const navigate = useNavigate();
+
+  // Scroll to top when component mounts or product ID changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
 
   // No need for separate wishlist status check as we're using the context
 
@@ -73,6 +81,20 @@ const ProductPage = () => {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (product) {
+      addToRecentlyViewed({
+        id: product.id,
+        name: product.name,
+        category: product.categoryId.toString(), // Convert to string to match the interface
+        description: product.description,
+        price: product.price,
+        salePrice: product.salePrice,
+        imageUrl: product.imageUrl
+      });
+    }
+  }, [product]);
+
   const handleBuyNow = async (e: React.MouseEvent) => {
     e.preventDefault();
     
@@ -99,7 +121,7 @@ const ProductPage = () => {
   
       if (response.status === 403) {
         toast.error('Please login to continue');
-        navigate('/users/login');
+        openUserModal('login');
         return;
       }
   
@@ -128,7 +150,7 @@ const ProductPage = () => {
 
   const toggleWishlist = async () => {
     if (!id || !currentUser) {
-      navigate('/login');
+      openUserModal('login');
       return;
     }
     
@@ -172,7 +194,7 @@ const ProductPage = () => {
     
     if (!cart?.id) {
       toast.error('Please login to add items to cart');
-      navigate('/users/login');
+      openUserModal('login');
       return;
     }
 
@@ -187,7 +209,7 @@ const ProductPage = () => {
 
       if (response.status === 401) {
         toast.error('Your session has expired. Please login again');
-        navigate('/login');
+        openUserModal('login');
         return;
       }
 
@@ -423,7 +445,7 @@ const ProductPage = () => {
 
           {/* Customer Rating */}
           <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-            <CustomerRating productId={product.id} />
+            <CustomerRating/>
           </div>
 
           {/* Related Products */}
@@ -435,6 +457,8 @@ const ProductPage = () => {
               onAddToCart={handleAddToCart} 
             />
           </div>
+
+          <RecentlyWatched />
           </div>
         </div>
       </main>
