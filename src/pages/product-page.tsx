@@ -430,7 +430,7 @@ const ProductPage = () => {
 
           {/* Customer Rating */}
           <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-            <CustomerRating productId={product.id} />
+            <CustomerRating/>
           </div>
 
           {/* Related Products */}

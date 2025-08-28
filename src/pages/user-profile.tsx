@@ -48,7 +48,8 @@ export default function UserProfile() {
   const { fetchUserDetails, fetchUserData } = useAuth();
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<{message: string; details?: string} | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const navigate = useNavigate();
   
@@ -58,17 +59,22 @@ export default function UserProfile() {
   const fetchAddresses = async (userId: string) => {
     try {
       setLoadingAddresses(true);
-      const response = await api.get(`/address/${userId}`)as { success: boolean; data: Address[] };
+      setError(null);
+      const response = await api.get(`/address/${userId}`) as { success: boolean; data: Address[] };
       
       if (!response.success) {
-        throw new Error('Failed to fetch addresses');
+        throw new Error('Failed to fetch addresses. Please try again later.');
       }
       
       const data = response.data;
       setAddresses(data);
     } catch (error) {
-      console.error('Error fetching addresses:', error);
-      // You might want to show a toast or error message here
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      setError({
+        message: 'Failed to load addresses',
+        details: errorMessage
+      });
+      message.error('Failed to load addresses');
     } finally {
       setLoadingAddresses(false);
     }
@@ -78,6 +84,7 @@ export default function UserProfile() {
     const loadUserData = async () => {
       try {
         setLoading(true);
+        setError(null);
         // Fetch both user details and additional user data
         const [userDetails, userData] = await Promise.all([
           fetchUserDetails(),
@@ -85,8 +92,7 @@ export default function UserProfile() {
         ]);
         
         if (!userDetails) {
-          setError('Failed to load user details');
-          return;
+          throw new Error('Failed to load user profile. Please try again.');
         }
 
         // Combine the data from both endpoints
@@ -98,12 +104,16 @@ export default function UserProfile() {
         setUser(userDataCombined);
         
         // Fetch addresses after user data is loaded
-        if (userDataCombined.id) {
-          await fetchAddresses(String(userDataCombined.id));
+        if (userDetails.id) {
+          await fetchAddresses(String(userDetails.id));
         }
-      } catch (err) {
-        console.error('Error loading user data:', err);
-        setError('An error occurred while loading user data');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+        setError({
+          message: 'Failed to load profile',
+          details: errorMessage
+        });
+        message.error('Failed to load user profile');
       } finally {
         setLoading(false);
       }
@@ -188,6 +198,7 @@ export default function UserProfile() {
 
   const handleSubmit = async (values: any) => {
     try {
+      setIsSubmitting(true);
       if (editingAddress) {
         // Update existing address
         await api.put(`/address/${editingAddress.id}`, values);
@@ -207,6 +218,8 @@ export default function UserProfile() {
     } catch (error) {
       console.error('Error saving address:', error);
       message.error('Failed to save address');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -332,7 +345,11 @@ export default function UserProfile() {
           <Button onClick={handleCancel}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>
+          <Button 
+            type="primary" 
+            loading={isSubmitting}
+            onClick={handleSubmit}
+          >
             {editingAddress ? 'Update Address' : 'Add Address'}
           </Button>
         </div>
@@ -575,62 +592,178 @@ export default function UserProfile() {
     );
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {loading ? (
-        <div className="flex items-center justify-center h-screen">
-          <Spin size="large" />
+  const ErrorBoundary = ({ error }: { error: {message: string; details?: string} | null }) => {
+    if (!error) return null;
+    
+    return (
+      <div className="mb-4 p-4 rounded-md bg-red-50 border border-red-200">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <ExclamationCircleOutlined className="h-5 w-5 text-red-400" />
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-red-800">{error.message}</h3>
+            {error.details && (
+              <div className="mt-2 text-sm text-red-700">
+                <p>{error.details}</p>
+              </div>
+            )}
+          </div>
         </div>
-      ) : (
-        <>
-          {renderAddressForm()}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex flex-col md:flex-row gap-8">
-              {/* Sidebar */}
-              <div className="w-full md:w-64 flex-shrink-0">
-                <div className="bg-white rounded-xl shadow-sm p-6 sticky top-8">
-                  <div className="text-center mb-6">
-                    <Avatar 
-                      size={120} 
-                      icon={<UserOutlined />} 
-                      className="bg-blue-50 text-blue-500 text-5xl mx-auto mb-4"
-                    />
-                    <Title level={4} className="m-0">{user?.firstName} {user?.lastName}</Title>
-                    <Text type="secondary" className="text-sm">{user?.email}</Text>
-                    <Text type="secondary" className="text-sm">{user?.phone}</Text>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {addresses.map((address) => (
+            <Card 
+              key={address._id}
+              className="h-full border hover:shadow-md transition-shadow"
+              bodyStyle={{ padding: '24px' }}
+            >
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-2">
+                    {address.isDefault && (
+                      <Tag color="blue" className="m-0">
+                        Default
+                      </Tag>
+                    )}
+                    <Text strong className="text-lg m-0">
+                      {address.name || 'Home'}
+                    </Text>
                   </div>
+                  <Button 
+                    type="text" 
+                    icon={<EditOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      showModal(address);
+                    }}
+                    className="text-gray-500 hover:bg-gray-50"
+                  />
+                </div>
+                
+                <div className="space-y-2 text-gray-700">
+                  <div className="flex items-start gap-2">
+                    <EnvironmentOutlined className="mt-1 text-gray-400" />
+                    <div>
+                      <p className="m-0">{address.addressLine1}</p>
+                      {address.addressLine2 && <p className="m-0">{address.addressLine2}</p>}
+                      <p className="m-0">
+                        {address.city}, {address.state} {address.postalCode}
+                      </p>
+                      <p className="m-0">{address.country}</p>
+                      {address.phoneNumber && (
+                        <p className="mt-1">
+                          <PhoneOutlined className="mr-2 text-gray-400" />
+                          {address.phoneNumber}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button 
+                    size="small"
+                    type={address.isDefault ? 'default' : 'text'}
+                    disabled={address.isDefault}
+                    onClick={() => handleSetDefault(address.id)}
+                    className={`flex items-center gap-1 ${!address.isDefault ? 'text-blue-600 hover:text-blue-700' : ''}`}
+                  >
+                    {address.isDefault ? (
+                      <CheckCircleOutlined className="text-green-500" />
+                    ) : (
+                      <CheckOutlined />
+                    )}
+                    {address.isDefault ? 'Default Address' : 'Set as Default'}
+                  </Button>
                   
-                  <div className="space-y-1">
-                    <button
-                      onClick={() => setActiveTab('profile')}
-                      className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeTab === 'profile' ? 'bg-blue-50 text-blue-600 font-medium' : 'hover:bg-gray-50'}`}
-                    >
-                      <UserOutlined className="mr-3" />
-                      Profile Information
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('addresses')}
-                      className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between ${activeTab === 'addresses' ? 'bg-blue-50 text-blue-600 font-medium' : 'hover:bg-gray-50'}`}
-                    >
-                      <span><HomeOutlined className="mr-3" /> My Addresses</span>
-                      <span className="bg-blue-100 text-blue-600 text-xs font-medium px-2 py-1 rounded-full">
-                        {addresses.length}
-                      </span>
-                    </button>
-                  </div>
+                  <Button 
+                    type="text" 
+                    danger 
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    onClick={() => {
+                      Modal.confirm({
+                        title: 'Delete Address',
+                        content: 'Are you sure you want to delete this address?',
+                        okText: 'Delete',
+                        okType: 'danger',
+                        cancelText: 'Cancel',
+                        onOk: () => handleDelete(address.id),
+                        icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />,
+                        centered: true,
+                      });
+                    }}
+                    className="hover:bg-red-50"
+                  >
+                    Delete
+                  </Button>
                 </div>
               </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <ErrorBoundary error={error} />
+      {renderAddressForm()}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Sidebar */}
+          <div className="w-full md:w-64 flex-shrink-0">
+            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-8">
+              <div className="text-center mb-6">
+                <Avatar 
+                  size={120} 
+                  icon={<UserOutlined />} 
+                  className="bg-blue-50 text-blue-500 text-5xl mx-auto mb-4"
+                />
+                <Title level={4} className="m-0">{user?.firstName} {user?.lastName}</Title>
+                <Text type="secondary" className="text-sm">{user?.email}</Text>
+                <Text type="secondary" className="text-sm">{user?.phone}</Text>
+              </div>
               
-              {/* Main Content */}
-              <div className="flex-1">
-                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                  {activeTab === 'profile' ? renderProfileTab() : renderAddressesTab()}
-                </div>
+              <div className="space-y-1">
+                <button
+                  onClick={() => setActiveTab('profile')}
+                  className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeTab === 'profile' ? 'bg-blue-50 text-blue-600 font-medium' : 'hover:bg-gray-50'}`}
+                >
+                  <UserOutlined className="mr-3" />
+                  Profile Information
+                </button>
+                <button
+                  onClick={() => setActiveTab('addresses')}
+                  className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between ${activeTab === 'addresses' ? 'bg-blue-50 text-blue-600 font-medium' : 'hover:bg-gray-50'}`}
+                >
+                  <span><HomeOutlined className="mr-3" /> My Addresses</span>
+                  <span className="bg-blue-100 text-blue-600 text-xs font-medium px-2 py-1 rounded-full">
+                    {addresses.length}
+                  </span>
+                </button>
               </div>
             </div>
           </div>
-        </>
-      )}
+          
+          {/* Main Content */}
+          <div className="flex-1">
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              {activeTab === 'profile' ? renderProfileTab() : renderAddressesTab()}
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
