@@ -1,4 +1,4 @@
-import { api } from "@/api/route";
+import { api } from "../api/route";
 
 export const uploadImageToS3 = async (formData: FormData, folder: string, name?: string): Promise<string | null> => {
 

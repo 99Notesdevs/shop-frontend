@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FiX, FiAlertTriangle } from 'react-icons/fi';
+import { FiAlertTriangle } from 'react-icons/fi';
 import { api } from '../../api/route';
 
 interface Offer {
@@ -11,7 +11,7 @@ interface Offer {
 export const OfferMessageDisplay = () => {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, ] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
 
   const fetchOffers = useCallback(async () => {

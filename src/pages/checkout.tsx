@@ -284,7 +284,6 @@ const Checkout: React.FC = () => {
     
     const response = await api.post(`/coupon/use/${couponCode}`, {
       totalAmount: totalWithShipping,
-      credentials: 'include'
     }) as { success: boolean; data: any };
     
     if (response.success) {
@@ -317,7 +316,7 @@ const Checkout: React.FC = () => {
   // Remove coupon function
   const removeCoupon = async () => {
     if (appliedCoupon) {
-      await api.post(`/coupon/remove/${appliedCoupon}`, {credentials: 'include'});
+      await api.post(`/coupon/remove/${appliedCoupon}`);
     }
     setAppliedCoupon('');
     setCouponDiscount(0);
@@ -362,7 +361,6 @@ const Checkout: React.FC = () => {
   // Submit handler
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    let paymentUrl;
     // If showing address form, save the new address first
     if (showAddressForm) {
       const isAddressValid = validateAddress(deliveryAddress);
@@ -482,7 +480,7 @@ const Checkout: React.FC = () => {
           productId: item.productId,
           product: item.product,
           quantity: item.quantity,
-          price: item.product.price,
+          price: item.product?.price,
         })),
         totalAmount: Math.max(0, (subtotal + shipping) - (couponDiscount || 0)),
         status: "Pending",
