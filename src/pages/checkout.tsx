@@ -481,6 +481,7 @@ const Checkout: React.FC = () => {
           product: item.product,
           quantity: item.quantity,
           price: item.product?.price,
+
         })),
         totalAmount: Math.max(0, (subtotal + shipping) - (couponDiscount || 0)),
         status: "Pending",

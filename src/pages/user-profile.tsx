@@ -610,10 +610,102 @@ export default function UserProfile() {
             )}
           </div>
         </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {addresses.map((address) => (
+            <Card 
+              key={address._id}
+              className="h-full border hover:shadow-md transition-shadow"
+              bodyStyle={{ padding: '24px' }}
+            >
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-2">
+                    {address.isDefault && (
+                      <Tag color="blue" className="m-0">
+                        Default
+                      </Tag>
+                    )}
+                    <Text strong className="text-lg m-0">
+                      {address.name || 'Home'}
+                    </Text>
+                  </div>
+                  <Button 
+                    type="text" 
+                    icon={<EditOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      showModal(address);
+                    }}
+                    className="text-gray-500 hover:bg-gray-50"
+                  />
+                </div>
+                
+                <div className="space-y-2 text-gray-700">
+                  <div className="flex items-start gap-2">
+                    <EnvironmentOutlined className="mt-1 text-gray-400" />
+                    <div>
+                      <p className="m-0">{address.addressLine1}</p>
+                      {address.addressLine2 && <p className="m-0">{address.addressLine2}</p>}
+                      <p className="m-0">
+                        {address.city}, {address.state} {address.postalCode}
+                      </p>
+                      <p className="m-0">{address.country}</p>
+                      {address.phoneNumber && (
+                        <p className="mt-1">
+                          <PhoneOutlined className="mr-2 text-gray-400" />
+                          {address.phoneNumber}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button 
+                    size="small"
+                    type={address.isDefault ? 'default' : 'text'}
+                    disabled={address.isDefault}
+                    onClick={() => handleSetDefault(address.id)}
+                    className={`flex items-center gap-1 ${!address.isDefault ? 'text-blue-600 hover:text-blue-700' : ''}`}
+                  >
+                    {address.isDefault ? (
+                      <CheckCircleOutlined className="text-green-500" />
+                    ) : (
+                      <CheckOutlined />
+                    )}
+                    {address.isDefault ? 'Default Address' : 'Set as Default'}
+                  </Button>
+                  
+                  <Button 
+                    type="text" 
+                    danger 
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    onClick={() => {
+                      Modal.confirm({
+                        title: 'Delete Address',
+                        content: 'Are you sure you want to delete this address?',
+                        okText: 'Delete',
+                        okType: 'danger',
+                        cancelText: 'Cancel',
+                        onOk: () => handleDelete(address.id),
+                        icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />,
+                        centered: true,
+                      });
+                    }}
+                    className="hover:bg-red-50"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -671,6 +763,7 @@ export default function UserProfile() {
           </div>
         </div>
       </div>
+
     </div>
   );
 }
