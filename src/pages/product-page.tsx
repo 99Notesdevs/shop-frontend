@@ -13,6 +13,7 @@ import CustomerRating from '../components/product/customer-rating';
 import ServiceIcon from '../components/common/service-icon';
 import StarRating from '../components/ui/StarRating';
 import { useUser } from '../contexts/UserContext';
+import RecentlyWatched, { addToRecentlyViewed } from '../components/product/recntly-watched';
 
 interface Product {
   id: number;
@@ -79,6 +80,20 @@ const ProductPage = () => {
       setLoading(false);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (product) {
+      addToRecentlyViewed({
+        id: product.id,
+        name: product.name,
+        category: product.categoryId.toString(), // Convert to string to match the interface
+        description: product.description,
+        price: product.price,
+        salePrice: product.salePrice,
+        imageUrl: product.imageUrl
+      });
+    }
+  }, [product]);
 
   const handleBuyNow = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -442,6 +457,8 @@ const ProductPage = () => {
               onAddToCart={handleAddToCart} 
             />
           </div>
+
+          <RecentlyWatched />
           </div>
         </div>
       </main>

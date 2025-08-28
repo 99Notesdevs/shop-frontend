@@ -56,11 +56,11 @@ export default function UserProfile() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
 
-  const fetchAddresses = async (userId: string) => {
+  const fetchAddresses = async () => {
     try {
       setLoadingAddresses(true);
       setError(null);
-      const response = await api.get(`/address/${userId}`) as { success: boolean; data: Address[] };
+      const response = await api.get(`/address/`) as { success: boolean; data: Address[] };
       
       if (!response.success) {
         throw new Error('Failed to fetch addresses. Please try again later.');
@@ -104,9 +104,7 @@ export default function UserProfile() {
         setUser(userDataCombined);
         
         // Fetch addresses after user data is loaded
-        if (userDetails.id) {
-          await fetchAddresses(String(userDetails.id));
-        }
+        await fetchAddresses();
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
         setError({
@@ -210,9 +208,7 @@ export default function UserProfile() {
       }
       
       // Refresh addresses
-      if (user?.id) {
-        await fetchAddresses(String(user.id));
-      }
+      await fetchAddresses();
       
       handleCancel();
     } catch (error) {
@@ -229,9 +225,7 @@ export default function UserProfile() {
       message.success('Address deleted successfully');
       
       // Refresh addresses
-      if (user?.id) {
-        await fetchAddresses(String(user.id));
-      }
+      await fetchAddresses();
     } catch (error) {
       console.error('Error deleting address:', error);
       message.error('Failed to delete address');
@@ -244,9 +238,7 @@ export default function UserProfile() {
       message.success('Default address updated');
       
       // Refresh addresses
-      if (user?.id) {
-        await fetchAddresses(String(user.id));
-      }
+      await fetchAddresses();
     } catch (error) {
       console.error('Error setting default address:', error);
       message.error('Failed to set default address');

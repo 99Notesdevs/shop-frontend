@@ -160,7 +160,7 @@ const Checkout: React.FC = () => {
         return;
       }
       
-      const response = await api.get<{ data: Address[] }>(`/address/${userId}`);
+      const response = await api.get<{ data: Address[] }>(`/address`);
       setUserAddresses(response.data);
       
       // Select default address if available
