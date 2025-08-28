@@ -541,22 +541,23 @@ const Checkout: React.FC = () => {
       // Create shipping details with default status 'Processing'
       if (orderforshipping) {
         try {
+          const shippingAdress = JSON.stringify({
+            name: selectedAddress?.name || '',
+            addressLine1: selectedAddress?.addressLine1 || '',
+            addressLine2: selectedAddress?.addressLine2 || '',
+            city: selectedAddress?.city || '',
+            state: selectedAddress?.state || '',
+            zipCode: selectedAddress?.zipCode || '',
+            country: selectedAddress?.country || '',
+            phoneNumber: selectedAddress?.phoneNumber || ''
+          })
           const shippingResponse = await fetch(`${env.API}/shipping/${orderforshipping}`, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              shippingAddress: {
-                name: selectedAddress?.name || '',
-                addressLine1: selectedAddress?.addressLine1 || '',
-                addressLine2: selectedAddress?.addressLine2 || '',
-                city: selectedAddress?.city || '',
-                state: selectedAddress?.state || '',
-                zipCode: selectedAddress?.zipCode || '',
-                country: selectedAddress?.country || '',
-                phoneNumber: selectedAddress?.phoneNumber || ''
-              },
-              trackingNumber: 'N/A', // Will be updated when shipped
+              shippingAddress: shippingAdress,
+              trackingNumber: '00000', // Will be updated when shipped
               carrier: 'N/A', // Will be updated when shipped
               status: 'Processing',
               shippingDate: new Date().toISOString()
