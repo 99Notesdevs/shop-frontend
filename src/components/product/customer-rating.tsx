@@ -1,350 +1,200 @@
-import { useState, useEffect } from 'react';
-import { Star, StarHalf, StarOutline } from '@mui/icons-material';
-import { Button, Typography, Box, Avatar, Paper, TextField, Rating, Snackbar } from '@mui/material';
-import { Alert as CustomAlert } from '../ui/alert';
+"use client";
 
-type AlertVariant = 'default' | 'destructive';
-import { api } from '../../api/route';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import { Star, StarHalf, Edit } from "lucide-react";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { format } from "date-fns";
+import StarRating from "../../components/ui/StarRating";
+import AddRating from "./add-rating";
+import { api } from "../../api/route";
 
 interface Review {
   id: number;
-  user: {
-    name: string;
-    avatar?: string;
-  };
+  userId: number;
+  productId: number;
   rating: number;
-  comment: string;
-  createdAt: string;
-}
-
-interface RatingDistribution {
-  1: number;
-  2: number;
-  3: number;
-  4: number;
-  5: number;
-}
-
-interface GlobalRating {
-  averageRating: number;
-  totalRatings: number;
-  ratingDistribution: RatingDistribution;
-}
-
-const CustomerRating = () => {
-  const { productId } = useParams<{ productId: string }>();
-  const [globalRating, setGlobalRating] = useState<GlobalRating | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [rating, setRating] = useState<number | null>(null);
-  const [reviewText, setReviewText] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', variant: 'default' as AlertVariant });
-
-  const fetchGlobalRating = async () => {
-    try {
-      const response = await api.get(`/productRating/global/${productId}`) as { 
-        success: boolean; 
-        data: number; // The API returns just a number (average rating)
-      };
-      
-      if (response.success && response.data !== undefined) {
-        // Create a mock GlobalRating object with the received average rating
-        const mockGlobalRating: GlobalRating = {
-          averageRating: response.data,
-          totalRatings: 1, // Default to 1 since we don't have this info
-          ratingDistribution: {
-            1: 0,
-            2: 0,
-            3: 0,
-            4: 0,
-            5: 0
-          }
-        };
-        
-        // If we have a rating, set the corresponding distribution
-        if (response.data >= 1 && response.data <= 5) {
-          const roundedRating = Math.round(response.data);
-          mockGlobalRating.ratingDistribution[roundedRating as keyof RatingDistribution] = 1;
-        }
-        
-        setGlobalRating(mockGlobalRating);
-      }
-    } catch (error) {
-      console.error('Error fetching global rating:', error);
-    }
+  review?: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    image?: string;
   };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export default function CustomerRating({ productId }: { productId: number }) {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [userReview, setUserReview] = useState<Review | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showAddReview, setShowAddReview] = useState(false);
 
   const fetchReviews = async () => {
     try {
-      const { data } = await api.get(`/productRating/reviews/${productId}`) as {
-        success: boolean;
-        data: Review[];
-      };
-      if (data) {
-        setReviews(data);
+      setLoading(true);
+      
+      // Fetch all reviews
+      const reviewsRes = await api.get(`productRating/reviews/${productId}`) as { success: boolean; data: Review[] };
+      
+      if (reviewsRes.success) {
+        setReviews(reviewsRes.data);
+      }
+
+      // Fetch user's review if logged in
+      try {
+        const userReviewRes = await api.get(`/productRating/review/${productId}`) as { success: boolean; data: Review }; 
+        
+        if (userReviewRes.success) {
+          if (userReviewRes.data) {
+            setUserReview(userReviewRes.data);
+          }
+        } else {
+          console.error("Error fetching user review:", userReviewRes.data);
+        }
+      } catch (error) {
+        console.error("Error in user review fetch:", error);
       }
     } catch (error) {
-      console.error('Error fetching reviews:', error);
+      console.error("Error in fetchReviews:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (productId) {
-      Promise.all([fetchGlobalRating(), fetchReviews()]);
-    }
+    fetchReviews();
   }, [productId]);
 
-  const renderStarRating = (rating: number) => {
+  const handleReviewSubmit = () => {
+    setShowAddReview(false);
+    fetchReviews(); // Refresh the reviews after submission
+  };
+
+  const renderStars = (rating: number) => {
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
 
     for (let i = 1; i <= 5; i++) {
       if (i <= fullStars) {
-        stars.push(<Star key={i} sx={{ color: '#FFD700', fontSize: 20 }} />);
+        stars.push(<Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />);
       } else if (i === fullStars + 1 && hasHalfStar) {
-        stars.push(<StarHalf key={i} sx={{ color: '#FFD700', fontSize: 20 }} />);
+        stars.push(<StarHalf key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />);
       } else {
-        stars.push(<StarOutline key={i} sx={{ color: '#FFD700', fontSize: 20 }} />);
+        stars.push(<Star key={i} className="w-4 h-4 text-gray-300" />);
       }
     }
-
     return stars;
   };
 
-  const handleRatingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!rating) {
-      setSnackbar({ open: true, message: 'Please select a star rating', variant: 'destructive' });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      // First submit the rating
-      await api.post(`/productRating/${productId}`, { rating });
-      
-      // If there's a review text, submit it as well
-      if (reviewText.trim()) {
-        await api.put(`/productRating/${productId}`, { review: reviewText });
-      }
-      
-      // Refresh the data
-      await Promise.all([fetchGlobalRating(), fetchReviews()]);
-      
-      // Reset form
-      setRating(null);
-      setReviewText('');
-      setShowReviewForm(false);
-      
-      setSnackbar({ open: true, message: 'Thank you for your feedback!', variant: 'default' });
-    } catch (error) {
-      console.error('Error submitting rating/review:', error);
-      setSnackbar({ 
-        open: true, 
-        message: 'Failed to submit your rating/review. Please try again.', 
-        variant: 'destructive' 
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
-  };
+  if (loading) {
+    return <div className="text-center py-8">Loading reviews...</div>;
+  }
 
   return (
-    <Box sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" gutterBottom>
-          Customer Reviews
-        </Typography>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={() => setShowReviewForm(!showReviewForm)}
-          disabled={isSubmitting}
-        >
-          {showReviewForm ? 'Cancel' : 'Write a Review'}
-        </Button>
-      </Box>
-
-      {showReviewForm && (
-        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-          <form onSubmit={handleRatingSubmit}>
-            <Typography variant="h6" gutterBottom>
-              Rate this product
-            </Typography>
-            <Box mb={2}>
-              <Typography component="legend" gutterBottom>Your Rating *</Typography>
-              <Rating
-                name="product-rating"
-                value={rating}
-                onChange={(_, newValue) => setRating(newValue)}
-                precision={0.5}
-                size="large"
-              />
-            </Box>
-            <Box mb={2}>
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                variant="outlined"
-                label="Your Review (Optional)"
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </Box>
-            <Button 
-              type="submit" 
-              variant="contained" 
-              color="primary"
-              disabled={isSubmitting || !rating}
-            >
-              {isSubmitting ? 'Submitting...' : 'Submit Review'}
-            </Button>
-          </form>
-        </Paper>
-      )}
-      
-      {globalRating && (
-        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-          <Box display="flex" alignItems="center" mb={2}>
-            <Typography variant="h4" component="span" sx={{ mr: 2 }}>
-              {globalRating.averageRating.toFixed(1)}
-            </Typography>
-            <Box>
-              <Box display="flex">
-                {renderStarRating(globalRating.averageRating)}
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                Based on {globalRating.totalRatings} reviews
-              </Typography>
-            </Box>
-          </Box>
-
-          <Box>
-            {[5, 4, 3, 2, 1].map((star) => (
-              <Box key={star} display="flex" alignItems="center" mb={1}>
-                <Typography variant="body2" sx={{ minWidth: 80 }}>
-                  {star} Star
-                </Typography>
-                <Box sx={{ width: 200, mx: 2, bgcolor: '#e0e0e0', height: 8, borderRadius: 4 }}>
-                  <Box
-                    sx={{
-                      width: `${(globalRating.ratingDistribution[star as keyof RatingDistribution] / globalRating.totalRatings) * 100}%`,
-                      bgcolor: '#FFD700',
-                      height: '100%',
-                      borderRadius: 4,
-                    }}
-                  />
-                </Box>
-                <Typography variant="body2" color="text.secondary">
-                  {globalRating.ratingDistribution[star as keyof RatingDistribution]}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </Paper>
-      )}
-
-      <Box mb={3}>
-        <Typography variant="h6">Reviews ({reviews.length})</Typography>
-      </Box>
-
-      {reviews.length === 0 ? (
-        <Typography>No reviews yet. Be the first to review!</Typography>
-      ) : (
-        <Box>
-          {reviews.map((review) => (
-            <Box key={review.id} mb={3} pb={2} borderBottom="1px solid #eee">
-              <Box display="flex" alignItems="center" mb={1}>
-                <Avatar src={review.user.avatar} alt={review.user.name} sx={{ mr: 2 }} />
-                <Box>
-                  <Typography variant="subtitle1">{review.user.name}</Typography>
-                  <Box display="flex" alignItems="center">
-                    {renderStarRating(review.rating)}
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                      {new Date(review.createdAt).toLocaleDateString()}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-              <Typography variant="body1" sx={{ mt: 1 }}>
-                {review.comment}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      )}
-
-      {showReviewForm && (
-        <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
-          <form onSubmit={handleRatingSubmit}>
-            <Typography variant="h6" gutterBottom>
-              Write a Review
-            </Typography>
-            <Box mb={2}>
-              <Typography>Your Rating *</Typography>
-              <Rating
-                name="rating"
-                value={rating}
-                onChange={(_, newValue) => setRating(newValue)}
-                precision={0.5}
-                size="large"
-              />
-            </Box>
-            <Box mb={2}>
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                placeholder="Your Review (Optional)"
-                variant="outlined"
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </Box>
-            <Box display="flex" justifyContent="flex-end" gap={2}>
-              <Button
-                variant="outlined"
-                onClick={() => setShowReviewForm(false)}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
+    <div className="space-y-6">
+      {/* Global Rating Summary */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Customer Reviews</CardTitle>
+            {!showAddReview && (
               <Button 
-                type="submit" 
-                variant="contained" 
-                color="primary"
-                disabled={isSubmitting || !rating}
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowAddReview(true)}
+                disabled={!!userReview}
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                {userReview ? 'Your Review Submitted' : 'Write a Review'}
               </Button>
-            </Box>
-          </form>
-        </Paper>
-      )}
-      
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <CustomAlert variant={snackbar.variant}>
-          {snackbar.message}
-        </CustomAlert>
-      </Snackbar>
-    </Box>
-  );
-};
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-4">
+            <StarRating productId={productId} readonly />
+          </div>
+        </CardContent>
+      </Card>
 
-export default CustomerRating;
+      {/* Add/Edit Review Form */}
+      {showAddReview && (
+        <AddRating 
+          productId={productId} 
+          onRatingSubmitted={handleReviewSubmit}
+        />
+      )}
+
+      {/* User's Review */}
+      {userReview && !showAddReview && (
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Your Review</h3>
+              <Button 
+                onClick={() => setShowAddReview(true)}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-1 mb-2">
+              {renderStars(userReview.rating)}
+              <span className="text-sm text-muted-foreground ml-2">
+                {format(new Date(userReview.updatedAt), "MMM d, yyyy")}
+              </span>
+            </div>
+            {userReview.review && (
+              <p className="text-muted-foreground">
+                {userReview.review}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Reviews List */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">
+          Customer Reviews {reviews.length > 0 && `(${reviews.length})`}
+        </h3>
+        {reviews.length > 0 ? (
+          reviews
+            .filter(review => !userReview || review.id !== userReview.id)
+            .map((review) => (
+              <Card key={review.id} className="p-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium">{review.user.name}</h4>
+                        <div className="flex items-center gap-1">
+                          {renderStars(review.rating)}
+                          <span className="text-xs text-muted-foreground ml-1">
+                            {format(new Date(review.createdAt), "MMM d, yyyy")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {review.review && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {review.review}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))
+        ) : (
+          <p className="text-center py-8 text-muted-foreground">
+            No reviews yet. Be the first to review this product!
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}

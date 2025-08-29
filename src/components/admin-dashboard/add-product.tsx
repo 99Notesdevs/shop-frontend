@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { api } from '../../api/route';
+import { uploadImageToS3 } from '../../config/imageUploadS3';
 
 interface Category {
   id: number;
@@ -43,6 +44,8 @@ export default function ProductForm() {
   const [isLoading, setIsLoading] = useState(!!id);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -128,6 +131,7 @@ export default function ProductForm() {
             edition: metadata?.edition || '',
           },
         });
+        setImagePreview(product.imageUrl);
       } else {
         console.error('Invalid product data format:', response);
         toast.error('Failed to load product data');
@@ -139,6 +143,49 @@ export default function ProductForm() {
       navigate('/admin/manage-product');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if file is an image
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Set preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to S3
+    try {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const imageUrl = await uploadImageToS3(formData, 'products');
+      
+      if (imageUrl) {
+        setFormData(prev => ({
+          ...prev,
+          imageUrl
+        }));
+      } else {
+        toast.error('Failed to upload image');
+        setImagePreview(null);
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Error uploading image');
+      setImagePreview(null);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -373,37 +420,60 @@ export default function ProductForm() {
               </p>
             </div>
 
+            {/* Image Upload */}
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="image">
+                Product Image
+              </label>
+              <div className="flex items-center">
+                <input
+                  type="file"
+                  id="image"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  disabled={isUploading}
+                />
+                <label
+                  htmlFor="image"
+                  className="cursor-pointer bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  {isUploading ? 'Uploading...' : 'Choose Image'}
+                </label>
+                {imagePreview && (
+                  <div className="ml-4">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="h-20 w-20 object-cover rounded-md"
+                    />
+                  </div>
+                )}
+              </div>
+              {formData.imageUrl && (
+                <p className="mt-2 text-sm text-gray-500">
+                  Image URL: {formData.imageUrl.length > 50 ? `${formData.imageUrl.substring(0, 50)}...` : formData.imageUrl}
+                </p>
+              )}
+            </div>
+
             <div>
-              <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700">
-                Image URL
+              <label htmlFor="shippingCharges" className="block text-sm font-medium text-gray-700">
+                Shipping Charges (₹) <span className="text-red-500">*</span>
               </label>
               <input
-                type="url"
-                id="imageUrl"
-                name="imageUrl"
-                value={formData.imageUrl}
+                type="number"
+                id="shippingCharges"
+                name="shippingCharges"
+                min="0"
+                required
+                value={formData.shippingCharges}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                placeholder="https://example.com/image.jpg"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <label htmlFor="shippingCharges" className="block text-sm font-medium text-gray-700">
-                  Shipping Charges (₹) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  id="shippingCharges"
-                  name="shippingCharges"
-                  min="0"
-                  required
-                  value={formData.shippingCharges}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-              </div>
               <div>
                 <label htmlFor="salePrice" className="block text-sm font-medium text-gray-700">
                   Type <span className="text-red-500">*</span>
