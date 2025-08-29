@@ -4,8 +4,7 @@ import { FiChevronLeft, FiChevronRight, FiMaximize2, FiHeart, FiShare2, FiMinus,
 import { api } from '../api/route';
 import { useAuth } from '../contexts/AuthContext';
 import { CartSidebar } from '../components/ui/cart-sidebar';
-import toast from 'react-hot-toast';
-import { env } from '../config/env';
+import toast from '../components/ui/toast';
 import { RelatedProducts } from '../components/product/related-product';
 import { Breadcrumb } from '../components/ui/breadcrumb';
 import ProductHighlights from '../components/product/product-highlights';
@@ -112,21 +111,15 @@ const ProductPage = () => {
         billingAddress: "",
         shippingAddress: "",
       };
-      const response = await fetch(`${env.API}/order`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data),
-      });
+      const response = await api.post(`/order`, data) as { success: boolean; data: any };
   
-      if (response.status === 403) {
+      if (!response.success) {
         toast.error('Please login to continue');
         openUserModal('login');
         return;
       }
   
-      const responseData = await response.json();
-      const orderId = responseData.data.id;
+      const orderId = response.data.id;
   
       const orderData = {
         orderId,
@@ -199,26 +192,14 @@ const ProductPage = () => {
     }
 
     try {
-      const response = await fetch(`${env.API}/cart/${cart.id}?productId=${product.id}&quantity=${quantity}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await api.post(`/cart/${cart.id}?productId=${product.id}&quantity=${quantity}`) as { success: boolean; data: any };
 
-      if (response.status === 401) {
+      if (!response.success) {
         toast.error('Your session has expired. Please login again');
         openUserModal('login');
         return;
       }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to add item to cart');
-      }
-
-      const data = await response.json();
+      const data = response.data;
       
       // Update the cart in the auth context
       if (data.data) {
@@ -445,7 +426,7 @@ const ProductPage = () => {
 
           {/* Customer Rating */}
           <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-            <CustomerRating/>
+            <CustomerRating productId={product.id}/>
           </div>
 
           {/* Related Products */}

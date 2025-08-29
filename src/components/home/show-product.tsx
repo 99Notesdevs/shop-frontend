@@ -106,10 +106,10 @@ export const ShowProduct: React.FC<ShowProductProps> = ({ onAddToCart }) => {
         </div>
         
         <div className="relative">
-          <div className="flex overflow-x-auto pb-6 mx-4 px-4 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            <div className="flex space-x-8">
+          <div className="flex overflow-x-auto pb-6 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="flex space-x-4">
               {category.products.map((product) => (
-                <div key={product.id} className="flex-shrink-0 w-80">
+                <div key={product.id} className="flex-shrink-0 w-70">
                   <ProductCard
                     key={product.id}
                     id={product.id}
