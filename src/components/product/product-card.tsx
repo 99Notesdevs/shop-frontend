@@ -112,9 +112,14 @@ export function ProductCard({
       {/* Product Image */}
       <div className="relative h-56 overflow-hidden bg-gray-50">
         <img
-          src={imageUrl}
+          src={imageUrl.split(',')[0].trim()}
           alt={name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.onerror = null;
+            target.src = '/placeholder-product.jpg';
+          }}
         />
         
         {/* Quick Action Buttons - Only shows on hover */}
