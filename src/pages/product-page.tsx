@@ -56,10 +56,18 @@ const ProductPage = () => {
           const productData = data.data;
           setProduct(productData);
           
-          // If product has imageUrl, use it, otherwise use placeholder
+          // Split the imageUrl string by comma, trim, encode each URL, and filter out any empty strings
           const productImages = productData.imageUrl 
-            ? [productData.imageUrl] 
+            ? productData.imageUrl
+                .split(',')
+                .map(url => {
+                  const trimmed = url.trim();
+                  // Encode the URL, handling spaces and special characters
+                  return trimmed ? encodeURI(trimmed) : '';
+                })
+                .filter(Boolean)
             : ['/placeholder-product.jpg'];
+          
           setImages(productImages);
         } else {
           throw new Error('Failed to fetch product');
@@ -263,12 +271,19 @@ const ProductPage = () => {
               {/* Product Images */}
               <div className="lg:w-1/2">
                 <div className="relative bg-gray-50 rounded-lg overflow-hidden">
-                  <div className="relative w-full pt-[133.33%]">
-                    <div className="absolute inset-0 flex items-center justify-center p-4">
+                  <div className="relative w-full pt-[80%] md:pt-[70%] lg:pt-[60%]">
+                    <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-4">
                       <img 
-                        src={images[currentImage]} 
+                        src={images[currentImage].startsWith('http') 
+                          ? images[currentImage] 
+                          : `/placeholder-product.jpg`}
                         alt={product.name}
                         className="max-w-full max-h-full object-contain"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = '/placeholder-product.jpg';
+                        }}
                       />
                     </div>
                   </div>
@@ -303,13 +318,19 @@ const ProductPage = () => {
                       onClick={() => setCurrentImage(index)}
                     >
                       <img 
-                        src={img}
+                        src={img.startsWith('http') ? img : '/placeholder-product.jpg'}
                         alt={`${product.name} ${index + 1}`}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = '/placeholder-product.jpg';
+                        }}
                       />
                     </button>
                   ))}
                 </div>
+                <ServiceIcon />
               </div>
 
               {/* Product Details */}
@@ -405,7 +426,6 @@ const ProductPage = () => {
               </div>
               <div className="pt-4 border-t border-gray-200">
               <ProductHighlights metaData={product.metadata ? JSON.parse(product.metadata) : {}} />
-              <ServiceIcon />
               </div>
             </div>
           </div>
