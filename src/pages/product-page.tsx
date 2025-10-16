@@ -4,8 +4,7 @@ import { FiChevronLeft, FiChevronRight, FiMaximize2, FiHeart, FiShare2, FiMinus,
 import { api } from '../api/route';
 import { useAuth } from '../contexts/AuthContext';
 import { CartSidebar } from '../components/ui/cart-sidebar';
-import toast from 'react-hot-toast';
-import { env } from '../config/env';
+import toast from '../components/ui/toast';
 import { RelatedProducts } from '../components/product/related-product';
 import { Breadcrumb } from '../components/ui/breadcrumb';
 import ProductHighlights from '../components/product/product-highlights';
@@ -57,10 +56,18 @@ const ProductPage = () => {
           const productData = data.data;
           setProduct(productData);
           
-          // If product has imageUrl, use it, otherwise use placeholder
+          // Split the imageUrl string by comma, trim, encode each URL, and filter out any empty strings
           const productImages = productData.imageUrl 
-            ? [productData.imageUrl] 
+            ? productData.imageUrl
+                .split(',')
+                .map(url => {
+                  const trimmed = url.trim();
+                  // Encode the URL, handling spaces and special characters
+                  return trimmed ? encodeURI(trimmed) : '';
+                })
+                .filter(Boolean)
             : ['/placeholder-product.jpg'];
+          
           setImages(productImages);
         } else {
           throw new Error('Failed to fetch product');
@@ -112,21 +119,15 @@ const ProductPage = () => {
         billingAddress: "",
         shippingAddress: "",
       };
-      const response = await fetch(`${env.API}/order`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data),
-      });
+      const response = await api.post(`/order`, data) as { success: boolean; data: any };
   
-      if (response.status === 403) {
+      if (!response.success) {
         toast.error('Please login to continue');
         openUserModal('login');
         return;
       }
   
-      const responseData = await response.json();
-      const orderId = responseData.data.id;
+      const orderId = response.data.id;
   
       const orderData = {
         orderId,
@@ -199,26 +200,14 @@ const ProductPage = () => {
     }
 
     try {
-      const response = await fetch(`${env.API}/cart/${cart.id}?productId=${product.id}&quantity=${quantity}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await api.post(`/cart/${cart.id}?productId=${product.id}&quantity=${quantity}`) as { success: boolean; data: any };
 
-      if (response.status === 401) {
+      if (!response.success) {
         toast.error('Your session has expired. Please login again');
         openUserModal('login');
         return;
       }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to add item to cart');
-      }
-
-      const data = await response.json();
+      const data = response.data;
       
       // Update the cart in the auth context
       if (data.data) {
@@ -282,12 +271,19 @@ const ProductPage = () => {
               {/* Product Images */}
               <div className="lg:w-1/2">
                 <div className="relative bg-gray-50 rounded-lg overflow-hidden">
-                  <div className="relative w-full pt-[133.33%]">
-                    <div className="absolute inset-0 flex items-center justify-center p-4">
+                  <div className="relative w-full pt-[80%] md:pt-[70%] lg:pt-[60%]">
+                    <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-4">
                       <img 
-                        src={images[currentImage]} 
+                        src={images[currentImage].startsWith('http') 
+                          ? images[currentImage] 
+                          : `/placeholder-product.jpg`}
                         alt={product.name}
                         className="max-w-full max-h-full object-contain"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = '/placeholder-product.jpg';
+                        }}
                       />
                     </div>
                   </div>
@@ -322,13 +318,19 @@ const ProductPage = () => {
                       onClick={() => setCurrentImage(index)}
                     >
                       <img 
-                        src={img}
+                        src={img.startsWith('http') ? img : '/placeholder-product.jpg'}
                         alt={`${product.name} ${index + 1}`}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = '/placeholder-product.jpg';
+                        }}
                       />
                     </button>
                   ))}
                 </div>
+                <ServiceIcon />
               </div>
 
               {/* Product Details */}
@@ -424,7 +426,6 @@ const ProductPage = () => {
               </div>
               <div className="pt-4 border-t border-gray-200">
               <ProductHighlights metaData={product.metadata ? JSON.parse(product.metadata) : {}} />
-              <ServiceIcon />
               </div>
             </div>
           </div>
@@ -445,7 +446,7 @@ const ProductPage = () => {
 
           {/* Customer Rating */}
           <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-            <CustomerRating/>
+            <CustomerRating productId={product.id}/>
           </div>
 
           {/* Related Products */}

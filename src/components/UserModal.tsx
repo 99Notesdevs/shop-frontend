@@ -125,7 +125,7 @@ export function AuthModal() {
 
           <div className="flex border-b mb-6">
             <button
-              className={`flex-1 py-3 px-4 font-medium text-sm transition-colors ${
+              className={`flex-1 py-3 px-4 font-medium text-sm transition-colors  ${
                 activeTab === 'login'
                   ? 'text-primary border-b-2 border-primary'
                   : 'text-gray-500 hover:text-gray-700'
@@ -205,7 +205,7 @@ export function AuthModal() {
               
               <Button 
                 type="submit" 
-                className="w-full py-2.5 text-base font-medium bg-primary hover:bg-primary/90 transition-colors"
+                className="w-full py-2.5 text-base font-medium bg-[var(--button)] hover:bg-[var(--button-hover)] transition-colors"
                 disabled={isLoading}
               >
                 {isLoading ? 'Signing in...' : 'Sign in'}

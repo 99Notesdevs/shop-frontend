@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { api } from '../../api/route';
+import { uploadImageToS3 } from '../../config/imageUploadS3';
 
 interface Category {
   id: number;
@@ -19,7 +20,7 @@ interface ProductData {
   price: string;
   salePrice: string;
   stock: string;
-  imageUrl: string;
+  imageUrl: string; // This will store comma-separated URLs
   categoryId: string;
   validity: string;
   shippingCharges: string;
@@ -43,6 +44,8 @@ export default function ProductForm() {
   const [isLoading, setIsLoading] = useState(!!id);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [imagePreviews, setImagePreviews] = useState<{url: string, isMain: boolean}[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -128,6 +131,7 @@ export default function ProductForm() {
             edition: metadata?.edition || '',
           },
         });
+        setImagePreviews(product.imageUrl ? product.imageUrl.split(',').filter(Boolean).map((url, index) => ({url, isMain: index === 0})) : []);
       } else {
         console.error('Invalid product data format:', response);
         toast.error('Failed to load product data');
@@ -140,6 +144,100 @@ export default function ProductForm() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Filter only image files
+    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length === 0) {
+      toast.error('Please upload image files only');
+      return;
+    }
+
+    // Set previews
+    const newPreviews = await Promise.all(
+      imageFiles.map(file => {
+        return new Promise<{url: string, isMain: boolean}>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve({
+              url: reader.result as string,
+              isMain: imagePreviews.length === 0 // First image is main by default
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+      })
+    );
+
+    setImagePreviews(prev => [...prev, ...newPreviews]);
+
+    // Upload to S3
+    try {
+      setIsUploading(true);
+      const uploadPromises = imageFiles.map(file => {
+        const formData = new FormData();
+        console.log(file)
+        formData.append('imageUrl', file);
+        console.log(formData)
+        return uploadImageToS3(formData, 'shop-products',file.name);
+      });
+
+      const uploadedUrls = await Promise.all(uploadPromises);
+      const validUrls = uploadedUrls.filter(url => url) as string[];
+      
+      if (validUrls.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          imageUrl: [...(prev.imageUrl ? prev.imageUrl.split(',') : []), ...validUrls].filter(Boolean).join(',')
+        }));
+      } else {
+        toast.error('Failed to upload some images');
+      }
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      toast.error('Error uploading images');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const setAsMainImage = (index: number) => {
+    setImagePreviews(prev => {
+      const newPreviews = [...prev];
+      // Set all images' isMain to false
+      newPreviews.forEach(img => img.isMain = false);
+      // Set the selected image as main
+      newPreviews[index].isMain = true;
+      // Move the main image to the first position
+      const mainImage = newPreviews.splice(index, 1)[0];
+      return [mainImage, ...newPreviews];
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setImagePreviews(prev => {
+      const newPreviews = [...prev];
+      const isRemovingMain = newPreviews[index].isMain;
+      newPreviews.splice(index, 1);
+      
+      // If we removed the main image and there are other images, set the next one as main
+      if (isRemovingMain && newPreviews.length > 0) {
+        newPreviews[0].isMain = true;
+      }
+      
+      // Update form data
+      setFormData(prev => ({
+        ...prev,
+        imageUrl: newPreviews.map(img => img.url.split('?')[0]).join(',')
+      }));
+      
+      return newPreviews;
+    });
   };
 
   // Initialize form with default values
@@ -373,37 +471,90 @@ export default function ProductForm() {
               </p>
             </div>
 
+            {/* Image Upload */}
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Product Images
+              </label>
+              <div className="mt-1 flex items-center">
+                <label className="cursor-pointer bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                  {isUploading ? 'Uploading...' : 'Choose Images'}
+                  <input
+                    type="file"
+                    className="sr-only"
+                    onChange={handleImageUpload}
+                    multiple
+                    accept="image/*"
+                    disabled={isUploading}
+                  />
+                </label>
+              </div>
+              
+              {/* Image Previews */}
+              {imagePreviews.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img 
+                        src={preview.url} 
+                        alt={`Preview ${index + 1}`} 
+                        className={`w-full h-32 object-cover rounded-lg border-2 ${preview.isMain ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'}`}
+                      />
+                      <div className="absolute top-2 left-2 flex space-x-1">
+                        {!preview.isMain && (
+                          <button
+                            type="button"
+                            onClick={() => setAsMainImage(index)}
+                            className="p-1 bg-white bg-opacity-80 rounded-full hover:bg-opacity-100"
+                            title="Set as main"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="p-1 bg-white bg-opacity-80 rounded-full hover:bg-opacity-100"
+                          title="Remove image"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                      {preview.isMain && (
+                        <div className="absolute bottom-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          Main
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div>
-              <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700">
-                Image URL
+              <label htmlFor="shippingCharges" className="block text-sm font-medium text-gray-700">
+                Shipping Charges (₹) <span className="text-red-500">*</span>
               </label>
               <input
-                type="url"
-                id="imageUrl"
-                name="imageUrl"
-                value={formData.imageUrl}
+                type="number"
+                id="shippingCharges"
+                name="shippingCharges"
+                min="0"
+                required
+                value={formData.shippingCharges}
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                placeholder="https://example.com/image.jpg"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <label htmlFor="shippingCharges" className="block text-sm font-medium text-gray-700">
-                  Shipping Charges (₹) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  id="shippingCharges"
-                  name="shippingCharges"
-                  min="0"
-                  required
-                  value={formData.shippingCharges}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-              </div>
               <div>
                 <label htmlFor="salePrice" className="block text-sm font-medium text-gray-700">
                   Type <span className="text-red-500">*</span>
