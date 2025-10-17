@@ -20,7 +20,7 @@ interface CartItem {
     price: number;
     salePrice?: number;
     shippingCharge?: number;
-    images: string;
+    images: string[];
   };
 }
 
@@ -404,11 +404,16 @@ export default function CartPage() {
                       {/* Product Info */}
                       <div className="flex items-center md:w-6/12 mb-4 md:mb-0">
                         <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-50">
-                          {item.product?.images ? (
+                          {item.product?.images?.[0] ? (
                             <img
-                              src={item.product.images}
-                              alt={item.product.name}
+                              src={item.product.images[0]}
+                              alt={item.product?.name || 'Product image'}
                               className="h-full w-full object-cover object-center"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.onerror = null;
+                                target.src = 'https://via.placeholder.com/80';
+                              }}
                             />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center bg-gray-100">
