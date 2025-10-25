@@ -18,6 +18,8 @@ import {
   CheckOutlined,
   DeleteOutlined,
   ExclamationCircleOutlined,
+  MessageOutlined,
+  ShopOutlined,
 } from '@ant-design/icons';
 import { message } from 'antd';
 
@@ -742,6 +744,20 @@ export default function UserProfile() {
                   <span className="bg-blue-100 text-blue-600 text-xs font-medium px-2 py-1 rounded-full">
                     {addresses.length}
                   </span>
+                </button>
+                <button
+                  onClick={() => window.open('http://tests.main.local:5173', '_blank')}
+                  className="w-full text-left px-4 py-3 rounded-lg transition-colors hover:bg-purple-50 text-purple-600"
+                >
+                  <MessageOutlined className="mr-3" />
+                  Test Portal
+                </button>
+                <button
+                  onClick={() => window.open('http://shop.main.local:5174', '_blank')}
+                  className="w-full text-left px-4 py-3 rounded-lg transition-colors hover:bg-green-50 text-green-600"
+                >
+                  <ShopOutlined className="mr-3" />
+                  Shop
                 </button>
               </div>
             </div>
