@@ -519,7 +519,7 @@ export default function MyOrders() {
               </div>
             ))}
             
-            {orders.length > currentPage * itemsPerPage && (
+            {hasMore && orders.length > currentPage * itemsPerPage && (
               <div className="flex justify-center mt-6">
                 <Button 
                   onClick={() => setCurrentPage(prev => prev + 1)}

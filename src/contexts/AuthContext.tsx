@@ -31,7 +31,7 @@ interface Cart {
 interface User {
   id: string | number;
   email: string;
-  name?: string;
+  firstName?: string;
   cartId?: string | number;
   cart?: Cart;
   // Add other user properties as needed

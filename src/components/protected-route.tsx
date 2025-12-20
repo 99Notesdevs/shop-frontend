@@ -7,7 +7,7 @@ interface AdminRouteProps {
 }
 
 export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-  const { admin, checkAdmin } = useAuth();
+  const { checkAdmin } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
