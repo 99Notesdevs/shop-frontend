@@ -426,7 +426,7 @@ export default function MyOrders() {
                     </div>
                     <div className="flex items-center space-x-3">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium`}>
-                        <span className="ml-1 capitalize">{order.status}</span>
+                        <span className="ml-1 capitalize flex"><p className='text-gray-600 font-bold'>Payment: </p>{order.status}</span>
                       </span>
                       <Button
                         onClick={() => viewOrderDetails(order)}
