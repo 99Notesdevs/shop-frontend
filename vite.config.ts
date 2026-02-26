@@ -5,14 +5,18 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/shop/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
     }
   },
+  preview: {
+    allowedHosts: ['99notes.org', 'www.99notes.org', 'localhost']
+  },
   server: {
-    host: 'shop.main.local',
-    port: 5173
+    host: 'localhost',
+    port: 3001
   }
 })
